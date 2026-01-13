@@ -19,10 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	EmbeddingsDBService_AddRecord_FullMethodName        = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/AddRecord"
-	EmbeddingsDBService_GetRecord_FullMethodName        = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetRecord"
-	EmbeddingsDBService_QueryRecords_FullMethodName     = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/QueryRecords"
-	EmbeddingsDBService_QueryRecordsById_FullMethodName = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/QueryRecordsById"
+	EmbeddingsDBService_AddRecord_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/AddRecord"
+	EmbeddingsDBService_GetRecord_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetRecord"
+	EmbeddingsDBService_SimilarRecords_FullMethodName     = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/SimilarRecords"
+	EmbeddingsDBService_SimilarRecordsById_FullMethodName = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/SimilarRecordsById"
 )
 
 // EmbeddingsDBServiceClient is the client API for EmbeddingsDBService service.
@@ -31,8 +31,8 @@ const (
 type EmbeddingsDBServiceClient interface {
 	AddRecord(ctx context.Context, in *AddRecordRequest, opts ...grpc.CallOption) (*AddRecordResponse, error)
 	GetRecord(ctx context.Context, in *GetRecordRequest, opts ...grpc.CallOption) (*GetRecordResponse, error)
-	QueryRecords(ctx context.Context, in *QueryRecordsRequest, opts ...grpc.CallOption) (*QueryRecordsResponse, error)
-	QueryRecordsById(ctx context.Context, in *QueryRecordsByIdRequest, opts ...grpc.CallOption) (*QueryRecordsResponse, error)
+	SimilarRecords(ctx context.Context, in *SimilarRecordsRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error)
+	SimilarRecordsById(ctx context.Context, in *SimilarRecordsByIdRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error)
 }
 
 type embeddingsDBServiceClient struct {
@@ -61,18 +61,18 @@ func (c *embeddingsDBServiceClient) GetRecord(ctx context.Context, in *GetRecord
 	return out, nil
 }
 
-func (c *embeddingsDBServiceClient) QueryRecords(ctx context.Context, in *QueryRecordsRequest, opts ...grpc.CallOption) (*QueryRecordsResponse, error) {
-	out := new(QueryRecordsResponse)
-	err := c.cc.Invoke(ctx, EmbeddingsDBService_QueryRecords_FullMethodName, in, out, opts...)
+func (c *embeddingsDBServiceClient) SimilarRecords(ctx context.Context, in *SimilarRecordsRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error) {
+	out := new(SimilarRecordsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingsDBService_SimilarRecords_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *embeddingsDBServiceClient) QueryRecordsById(ctx context.Context, in *QueryRecordsByIdRequest, opts ...grpc.CallOption) (*QueryRecordsResponse, error) {
-	out := new(QueryRecordsResponse)
-	err := c.cc.Invoke(ctx, EmbeddingsDBService_QueryRecordsById_FullMethodName, in, out, opts...)
+func (c *embeddingsDBServiceClient) SimilarRecordsById(ctx context.Context, in *SimilarRecordsByIdRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error) {
+	out := new(SimilarRecordsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingsDBService_SimilarRecordsById_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +85,8 @@ func (c *embeddingsDBServiceClient) QueryRecordsById(ctx context.Context, in *Qu
 type EmbeddingsDBServiceServer interface {
 	AddRecord(context.Context, *AddRecordRequest) (*AddRecordResponse, error)
 	GetRecord(context.Context, *GetRecordRequest) (*GetRecordResponse, error)
-	QueryRecords(context.Context, *QueryRecordsRequest) (*QueryRecordsResponse, error)
-	QueryRecordsById(context.Context, *QueryRecordsByIdRequest) (*QueryRecordsResponse, error)
+	SimilarRecords(context.Context, *SimilarRecordsRequest) (*SimilarRecordsResponse, error)
+	SimilarRecordsById(context.Context, *SimilarRecordsByIdRequest) (*SimilarRecordsResponse, error)
 	mustEmbedUnimplementedEmbeddingsDBServiceServer()
 }
 
@@ -100,11 +100,11 @@ func (UnimplementedEmbeddingsDBServiceServer) AddRecord(context.Context, *AddRec
 func (UnimplementedEmbeddingsDBServiceServer) GetRecord(context.Context, *GetRecordRequest) (*GetRecordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRecord not implemented")
 }
-func (UnimplementedEmbeddingsDBServiceServer) QueryRecords(context.Context, *QueryRecordsRequest) (*QueryRecordsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryRecords not implemented")
+func (UnimplementedEmbeddingsDBServiceServer) SimilarRecords(context.Context, *SimilarRecordsRequest) (*SimilarRecordsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SimilarRecords not implemented")
 }
-func (UnimplementedEmbeddingsDBServiceServer) QueryRecordsById(context.Context, *QueryRecordsByIdRequest) (*QueryRecordsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryRecordsById not implemented")
+func (UnimplementedEmbeddingsDBServiceServer) SimilarRecordsById(context.Context, *SimilarRecordsByIdRequest) (*SimilarRecordsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SimilarRecordsById not implemented")
 }
 func (UnimplementedEmbeddingsDBServiceServer) mustEmbedUnimplementedEmbeddingsDBServiceServer() {}
 
@@ -155,38 +155,38 @@ func _EmbeddingsDBService_GetRecord_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _EmbeddingsDBService_QueryRecords_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryRecordsRequest)
+func _EmbeddingsDBService_SimilarRecords_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SimilarRecordsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(EmbeddingsDBServiceServer).QueryRecords(ctx, in)
+		return srv.(EmbeddingsDBServiceServer).SimilarRecords(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: EmbeddingsDBService_QueryRecords_FullMethodName,
+		FullMethod: EmbeddingsDBService_SimilarRecords_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmbeddingsDBServiceServer).QueryRecords(ctx, req.(*QueryRecordsRequest))
+		return srv.(EmbeddingsDBServiceServer).SimilarRecords(ctx, req.(*SimilarRecordsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _EmbeddingsDBService_QueryRecordsById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryRecordsByIdRequest)
+func _EmbeddingsDBService_SimilarRecordsById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SimilarRecordsByIdRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(EmbeddingsDBServiceServer).QueryRecordsById(ctx, in)
+		return srv.(EmbeddingsDBServiceServer).SimilarRecordsById(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: EmbeddingsDBService_QueryRecordsById_FullMethodName,
+		FullMethod: EmbeddingsDBService_SimilarRecordsById_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmbeddingsDBServiceServer).QueryRecordsById(ctx, req.(*QueryRecordsByIdRequest))
+		return srv.(EmbeddingsDBServiceServer).SimilarRecordsById(ctx, req.(*SimilarRecordsByIdRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -207,12 +207,12 @@ var EmbeddingsDBService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EmbeddingsDBService_GetRecord_Handler,
 		},
 		{
-			MethodName: "QueryRecords",
-			Handler:    _EmbeddingsDBService_QueryRecords_Handler,
+			MethodName: "SimilarRecords",
+			Handler:    _EmbeddingsDBService_SimilarRecords_Handler,
 		},
 		{
-			MethodName: "QueryRecordsById",
-			Handler:    _EmbeddingsDBService_QueryRecordsById_Handler,
+			MethodName: "SimilarRecordsById",
+			Handler:    _EmbeddingsDBService_SimilarRecordsById_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

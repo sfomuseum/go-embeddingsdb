@@ -6,24 +6,18 @@ option go_package = "github.com/sfomuseum/go-embeddingsdb/grpc";
 service EmbeddingsDBService {
     rpc AddRecord(AddRecordRequest) returns (AddRecordResponse) {}
     rpc GetRecord(GetRecordRequest) returns (GetRecordResponse) {}
-    rpc QueryRecords(QueryRecordsRequest) returns (QueryRecordsResponse) {}
-    rpc QueryRecordsById(QueryRecordsByIdRequest) returns (QueryRecordsResponse) {}
+    rpc SimilarRecords(SimilarRecordsRequest) returns (SimilarRecordsResponse) {}
+    rpc SimilarRecordsById(SimilarRecordsByIdRequest) returns (SimilarRecordsResponse) {}
 }
 
 message EmbeddingsDBRecord {
-    int64 depiction_id = 1;
-    int64 subject_id = 2;
-    string model = 3;
-    int32 dimensions = 4;
-    string content = 5;
-    repeated float embeddings = 6;
+    string provider = 1;
+    string depiction_id = 2;
+    string subject_id = 3;
+    string model = 4;
+    repeated float embeddings = 5;
+    map<string, string> attributes = 6;
     int64 created = 7;
-}
-
-message EmbeddingsDBQueryResult {
-    int64 depiction_id = 1;
-    int64 subject_id = 2;
-    float similarity = 3;
 }
 
 message AddRecordRequest {
@@ -32,24 +26,36 @@ message AddRecordRequest {
 
 message AddRecordResponse {}
 
-message QueryRecordsRequest {
-    EmbeddingsDBRecord record = 1;
-}
-
-message QueryRecordsByIdRequest {
-    int64 depiction_id = 1;
-    string model = 2;
-}
-
-message QueryRecordsResponse {
-    repeated EmbeddingsDBQueryResult records = 1;
-}
-
 message GetRecordRequest {
-    int64 depiction_id = 1;
-    string model = 2;
+    string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
 }
 
 message GetRecordResponse {
     EmbeddingsDBRecord record = 1;
+}
+
+message SimilarRecordsRequest {
+    optional string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
+    repeated float embeddings = 4;
+}
+
+message SimilarRecordsByIdRequest {
+    optional string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
+}
+
+message SimilarRecordsResponse {
+    repeated SimilarRecord records = 1;
+}
+
+message SimilarRecord {
+    string provider = 1;
+    string depiction_id = 2;
+    string subject_id = 3;
+    float similarity = 4;
 }
