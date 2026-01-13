@@ -42,7 +42,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n\t%s [command] [options]\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "Valid commands are:\n")
 	fmt.Fprintf(os.Stderr, "* record [options]\n")
-	fmt.Fprintf(os.Stderr, "* query-by-id [options]\n")		
+	fmt.Fprintf(os.Stderr, "* query-by-id [options]\n")
 	flag.PrintDefaults()
 
 	os.Exit(1)
@@ -51,22 +51,24 @@ func usage() {
 func record(args []string) {
 
 	var client_uri string
-	var depiction_id int64
+	var provider string
+	var depiction_id string
 	var model string
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
-	fs.Int64Var(&depiction_id, "depiction_id", 0, "...")
+	fs.StringVar(&provider, "provider", "", "...")
+	fs.StringVar(&depiction_id, "depiction_id", "", "...")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the MobileCLIP model to use to derive embeddings. Valid options are: s0, s1, s2, blt")
 
-	fs.Usage = func(){
+	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving a record from a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "record")
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	fs.Parse(args)
 
 	ctx := context.Background()
@@ -77,7 +79,7 @@ func record(args []string) {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	rsp, err := cl.GetRecord(ctx, depiction_id, model)
+	rsp, err := cl.GetRecord(ctx, provider, depiction_id, model)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)
@@ -90,22 +92,24 @@ func record(args []string) {
 func queryById(args []string) {
 
 	var client_uri string
-	var depiction_id int64
+	var provider string
+	var depiction_id string
 	var model string
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
-	fs.Int64Var(&depiction_id, "depiction_id", 0, "...")
+	fs.StringVar(&provider, "provider", "", "...")
+	fs.StringVar(&depiction_id, "depiction_id", "", "...")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the MobileCLIP model to use to derive embeddings. Valid options are: s0, s1, s2, blt")
 
-	fs.Usage = func(){
+	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "query-by-id")
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	fs.Parse(args)
 
 	ctx := context.Background()
@@ -116,7 +120,7 @@ func queryById(args []string) {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	rsp, err := cl.QueryRecordsById(ctx, depiction_id, model)
+	rsp, err := cl.QueryRecordsById(ctx, provider, depiction_id, model)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)

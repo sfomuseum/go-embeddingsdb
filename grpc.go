@@ -124,9 +124,10 @@ func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *Record) 
 	return nil
 }
 
-func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int64, model string) (*Record, error) {
+func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*Record, error) {
 
 	req := &embeddingsdb_grpc.GetRecordRequest{
+		Provider:    provider,
 		DepictionId: depiction_id,
 		Model:       model,
 	}
@@ -140,31 +141,32 @@ func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int
 	return e.embeddingsRecordToRecord(rsp.Record), nil
 }
 
-func (e *GrpcEmbeddingsDBClient) QueryRecords(ctx context.Context, record *Record) ([]*QueryResult, error) {
+func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *SimilarRequest) ([]*SimilarResult, error) {
 
-	db_record := e.recordToEmbeddingsDBRecord(record)
-
-	req := &embeddingsdb_grpc.QueryRecordsRequest{
-		Record: db_record,
+	req := &embeddingsdb_grpc.SimilarRecordsRequest{
+		Provider:   req.Provider,
+		Model:      req.Model,
+		Embeddings: req.Embeddings,
 	}
 
-	rsp, err := e.client.QueryRecords(ctx, req)
+	rsp, err := e.client.SimilarRecords(ctx, req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query records, %w", err)
 	}
 
-	return e.embeddingsQueryResultsToQueryResults(rsp.Records), nil
+	return e.embeddingsSimilarResultsToSimilarResults(rsp.Records), nil
 }
 
-func (e *GrpcEmbeddingsDBClient) QueryRecordsById(ctx context.Context, depiction_id int64, model string) ([]*QueryResult, error) {
+func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*SimilarResult, error) {
 
-	req := &embeddingsdb_grpc.QueryRecordsByIdRequest{
+	req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
+		Provider:    provider,
 		DepictionId: depiction_id,
 		Model:       model,
 	}
 
-	rsp, err := e.client.QueryRecordsById(ctx, req)
+	rsp, err := e.client.SimilarRecordsById(ctx, req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query records, %w", err)
@@ -173,14 +175,15 @@ func (e *GrpcEmbeddingsDBClient) QueryRecordsById(ctx context.Context, depiction
 	return e.embeddingsQueryResultsToQueryResults(rsp.Records), nil
 }
 
-func (e *GrpcEmbeddingsDBClient) embeddingsQueryResultsToQueryResults(records []*embeddingsdb_grpc.EmbeddingsDBQueryResult) []*QueryResult {
+func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(records []*embeddingsdb_grpc.EmbeddingsDBSimilarResult) []*SimilarResult {
 
 	count := len(records)
-	results := make([]*QueryResult, count)
+	results := make([]*SimilarResult, count)
 
 	for idx, rec := range records {
 
-		qr := &QueryResult{
+		qr := &SimilarResult{
+			Provider:    rec.Provider,
 			DepictionId: rec.DepictionId,
 			SubjectId:   rec.SubjectId,
 			Similarity:  rec.Similarity,
@@ -202,13 +205,13 @@ func (e *GrpcEmbeddingsDBClient) recordToEmbeddingsDBRecord(record *Record) *emb
 func (e *GrpcEmbeddingsDBClient) embeddingsRecordToRecord(db_record *embeddingsdb_grpc.EmbeddingsDBRecord) *Record {
 
 	rec := &Record{
+		Provider:    db_record.Provider,
 		DepictionId: db_record.DepictionId,
 		SubjectId:   db_record.SubjectId,
 		Model:       db_record.Model,
 		Embeddings:  db_record.Embeddings,
-		Dimensions:  int(db_record.Dimensions),
+		Attributes:  db_record.Attributes,
 		Created:     db_record.Created,
-		// URI...
 	}
 
 	return rec
