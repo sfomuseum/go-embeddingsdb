@@ -110,8 +110,8 @@ func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBCli
 func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int64, model string) (any, error) {
 
 	grpc_req := &embeddingsdb_grpc.GetRecordRequest{
-		DepictionId:    depiction_id,
-		Model: model,
+		DepictionId: depiction_id,
+		Model:       model,
 	}
 
 	rsp, err := e.client.GetRecord(ctx, grpc_req)

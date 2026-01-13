@@ -1,6 +1,9 @@
 # github.com/aaronland/go-roster v1.0.0
 ## explicit; go 1.16
 github.com/aaronland/go-roster
+# github.com/sfomuseum/go-flags v0.12.1
+## explicit; go 1.22
+github.com/sfomuseum/go-flags/flagset
 # golang.org/x/net v0.47.0
 ## explicit; go 1.24.0
 golang.org/x/net/http/httpguts
