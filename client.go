@@ -11,7 +11,10 @@ import (
 )
 
 type EmbeddingsDBClient interface {
-	GetRecord(context.Context, int64, string) (any, error)
+	AddRecord(context.Context, *Record) error
+	GetRecord(context.Context, int64, string) (*Record, error)
+	QueryRecords(context.Context, *Record) ([]*QueryResult, error)
+	QueryRecordsById(context.Context, int64, string) ([]*QueryResult, error)
 }
 
 var client_roster roster.Roster

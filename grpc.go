@@ -107,7 +107,11 @@ func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBCli
 	return e, nil
 }
 
-func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int64, model string) (any, error) {
+func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *Record) error {
+	return fmt.Errorf("Not implemented.")
+}
+
+func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int64, model string) (*Record, error) {
 
 	grpc_req := &embeddingsdb_grpc.GetRecordRequest{
 		DepictionId: depiction_id,
@@ -120,5 +124,23 @@ func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int
 		return nil, fmt.Errorf("Failed to derive embeddings, %w", err)
 	}
 
-	return rsp, nil
+	rec := &Record{
+		DepictionId: rsp.Record.DepictionId,
+		SubjectId:   rsp.Record.SubjectId,
+		Model:       rsp.Record.Model,
+		Embeddings:  rsp.Record.Embeddings,
+		Dimensions:  int(rsp.Record.Dimensions),
+		Created:     rsp.Record.Created,
+		// URI...
+	}
+
+	return rec, nil
+}
+
+func (e *GrpcEmbeddingsDBClient) QueryRecords(ctx context.Context, record *Record) ([]*QueryResult, error) {
+	return nil, fmt.Errorf("Not implemented.")
+}
+
+func (e *GrpcEmbeddingsDBClient) QueryRecordsById(ctx context.Context, depiction_id int64, model string) ([]*QueryResult, error) {
+	return nil, fmt.Errorf("Not implemented.")
 }
