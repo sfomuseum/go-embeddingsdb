@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
-	_ "flag"
+	"flag"
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -16,21 +18,34 @@ func main() {
 	args := os.Args
 
 	if len(args) < 2 {
-		log.Fatal("SAD")
+		usage()
 	}
 
 	cmd := args[1]
 
 	switch cmd {
 	case "-h":
-		log.Fatal("help")
+		usage()
 	case "record":
 		record(args[2:])
-	case "query":
-		query(args[2:])
+	case "query-by-id":
+		queryById(args[2:])
 	default:
-		log.Fatal("Nope")
+		slog.Warn("Unsupported command", "command", cmd)
+		usage()
 	}
+}
+
+func usage() {
+
+	fmt.Fprintf(os.Stderr, "Command-line tool for interacting with a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
+	fmt.Fprintf(os.Stderr, "Usage:\n\t%s [command] [options]\n\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Valid commands are:\n")
+	fmt.Fprintf(os.Stderr, "* record [options]\n")
+	fmt.Fprintf(os.Stderr, "* query-by-id [options]\n")		
+	flag.PrintDefaults()
+
+	os.Exit(1)
 }
 
 func record(args []string) {
@@ -45,6 +60,13 @@ func record(args []string) {
 	fs.Int64Var(&depiction_id, "depiction_id", 0, "...")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the MobileCLIP model to use to derive embeddings. Valid options are: s0, s1, s2, blt")
 
+	fs.Usage = func(){
+		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving a record from a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "record")
+		fmt.Fprintf(os.Stderr, "Valid options are:\n")
+		fs.PrintDefaults()
+	}
+	
 	fs.Parse(args)
 
 	ctx := context.Background()
@@ -65,7 +87,7 @@ func record(args []string) {
 	enc.Encode(rsp)
 }
 
-func query(args []string) {
+func queryById(args []string) {
 
 	var client_uri string
 	var depiction_id int64
@@ -77,6 +99,13 @@ func query(args []string) {
 	fs.Int64Var(&depiction_id, "depiction_id", 0, "...")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the MobileCLIP model to use to derive embeddings. Valid options are: s0, s1, s2, blt")
 
+	fs.Usage = func(){
+		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "query-by-id")
+		fmt.Fprintf(os.Stderr, "Valid options are:\n")
+		fs.PrintDefaults()
+	}
+	
 	fs.Parse(args)
 
 	ctx := context.Background()
