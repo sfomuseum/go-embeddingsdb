@@ -108,39 +108,108 @@ func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBCli
 }
 
 func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *Record) error {
-	return fmt.Errorf("Not implemented.")
+
+	db_record := e.recordToEmbeddingsDBRecord(record)
+
+	req := &embeddingsdb_grpc.AddRecordRequest{
+		Record: db_record,
+	}
+
+	_, err := e.client.AddRecord(ctx, req)
+
+	if err != nil {
+		return fmt.Errorf("Failed to add record, %w", err)
+	}
+
+	return nil
 }
 
 func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, depiction_id int64, model string) (*Record, error) {
 
-	grpc_req := &embeddingsdb_grpc.GetRecordRequest{
+	req := &embeddingsdb_grpc.GetRecordRequest{
 		DepictionId: depiction_id,
 		Model:       model,
 	}
 
-	rsp, err := e.client.GetRecord(ctx, grpc_req)
+	rsp, err := e.client.GetRecord(ctx, req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to derive embeddings, %w", err)
 	}
 
-	rec := &Record{
-		DepictionId: rsp.Record.DepictionId,
-		SubjectId:   rsp.Record.SubjectId,
-		Model:       rsp.Record.Model,
-		Embeddings:  rsp.Record.Embeddings,
-		Dimensions:  int(rsp.Record.Dimensions),
-		Created:     rsp.Record.Created,
-		// URI...
-	}
-
-	return rec, nil
+	return e.embeddingsRecordToRecord(rsp.Record), nil
 }
 
 func (e *GrpcEmbeddingsDBClient) QueryRecords(ctx context.Context, record *Record) ([]*QueryResult, error) {
-	return nil, fmt.Errorf("Not implemented.")
+
+	db_record := e.recordToEmbeddingsDBRecord(record)
+
+	req := &embeddingsdb_grpc.QueryRecordsRequest{
+		Record: db_record,
+	}
+
+	rsp, err := e.client.QueryRecords(ctx, req)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query records, %w", err)
+	}
+
+	return e.embeddingsQueryResultsToQueryResults(rsp.Records), nil
 }
 
 func (e *GrpcEmbeddingsDBClient) QueryRecordsById(ctx context.Context, depiction_id int64, model string) ([]*QueryResult, error) {
-	return nil, fmt.Errorf("Not implemented.")
+
+	req := &embeddingsdb_grpc.QueryRecordsByIdRequest{
+		DepictionId: depiction_id,
+		Model:       model,
+	}
+
+	rsp, err := e.client.QueryRecordsById(ctx, req)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query records, %w", err)
+	}
+
+	return e.embeddingsQueryResultsToQueryResults(rsp.Records), nil
+}
+
+func (e *GrpcEmbeddingsDBClient) embeddingsQueryResultsToQueryResults(records []*embeddingsdb_grpc.EmbeddingsDBQueryResult) []*QueryResult {
+
+	count := len(records)
+	results := make([]*QueryResult, count)
+
+	for idx, rec := range records {
+
+		qr := &QueryResult{
+			DepictionId: rec.DepictionId,
+			SubjectId:   rec.SubjectId,
+			Similarity:  rec.Similarity,
+		}
+
+		results[idx] = qr
+	}
+
+	return results
+}
+
+func (e *GrpcEmbeddingsDBClient) recordToEmbeddingsDBRecord(record *Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
+
+	db_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{}
+
+	return db_rec
+}
+
+func (e *GrpcEmbeddingsDBClient) embeddingsRecordToRecord(db_record *embeddingsdb_grpc.EmbeddingsDBRecord) *Record {
+
+	rec := &Record{
+		DepictionId: db_record.DepictionId,
+		SubjectId:   db_record.SubjectId,
+		Model:       db_record.Model,
+		Embeddings:  db_record.Embeddings,
+		Dimensions:  int(db_record.Dimensions),
+		Created:     db_record.Created,
+		// URI...
+	}
+
+	return rec
 }
