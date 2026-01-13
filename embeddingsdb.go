@@ -11,7 +11,7 @@ type Record struct {
 }
 
 type SimilarRequest struct {
-	Provider   string    `json:"provider"`
+	Provider   *string   `json:"provider"`
 	Model      string    `json:"model"`
 	Embeddings []float32 `json:"embeddings"`
 }

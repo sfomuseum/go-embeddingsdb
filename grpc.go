@@ -143,13 +143,16 @@ func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, provider string,
 
 func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *SimilarRequest) ([]*SimilarResult, error) {
 
-	req := &embeddingsdb_grpc.SimilarRecordsRequest{
-		Provider:   req.Provider,
+	grpc_req := &embeddingsdb_grpc.SimilarRecordsRequest{
 		Model:      req.Model,
 		Embeddings: req.Embeddings,
 	}
 
-	rsp, err := e.client.SimilarRecords(ctx, req)
+	if req.Provider != nil {
+		grpc_req.Provider = req.Provider
+	}
+
+	rsp, err := e.client.SimilarRecords(ctx, grpc_req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query records, %w", err)
@@ -161,7 +164,7 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *Simila
 func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*SimilarResult, error) {
 
 	req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
-		Provider:    provider,
+		Provider:    &provider,
 		DepictionId: depiction_id,
 		Model:       model,
 	}
@@ -172,10 +175,10 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provide
 		return nil, fmt.Errorf("Failed to query records, %w", err)
 	}
 
-	return e.embeddingsQueryResultsToQueryResults(rsp.Records), nil
+	return e.embeddingsSimilarResultsToSimilarResults(rsp.Records), nil
 }
 
-func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(records []*embeddingsdb_grpc.EmbeddingsDBSimilarResult) []*SimilarResult {
+func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(records []*embeddingsdb_grpc.SimilarRecord) []*SimilarResult {
 
 	count := len(records)
 	results := make([]*SimilarResult, count)

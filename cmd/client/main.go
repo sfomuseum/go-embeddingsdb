@@ -120,7 +120,7 @@ func queryById(args []string) {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	rsp, err := cl.QueryRecordsById(ctx, provider, depiction_id, model)
+	rsp, err := cl.SimilarRecordsById(ctx, provider, depiction_id, model)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)
