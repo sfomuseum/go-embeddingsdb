@@ -26,6 +26,8 @@ type SimilarRequest struct {
 	Model string `json:"model"`
 	// Embeddings are the embeddings to use for querying similar records.
 	Embeddings []float32 `json:"embeddings"`
+	// Zero or more depiction IDs to explicitly exclude from results.
+	Exclude []string `json:"exclude"`
 }
 
 // SimilarResult is a struct containing properties for similar records returned from an embeddings database.
@@ -38,4 +40,6 @@ type SimilarResult struct {
 	SubjectId string `json:"subject_id"`
 	// Similarlity is the distance between the input embeddings and the result embeddings.
 	Similarity float32 `json:"similarity"`
+	// Attributes is an arbitrary map of key-value properties associated with the embeddings.
+	Attributes map[string]string `json:"attributes"`
 }

@@ -40,6 +40,7 @@ message SimilarRecordsRequest {
     optional string similar_provider = 1;
     string model = 2;
     repeated float embeddings = 3;
+    repeated string exclude = 4;
 }
 
 message SimilarRecordsByIdRequest {
@@ -58,4 +59,5 @@ message SimilarRecord {
     string depiction_id = 2;
     string subject_id = 3;
     float similarity = 4;
+    map<string, string> attributes = 5;
 }

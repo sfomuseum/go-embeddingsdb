@@ -201,6 +201,7 @@ func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(record
 			DepictionId: rec.DepictionId,
 			SubjectId:   rec.SubjectId,
 			Similarity:  rec.Similarity,
+			Attributes:  rec.Attributes,
 		}
 
 		results[idx] = qr
