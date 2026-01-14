@@ -1,0 +1,109 @@
+package client
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"sort"
+	"strings"
+
+	"github.com/aaronland/go-roster"
+	"github.com/sfomuseum/go-embeddingsdb"
+)
+
+// EmbeddingsDBClient defines an interface for clients to interact with an embeddings database.
+type EmbeddingsDBClient interface {
+	// Add a new record to an embeddings database.
+	AddRecord(context.Context, *embeddingsdb.Record) error
+	// Retrieve a specific record from an embeddings database.
+	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
+	// Retrieve records with similar embeddings from an embeddings database.
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
+	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
+	SimilarRecordsById(context.Context, string, string, string) ([]*embeddingsdb.SimilarResult, error)
+}
+
+var client_roster roster.Roster
+
+// ClientInitializationFunc is a function defined by individual client package and used to create
+// an instance of that client
+type EmbeddingsDBClientInitializationFunc func(ctx context.Context, uri string) (EmbeddingsDBClient, error)
+
+// RegisterEmbeddingsDBClient registers 'scheme' as a key pointing to 'init_func' in an internal lookup table
+// used to create new `Client` instances by the `NewEmbeddingsDBClient` method.
+func RegisterEmbeddingsDBClient(ctx context.Context, scheme string, init_func EmbeddingsDBClientInitializationFunc) error {
+
+	err := ensureClientRoster()
+
+	if err != nil {
+		return err
+	}
+
+	return client_roster.Register(ctx, scheme, init_func)
+}
+
+func ensureClientRoster() error {
+
+	if client_roster == nil {
+
+		r, err := roster.NewDefaultRoster()
+
+		if err != nil {
+			return err
+		}
+
+		client_roster = r
+	}
+
+	return nil
+}
+
+// NewClient returns a new `Client` instance configured by 'uri'. The value of 'uri' is parsed
+// as a `url.URL` and its scheme is used as the key for a corresponding `ClientInitializationFunc`
+// function used to instantiate the new `Client`. It is assumed that the scheme (and initialization
+// function) have been registered by the `RegisterClient` method.
+func NewEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBClient, error) {
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := u.Scheme
+
+	i, err := client_roster.Driver(ctx, scheme)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if i == nil {
+		return nil, fmt.Errorf("Unregistered client")
+	}
+
+	init_func := i.(EmbeddingsDBClientInitializationFunc)
+
+	return init_func(ctx, uri)
+}
+
+// Schemes returns the list of schemes that have been registered.
+func Schemes() []string {
+
+	ctx := context.Background()
+	schemes := []string{}
+
+	err := ensureClientRoster()
+
+	if err != nil {
+		return schemes
+	}
+
+	for _, dr := range client_roster.Drivers(ctx) {
+		scheme := fmt.Sprintf("%s://", strings.ToLower(dr))
+		schemes = append(schemes, scheme)
+	}
+
+	sort.Strings(schemes)
+	return schemes
+}

@@ -2,7 +2,7 @@
 
 // This is all up for debate. Just testing things right now.
 
-package embeddingsdb
+package database
 
 // https://duckdb.org/2024/05/03/vector-similarity-search-vss.html
 // https://duckdb.org/docs/api/go.html
@@ -136,7 +136,7 @@ func (db *DuckDBDatabase) Export(ctx context.Context, uri string) error {
 	return err
 }
 
-func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *Record) error {
+func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
 
 	provider := rec.Provider
 	depiction_id := rec.DepictionId
@@ -170,9 +170,9 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *Record) error {
 	return nil
 }
 
-func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *SimilarRequest) ([]*SimilarResult, error) {
+func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
 
-	results := make([]*SimilarResult, 0)
+	results := make([]*embeddingsdb.SimilarResult, 0)
 
 	embeddings, err := json.Marshal(rec.Embeddings)
 

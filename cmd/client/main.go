@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -73,7 +73,7 @@ func record(args []string) {
 
 	ctx := context.Background()
 
-	cl, err := embeddingsdb.NewEmbeddingsDBClient(ctx, client_uri)
+	cl, err := client.NewEmbeddingsDBClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
@@ -116,7 +116,7 @@ func queryById(args []string) {
 
 	ctx := context.Background()
 
-	cl, err := embeddingsdb.NewEmbeddingsDBClient(ctx, client_uri)
+	cl, err := client.NewEmbeddingsDBClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)

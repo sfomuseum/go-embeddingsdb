@@ -1,4 +1,4 @@
-package embeddingsdb
+package database
 
 // This is all up for debate. Just testing things right now.
 
@@ -10,14 +10,15 @@ import (
 	"strings"
 
 	"github.com/aaronland/go-roster"
+	"github.com/sfomuseum/go-embeddingsdb"
 )
 
 // Database defines an interface for adding and querying vector embeddings of `Record` records.
 type Database interface {
 	// Add adds a `Record` instance to the underlying database implementation.
-	AddRecord(context.Context, *Record) error
+	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Find similar records for a given model and record instance.
-	SimilarRecords(context.Context, *SimilarRequest) ([]*SimilarResult, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 	Export(context.Context, string) error
 	// Close performs and terminating functions required by the database.
