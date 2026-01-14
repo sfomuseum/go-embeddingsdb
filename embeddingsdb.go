@@ -1,24 +1,41 @@
 package embeddingsdb
 
+// Record defines a struct containing properties associated with individual records stored in an embeddings database.
 type Record struct {
-	Provider    string            `json:"provider"`
-	DepictionId string            `json:"depiction_id"`
-	SubjectId   string            `json:"subject_id"`
-	Model       string            `json:"model"`
-	Embeddings  []float32         `json:"embeddings"`
-	Created     int64             `json:"created"`
-	Attributes  map[string]string `json:"attributes"`
+	// Provider is the name (or context) of the provider responsible for DepictionId.
+	Provider string `json:"provider"`
+	// DepictionId is the unique identifier for the depiction for which embeddings have been generated.
+	DepictionId string `json:"depiction_id"`
+	// SubjectId is the unique identifier associated with the record that DepictionId depicts.
+	SubjectId string `json:"subject_id"`
+	// Model is the label for the model used to generate embeddings for DepictionId.
+	Model string `json:"model"`
+	// Embeddings are the embeddings generated for DepictionId using Model.
+	Embeddings []float32 `json:"embeddings"`
+	// Created is the Unix timestamp when Embeddings were generated.
+	Created int64 `json:"created"`
+	// Attributes is an arbitrary map of key-value properties associated with the embeddings.
+	Attributes map[string]string `json:"attributes"`
 }
 
+// SimilarRequest is a struct containing properties for retrieving records from an embeddings database.
 type SimilarRequest struct {
-	Provider   *string   `json:"provider"`
-	Model      string    `json:"model"`
+	// Provider is the name (or context) of the provider responsible for DepictionId. The property is optional.
+	Provider *string `json:"provider"`
+	// Model is the name of the model to specify when querying for similar embeddings.
+	Model string `json:"model"`
+	// Embeddings are the embeddings to use for querying similar records.
 	Embeddings []float32 `json:"embeddings"`
 }
 
+// SimilarResult is a struct containing properties for similar records returned from an embeddings database.
 type SimilarResult struct {
-	Provider    string  `json:"provider"`
-	DepictionId string  `json:"depiction_id"`
-	SubjectId   string  `json:"subject_id"`
-	Similarity  float32 `json:"similarity"`
+	// Provider is the name (or context) of the provider responsible for DepictionId.
+	Provider string `json:"provider"`
+	// DepictionID is the unique identifier	for the	depiction associated with the result.
+	DepictionId string `json:"depiction_id"`
+	// DepictionID is the unique identifier	for the	subject associated with the result depiction.
+	SubjectId string `json:"subject_id"`
+	// Similarlity is the distance between the input embeddings and the result embeddings.
+	Similarity float32 `json:"similarity"`
 }

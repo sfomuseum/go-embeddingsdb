@@ -10,10 +10,15 @@ import (
 	"github.com/aaronland/go-roster"
 )
 
+// EmbeddingsDBClient defines an interface for clients to interact with an embeddings database.
 type EmbeddingsDBClient interface {
+	// Add a new record to an embeddings database.
 	AddRecord(context.Context, *Record) error
+	// Retrieve a specific record from an embeddings database.
 	GetRecord(context.Context, string, string, string) (*Record, error)
+	// Retrieve records with similar embeddings from an embeddings database.
 	SimilarRecords(context.Context, *SimilarRequest) ([]*SimilarResult, error)
+	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
 	SimilarRecordsById(context.Context, string, string, string) ([]*SimilarResult, error)
 }
 

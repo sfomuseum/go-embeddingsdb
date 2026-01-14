@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+// GrpcEmbeddingsDBClient implements the [EmbeddingsDBClient] interface for a gRPC-based embeddings database.
 type GrpcEmbeddingsDBClient struct {
 	conn   *grpc.ClientConn
 	client embeddingsdb_grpc.EmbeddingsDBServiceClient
@@ -24,6 +25,12 @@ func init() {
 	RegisterEmbeddingsDBClient(ctx, "grpc", NewGrpcEmbeddingsDBClient)
 }
 
+// NewGrpcEmbeddingsDBClient will return a new [GrpcEmbeddingsDBClient] instance implementing the [EmbeddingsDBClient] interface
+// derived from 'uri' which is expected to take the port of:
+//
+//	grpc://{HOST}:{PORT}?{PARAMETERS}
+
+// Where {PARAMETERS} may be one or more of the following:
 func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBClient, error) {
 
 	u, err := url.Parse(uri)
@@ -107,6 +114,7 @@ func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBCli
 	return e, nil
 }
 
+// AddRecord adds 'record' to a gRPC-backed embeddings database.
 func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *Record) error {
 
 	db_record := e.recordToEmbeddingsDBRecord(record)
@@ -124,6 +132,7 @@ func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *Record) 
 	return nil
 }
 
+// GetRecord retrieves the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
 func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*Record, error) {
 
 	req := &embeddingsdb_grpc.GetRecordRequest{
@@ -141,6 +150,7 @@ func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, provider string,
 	return e.embeddingsRecordToRecord(rsp.Record), nil
 }
 
+// SimilarRecords retrieves records with embeddings similar to those defined in 'req' from a gRPC-backed embeddings database.
 func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *SimilarRequest) ([]*SimilarResult, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsRequest{
@@ -161,6 +171,7 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *Simila
 	return e.embeddingsSimilarResultsToSimilarResults(rsp.Records), nil
 }
 
+// SimilarRecordsById retrieves records with embeddings similar to those for the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
 func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*SimilarResult, error) {
 
 	req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
