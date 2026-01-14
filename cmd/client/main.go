@@ -58,9 +58,9 @@ func record(args []string) {
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
-	fs.StringVar(&provider, "provider", "", "...")
-	fs.StringVar(&depiction_id, "depiction_id", "", "...")
-	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the MobileCLIP model to use to derive embeddings. Valid options are: s0, s1, s2, blt")
+	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
+	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
+	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve.")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving a record from a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
@@ -95,13 +95,15 @@ func queryById(args []string) {
 	var provider string
 	var depiction_id string
 	var model string
+	var similar_provider string
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
-	fs.StringVar(&provider, "provider", "", "...")
-	fs.StringVar(&depiction_id, "depiction_id", "", "...")
-	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the MobileCLIP model to use to derive embeddings. Valid options are: s0, s1, s2, blt")
+	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve to establish embeddings to compare.")
+	fs.StringVar(&depiction_id, "depiction_id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
+	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
+	fs.StringVar(&similar_provider, "similar_provider", "", "The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")

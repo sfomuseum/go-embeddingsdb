@@ -158,8 +158,8 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *Simila
 		Embeddings: req.Embeddings,
 	}
 
-	if req.Provider != nil {
-		grpc_req.Provider = req.Provider
+	if req.SimilarProvider != nil {
+		grpc_req.SimilarProvider = req.SimilarProvider
 	}
 
 	rsp, err := e.client.SimilarRecords(ctx, grpc_req)
@@ -175,7 +175,7 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *Simila
 func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*SimilarResult, error) {
 
 	req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
-		Provider:    &provider,
+		Provider:    provider,
 		DepictionId: depiction_id,
 		Model:       model,
 	}

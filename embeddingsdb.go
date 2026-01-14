@@ -20,8 +20,8 @@ type Record struct {
 
 // SimilarRequest is a struct containing properties for retrieving records from an embeddings database.
 type SimilarRequest struct {
-	// Provider is the name (or context) of the provider responsible for DepictionId. The property is optional.
-	Provider *string `json:"provider"`
+	// The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.
+	SimilarProvider *string `json:"similar_provider"`
 	// Model is the name of the model to specify when querying for similar embeddings.
 	Model string `json:"model"`
 	// Embeddings are the embeddings to use for querying similar records.

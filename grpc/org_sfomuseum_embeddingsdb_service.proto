@@ -37,16 +37,16 @@ message GetRecordResponse {
 }
 
 message SimilarRecordsRequest {
-    optional string provider = 1;
-    string depiction_id = 2;
-    string model = 3;
-    repeated float embeddings = 4;
+    optional string similar_provider = 1;
+    string model = 2;
+    repeated float embeddings = 3;
 }
 
 message SimilarRecordsByIdRequest {
-    optional string provider = 1;
-    string depiction_id = 2;
-    string model = 3;
+    optional string similar_provider = 1;
+    string provider = 2;
+    string depiction_id = 3;
+    string model = 4;
 }
 
 message SimilarRecordsResponse {
