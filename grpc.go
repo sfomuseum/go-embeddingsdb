@@ -211,7 +211,15 @@ func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(record
 
 func (e *GrpcEmbeddingsDBClient) recordToEmbeddingsDBRecord(record *Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
 
-	db_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{}
+	db_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{
+		Provider:    record.Provider,
+		DepictionId: record.DepictionId,
+		SubjectId:   record.SubjectId,
+		Model:       record.Model,
+		Attributes:  record.Attributes,
+		Embeddings:  record.Embeddings,
+		Created:     record.Created,
+	}
 
 	return db_rec
 }

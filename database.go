@@ -15,7 +15,7 @@ import (
 // Database defines an interface for adding and querying vector embeddings of `Record` records.
 type Database interface {
 	// Add adds a `Record` instance to the underlying database implementation.
-	Add(context.Context, *Record) error
+	AddRecord(context.Context, *Record) error
 	// Find similar records for a given model and record instance.
 	SimilarRecords(context.Context, *SimilarRequest) ([]*SimilarResult, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.

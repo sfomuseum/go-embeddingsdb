@@ -17,6 +17,7 @@ import (
 	"log/slog"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/marcboeker/go-duckdb/v2"
@@ -135,22 +136,32 @@ func (db *DuckDBDatabase) Export(ctx context.Context, uri string) error {
 	return err
 }
 
-func (db *DuckDBDatabase) Add(ctx context.Context, rec *Record) error {
+func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *Record) error {
 
+	provider := rec.Provider
 	depiction_id := rec.DepictionId
 	subject_id := rec.SubjectId
-	content := rec.URI
 	model := rec.Model
+	created := rec.Created
 
-	v, err := json.Marshal(rec.Embeddings)
+	now := time.Now()
+	lastmod := now.Unix()
+
+	embeddings, err := json.Marshal(rec.Embeddings)
 
 	if err != nil {
 		return fmt.Errorf("Failed to marshal embeddings for ID %s, %w", depiction_id, err)
 	}
 
-	q := "INSERT OR REPLACE INTO embeddings (depiction_id, subject_id, model, content, vec) VALUES (?, ?, ?, ?, ?)"
+	attributes, err := json.Marshal(rec.Attributes)
 
-	_, err = db.vec_db.ExecContext(ctx, q, depiction_id, subject_id, model, content, string(v), subject_id, model, content, string(v))
+	if err != nil {
+		return fmt.Errorf("Failed to marshal attributes for ID %s, %w", depiction_id, err)
+	}
+
+	q := "INSERT OR REPLACE INTO embeddings (provider, depiction_id, subject_id, model, attributes, vec, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+
+	_, err = db.vec_db.ExecContext(ctx, q, provider, depiction_id, subject_id, model, string(attributes), string(embeddings), created, lastmod)
 
 	if err != nil {
 		return fmt.Errorf("Failed to add embeddings for %s, %w", depiction_id, err)
@@ -159,53 +170,44 @@ func (db *DuckDBDatabase) Add(ctx context.Context, rec *Record) error {
 	return nil
 }
 
-func (db *DuckDBDatabase) Models(ctx context.Context) ([]string, error) {
+func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *SimilarRequest) ([]*SimilarResult, error) {
 
-	q := "SELECT DISTINCT(model) AS model FROM embeddings"
+	results := make([]*SimilarResult, 0)
 
-	rows, err := db.vec_db.QueryContext(ctx, q)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to execute query (%s), %w", q, err)
-	}
-
-	models := make([]string, 0)
-
-	for rows.Next() {
-
-		var model string
-
-		err = rows.Scan(&model)
-
-		if err != nil {
-			return nil, fmt.Errorf("Failed to scan row, %w", err)
-		}
-
-		models = append(models, model)
-	}
-
-	return models, nil
-}
-
-func (db *DuckDBDatabase) Similar(ctx context.Context, rec *Record) ([]*QueryResult, error) {
-
-	results := make([]*QueryResult, 0)
-
-	v, err := json.Marshal(rec.Embeddings)
+	embeddings, err := json.Marshal(rec.Embeddings)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to serialize query, %w", err)
 	}
 
-	q := fmt.Sprintf(`SELECT depiction_id, subject_id, content, array_distance(vec, ?::FLOAT[%d]) AS distance
-			  FROM embeddings WHERE depiction_id != ? AND model == ? AND distance <= ? ORDER BY distance ASC LIMIT %d`,
-		db.dimensions, db.max_results)
+	conditions := make([]string, 0)
+
+	args := []any{
+		string(embeddings),
+	}
+
+	if rec.SimilarProvider != nil {
+		conditions = append(conditions, "provider = ?")
+		args = append(args, &rec.SimilarProvider)
+	}
+
+	conditions = append(conditions, "model == ?")
+	args = append(args, rec.Model)
+
+	conditions = append(conditions, "distance <= ?")
+	args = append(args, db.max_distance)
+
+	str_conditions := strings.Join(conditions, " AND ")
+
+	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, array_distance(vec, ?::FLOAT[%d]) AS distance
+			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
+		str_conditions, db.dimensions, db.max_results)
 
 	slog.Debug(q)
 
 	t1 := time.Now()
 
-	rows, err := db.vec_db.QueryContext(ctx, q, string(v), rec.DepictionId, rec.Model, db.max_distance)
+	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to execute query (%s), %w", q, err)
@@ -215,25 +217,23 @@ func (db *DuckDBDatabase) Similar(ctx context.Context, rec *Record) ([]*QueryRes
 
 	for rows.Next() {
 
+		var provider string
 		var depiction_id string
 		var subject_id string
-		var content string
 		var distance float64
 
-		err = rows.Scan(&depiction_id, &subject_id, &content, &distance)
+		err = rows.Scan(&provider, &depiction_id, &subject_id, &distance)
 
 		if err != nil {
 			return nil, fmt.Errorf("Failed to scan row, %w", err)
 		}
 
-		r := &QueryResult{
+		r := &SimilarResult{
+			Provider:    provider,
 			SubjectId:   subject_id,
 			DepictionId: depiction_id,
-			Content:     content,
 			Similarity:  float32(distance),
 		}
-
-		slog.Debug("Result", "depiction id", depiction_id, "content", content, "distance", distance)
 
 		results = append(results, r)
 	}
@@ -241,10 +241,6 @@ func (db *DuckDBDatabase) Similar(ctx context.Context, rec *Record) ([]*QueryRes
 	slog.Debug("Query rows", "time", time.Since(t1))
 
 	return results, nil
-}
-
-func (db *DuckDBDatabase) Flush(ctx context.Context) error {
-	return nil
 }
 
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
@@ -267,8 +263,11 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, path string, dimension
 	if path != "" {
 		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", path))
 	} else {
-		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(depiction_id INTEGER, subject_id INTEGER, model TEXT, content TEXT, vec FLOAT[%d])", dimensions))
-		cmds = append(cmds, "CREATE UNIQUE INDEX id_model ON embeddings (depiction_id, model)")
+		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes JSON, vec FLOAT[%d], created BIGINT, lastmodified BIGINT", dimensions))
+		cmds = append(cmds, "CREATE UNIQUE INDEX id_model ON embeddings (provider, depiction_id, model)")
+		cmds = append(cmds, "CREATE INDEX by_provider ON embeddings (provider, model, created)")
+		cmds = append(cmds, "CREATE INDEX by_model ON embeddings (model, provider, created)")
+		cmds = append(cmds, "CREATE INDEX by_lastmod ON embeddings (lastmodified)")
 		cmds = append(cmds, "CREATE INDEX idx ON embeddings USING HNSW (vec)")
 	}
 
