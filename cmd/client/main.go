@@ -28,8 +28,8 @@ func main() {
 		usage()
 	case "record":
 		record(args[2:])
-	case "query-by-id":
-		queryById(args[2:])
+	case "similar-by-id":
+		similarById(args[2:])
 	default:
 		slog.Warn("Unsupported command", "command", cmd)
 		usage()
@@ -42,7 +42,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n\t%s [command] [options]\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "Valid commands are:\n")
 	fmt.Fprintf(os.Stderr, "* record [options]\n")
-	fmt.Fprintf(os.Stderr, "* query-by-id [options]\n")
+	fmt.Fprintf(os.Stderr, "* similar-by-id [options]\n")
 	flag.PrintDefaults()
 
 	os.Exit(1)
@@ -89,7 +89,7 @@ func record(args []string) {
 	enc.Encode(rsp)
 }
 
-func queryById(args []string) {
+func similarById(args []string) {
 
 	var client_uri string
 	var provider string
@@ -101,13 +101,13 @@ func queryById(args []string) {
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve to establish embeddings to compare.")
-	fs.StringVar(&depiction_id, "depiction_id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
+	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
-	fs.StringVar(&similar_provider, "similar_provider", "", "The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.")
+	fs.StringVar(&similar_provider, "similar-provider", "", "The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
-		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "query-by-id")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "similar-by-id")
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}

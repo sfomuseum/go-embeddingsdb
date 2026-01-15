@@ -201,7 +201,7 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depict
 	}
 
 	// Thanks for making things weird, DuckDB...
-	
+
 	embeddings := make([]float32, len(placeholder_embeddings))
 
 	for idx, v := range placeholder_embeddings {
@@ -281,7 +281,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 		var attributes map[string]string
 
 		err = json.Unmarshal([]byte(placeholder_attributes), &attributes)
-		
+
 		if err != nil {
 			return nil, err
 		}

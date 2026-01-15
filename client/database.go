@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	
+
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
