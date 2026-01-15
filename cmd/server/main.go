@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"log"
-	
-	"github.com/sfomuseum/go-flags/flagset"	
+
 	"github.com/sfomuseum/go-embeddingsdb/server"
+	"github.com/sfomuseum/go-flags/flagset"
 )
 
 func main() {
@@ -32,4 +32,3 @@ func main() {
 		log.Fatalf("Failed to start server, %v", err)
 	}
 }
-	
