@@ -54,6 +54,7 @@ func record(args []string) {
 	var provider string
 	var depiction_id string
 	var model string
+	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
 
@@ -61,6 +62,7 @@ func record(args []string) {
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve.")
+	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving a record from a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
@@ -72,6 +74,11 @@ func record(args []string) {
 	fs.Parse(args)
 
 	ctx := context.Background()
+
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+		slog.Debug("Verbose logging enabled")
+	}
 
 	cl, err := client.NewEmbeddingsDBClient(ctx, client_uri)
 
@@ -96,6 +103,7 @@ func similarById(args []string) {
 	var depiction_id string
 	var model string
 	var similar_provider string
+	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
 
@@ -104,6 +112,7 @@ func similarById(args []string) {
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&similar_provider, "similar-provider", "", "The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.")
+	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
@@ -115,6 +124,11 @@ func similarById(args []string) {
 	fs.Parse(args)
 
 	ctx := context.Background()
+
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+		slog.Debug("Verbose logging enabled")
+	}
 
 	cl, err := client.NewEmbeddingsDBClient(ctx, client_uri)
 

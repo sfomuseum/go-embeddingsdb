@@ -25,6 +25,25 @@ func GrpcSimilarRecordsToEmbeddingDBSimilarResults(records []*embeddingsdb_grpc.
 	return results
 }
 
+func EmbeddingsDBSimilarResultsToGrpcSimilarRecords(results []*SimilarResult) []*embeddingsdb_grpc.SimilarRecord {
+
+	count := len(results)
+	records := make([]*embeddingsdb_grpc.SimilarRecord, count)
+
+	for idx, result := range results {
+
+		records[idx] = &embeddingsdb_grpc.SimilarRecord{
+			Provider:    result.Provider,
+			DepictionId: result.DepictionId,
+			SubjectId:   result.SubjectId,
+			Similarity:  result.Similarity,
+			Attributes:  result.Attributes,
+		}
+	}
+
+	return records
+}
+
 func EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(record *Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
 
 	grpc_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{

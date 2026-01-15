@@ -26,6 +26,7 @@ import (
 )
 
 type DuckDBDatabase struct {
+	Database
 	// The underlying SQLite database used to store and query embeddings.
 	vec_db *sql.DB
 	// ...
