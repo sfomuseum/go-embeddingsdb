@@ -4,6 +4,36 @@ import (
 	embeddingsdb_grpc "github.com/sfomuseum/go-embeddingsdb/grpc"
 )
 
+func EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(record *Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
+
+	grpc_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{
+		Provider:    record.Provider,
+		DepictionId: record.DepictionId,
+		SubjectId:   record.SubjectId,
+		Model:       record.Model,
+		Attributes:  record.Attributes,
+		Embeddings:  record.Embeddings,
+		Created:     record.Created,
+	}
+
+	return grpc_rec
+}
+
+func GrpcEmbeddingsRecordToEmbeddingsDBRecord(grpc_record *embeddingsdb_grpc.EmbeddingsDBRecord) *Record {
+
+	record := &Record{
+		Provider:    grpc_record.Provider,
+		DepictionId: grpc_record.DepictionId,
+		SubjectId:   grpc_record.SubjectId,
+		Model:       grpc_record.Model,
+		Embeddings:  grpc_record.Embeddings,
+		Attributes:  grpc_record.Attributes,
+		Created:     grpc_record.Created,
+	}
+
+	return record
+}
+
 func GrpcSimilarRecordsToEmbeddingDBSimilarResults(records []*embeddingsdb_grpc.SimilarRecord) []*SimilarResult {
 
 	count := len(records)
@@ -42,34 +72,4 @@ func EmbeddingsDBSimilarResultsToGrpcSimilarRecords(results []*SimilarResult) []
 	}
 
 	return records
-}
-
-func EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(record *Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
-
-	grpc_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{
-		Provider:    record.Provider,
-		DepictionId: record.DepictionId,
-		SubjectId:   record.SubjectId,
-		Model:       record.Model,
-		Attributes:  record.Attributes,
-		Embeddings:  record.Embeddings,
-		Created:     record.Created,
-	}
-
-	return grpc_rec
-}
-
-func GrpcEmbeddingsRecordToEmbeddingsDBRecord(grpc_record *embeddingsdb_grpc.EmbeddingsDBRecord) *Record {
-
-	record := &Record{
-		Provider:    grpc_record.Provider,
-		DepictionId: grpc_record.DepictionId,
-		SubjectId:   grpc_record.SubjectId,
-		Model:       grpc_record.Model,
-		Embeddings:  grpc_record.Embeddings,
-		Attributes:  grpc_record.Attributes,
-		Created:     grpc_record.Created,
-	}
-
-	return record
 }

@@ -119,10 +119,10 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 // AddRecord adds 'record' to a gRPC-backed embeddings database.
 func (e *GrpcClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
 
-	db_record := e.recordToEmbeddingsDBRecord(record)
+	grpc_record := embeddingsdb.EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(record)
 
 	req := &embeddingsdb_grpc.AddRecordRequest{
-		Record: db_record,
+		Record: grpc_record,
 	}
 
 	_, err := e.client.AddRecord(ctx, req)
@@ -149,7 +149,9 @@ func (e *GrpcClient) GetRecord(ctx context.Context, provider string, depiction_i
 		return nil, fmt.Errorf("Failed to derive embeddings, %w", err)
 	}
 
-	return e.embeddingsRecordToRecord(rsp.Record), nil
+	record := embeddingsdb.GrpcEmbeddingsRecordToEmbeddingsDBRecord(rsp.Record)
+
+	return record, nil
 }
 
 // SimilarRecords retrieves records with embeddings similar to those defined in 'req' from a gRPC-backed embeddings database.
@@ -170,7 +172,8 @@ func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.Simil
 		return nil, fmt.Errorf("Failed to query records, %w", err)
 	}
 
-	return e.embeddingsSimilarResultsToSimilarResults(rsp.Records), nil
+	results := embeddingsdb.GrpcSimilarRecordsToEmbeddingDBSimilarResults(rsp.Records)
+	return results, nil
 }
 
 // SimilarRecordsById retrieves records with embeddings similar to those for the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
@@ -188,56 +191,6 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, provider string, de
 		return nil, fmt.Errorf("Failed to query records, %w", err)
 	}
 
-	return e.embeddingsSimilarResultsToSimilarResults(rsp.Records), nil
-}
-
-func (e *GrpcClient) embeddingsSimilarResultsToSimilarResults(records []*embeddingsdb_grpc.SimilarRecord) []*embeddingsdb.SimilarResult {
-
-	count := len(records)
-	results := make([]*embeddingsdb.SimilarResult, count)
-
-	for idx, rec := range records {
-
-		qr := &embeddingsdb.SimilarResult{
-			Provider:    rec.Provider,
-			DepictionId: rec.DepictionId,
-			SubjectId:   rec.SubjectId,
-			Similarity:  rec.Similarity,
-			Attributes:  rec.Attributes,
-		}
-
-		results[idx] = qr
-	}
-
-	return results
-}
-
-func (e *GrpcClient) recordToEmbeddingsDBRecord(record *embeddingsdb.Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
-
-	db_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{
-		Provider:    record.Provider,
-		DepictionId: record.DepictionId,
-		SubjectId:   record.SubjectId,
-		Model:       record.Model,
-		Attributes:  record.Attributes,
-		Embeddings:  record.Embeddings,
-		Created:     record.Created,
-	}
-
-	return db_rec
-}
-
-func (e *GrpcClient) embeddingsRecordToRecord(db_record *embeddingsdb_grpc.EmbeddingsDBRecord) *embeddingsdb.Record {
-
-	rec := &embeddingsdb.Record{
-		Provider:    db_record.Provider,
-		DepictionId: db_record.DepictionId,
-		SubjectId:   db_record.SubjectId,
-		Model:       db_record.Model,
-		Embeddings:  db_record.Embeddings,
-		Attributes:  db_record.Attributes,
-		Created:     db_record.Created,
-	}
-
-	return rec
+	results := embeddingsdb.GrpcSimilarRecordsToEmbeddingDBSimilarResults(rsp.Records)
+	return results, nil
 }
