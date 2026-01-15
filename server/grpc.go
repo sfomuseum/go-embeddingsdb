@@ -5,59 +5,63 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/url"
 
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
 	core "google.golang.org/grpc"
 )
 
-type grpcService struct {
-	grpc.EmbeddingsDBServiceServer
-	db database.Database
-}
-
-func (s *GrpcServer) AddRecord(context.Context, *grpc.AddRecordRequest) (*grpc.AddRecordResponse, error) {
-	return nil, fmt.Errorf("Not implemented")
-}
-
-func (s *GrpcServer) GetRecord(context.Context, *grpc.GetRecordRequest) (*grpc.GetRecordResponse, error) {
-	return nil, fmt.Errorf("Not implemented")
-}
-
-func (s *GrpcServer) SimilarRecords(context.Context, *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
-	return nil, fmt.Errorf("Not implemented")
-}
-
-func (s *GrpcServer) SimilarRecordsById(context.Context, *grpc.SimilarRecordsByIdRequest) (*grpc.SimilarRecordsResponse, error) {
-	return nil, fmt.Errorf("Not implemented")
-}
-
-type GrpcServer struct {
-	Server
+type GrpcEmbeddingsDBServer struct {
+	EmbeddingsDBServer
 	host    string
-	port    int
+	port    string
 	service grpc.EmbeddingsDBServiceServer
 }
 
-func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
+func init() {
+	
+	ctx := context.Background()
+	err := RegisterEmbeddingsDBServer(ctx, "grpc", NewGrpcEmbeddingsDBServer)
 
-	s := &GrpcServer{}
+	if err != nil {
+		panic(err)
+	}
+}
+
+func NewGrpcEmbeddingsDBServer(ctx context.Context, uri string) (EmbeddingsDBServer, error) {
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse URI, %w", err)
+	}
+
+	host := u.Hostname()
+	port := u.Port()
+
+	svc := &grpcService{}
+
+	s := &GrpcEmbeddingsDBServer{
+		host:    host,
+		port:    port,
+		service: svc,
+	}
 
 	return s, nil
 }
 
-func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
+func (s *GrpcEmbeddingsDBServer) ListenAndServe(ctx context.Context) error {
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.host, s.port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", s.host, s.port))
 
 	if err != nil {
 		return err
 	}
 
 	svr := core.NewServer()
-	svc := grpcService{}
 
-	grpc.RegisterEmbeddingsDBServiceServer(svr, svc)
+	grpc.RegisterEmbeddingsDBServiceServer(svr, s.service)
 
 	slog.Info("Server listening", "address", lis.Addr())
 	err = svr.Serve(lis)
@@ -68,3 +72,25 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 	return nil
 }
+
+type grpcService struct {
+	grpc.EmbeddingsDBServiceServer
+	db database.Database
+}
+
+func (s *grpcService) AddRecord(context.Context, *grpc.AddRecordRequest) (*grpc.AddRecordResponse, error) {
+	return nil, fmt.Errorf("Not implemented")
+}
+
+func (s *grpcService) GetRecord(context.Context, *grpc.GetRecordRequest) (*grpc.GetRecordResponse, error) {
+	return nil, fmt.Errorf("Not implemented")
+}
+
+func (s *grpcService) SimilarRecords(context.Context, *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
+	return nil, fmt.Errorf("Not implemented")
+}
+
+func (s *grpcService) SimilarRecordsById(context.Context, *grpc.SimilarRecordsByIdRequest) (*grpc.SimilarRecordsResponse, error) {
+	return nil, fmt.Errorf("Not implemented")
+}
+

@@ -4,6 +4,7 @@ TAGS=null
 
 cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
 
 # https://developers.google.com/protocol-buffers/docs/reference/go-generated
 # go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
