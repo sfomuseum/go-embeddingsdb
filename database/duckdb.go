@@ -177,7 +177,7 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 
 func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
 
-	q := "SELECT subject_id, attributes::TEXT, vec, created FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
+	q := "SELECT subject_id, attributes, vec, created FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
 	row := db.vec_db.QueryRowContext(ctx, q, provider, depiction_id, model)
 
@@ -192,8 +192,6 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depict
 		return nil, err
 	}
 
-	slog.Info("WTAF", "attrs", placeholder_attributes)
-
 	var attributes map[string]string
 
 	err = json.Unmarshal([]byte(placeholder_attributes), &attributes)
@@ -202,6 +200,8 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depict
 		return nil, err
 	}
 
+	// Thanks for making things weird, DuckDB...
+	
 	embeddings := make([]float32, len(placeholder_embeddings))
 
 	for idx, v := range placeholder_embeddings {
@@ -254,8 +254,6 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
 		db.dimensions, str_conditions, db.max_results)
 
-	// slog.Info("WTF", "q", q)
-
 	t1 := time.Now()
 
 	rows, err := db.vec_db.QueryContext(ctx, q, args...)
@@ -271,7 +269,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 		var provider string
 		var depiction_id string
 		var subject_id string
-		var placeholder_attributes map[string]interface{}
+		var placeholder_attributes string
 		var distance float64
 
 		err = rows.Scan(&provider, &depiction_id, &subject_id, &placeholder_attributes, &distance)
@@ -280,10 +278,12 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 			return nil, fmt.Errorf("Failed to scan row, %w", err)
 		}
 
-		attributes := make(map[string]string)
+		var attributes map[string]string
 
-		for k, v := range placeholder_attributes {
-			attributes[k] = v.(string)
+		err = json.Unmarshal([]byte(placeholder_attributes), &attributes)
+		
+		if err != nil {
+			return nil, err
 		}
 
 		r := &embeddingsdb.SimilarResult{
@@ -343,7 +343,7 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, path string, dimension
 	if path != "" {
 		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", path))
 	} else {
-		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes JSON, vec FLOAT[%d], created BIGINT, lastmodified BIGINT", dimensions))
+		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes TEXT, vec FLOAT[%d], created BIGINT, lastmodified BIGINT", dimensions))
 		cmds = append(cmds, "CREATE UNIQUE INDEX id_model ON embeddings (provider, depiction_id, model)")
 		cmds = append(cmds, "CREATE INDEX by_provider ON embeddings (provider, model, created)")
 		cmds = append(cmds, "CREATE INDEX by_model ON embeddings (model, provider, created)")
