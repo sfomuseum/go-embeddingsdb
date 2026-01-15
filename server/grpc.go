@@ -14,8 +14,8 @@ import (
 	core "google.golang.org/grpc"
 )
 
-type GrpcEmbeddingsDBServer struct {
-	EmbeddingsDBServer
+type GrpcServer struct {
+	Server
 	host   string
 	port   string
 	db_uri string
@@ -24,14 +24,14 @@ type GrpcEmbeddingsDBServer struct {
 func init() {
 
 	ctx := context.Background()
-	err := RegisterEmbeddingsDBServer(ctx, "grpc", NewGrpcEmbeddingsDBServer)
+	err := RegisterServer(ctx, "grpc", NewGrpcServer)
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-func NewGrpcEmbeddingsDBServer(ctx context.Context, uri string) (EmbeddingsDBServer, error) {
+func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 
 	u, err := url.Parse(uri)
 
@@ -50,7 +50,7 @@ func NewGrpcEmbeddingsDBServer(ctx context.Context, uri string) (EmbeddingsDBSer
 
 	db_uri := q.Get("database-uri")
 
-	s := &GrpcEmbeddingsDBServer{
+	s := &GrpcServer{
 		host:   host,
 		port:   port,
 		db_uri: db_uri,
@@ -59,7 +59,7 @@ func NewGrpcEmbeddingsDBServer(ctx context.Context, uri string) (EmbeddingsDBSer
 	return s, nil
 }
 
-func (s *GrpcEmbeddingsDBServer) ListenAndServe(ctx context.Context) error {
+func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 	slog.Debug("Set up database")
 
@@ -139,7 +139,7 @@ func (s *GrpcEmbeddingsDBServer) ListenAndServe(ctx context.Context) error {
 	svc := &grpcService{
 		db: db,
 	}
-	
+
 	svr := core.NewServer()
 	grpc.RegisterEmbeddingsDBServiceServer(svr, svc)
 

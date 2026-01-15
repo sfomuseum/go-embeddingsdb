@@ -13,9 +13,9 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
-// Database defines an interface for adding and querying vector embeddings of `Record` records.
+// Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
-	// Add adds a `Record` instance to the underlying database implementation.
+	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
@@ -23,9 +23,9 @@ type Database interface {
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 	Export(context.Context, string) error
-	// ..
+	// Return the Unix timestamp of the last update to the Database instance.
 	LastUpdate(context.Context) (int64, error)
-	// ...
+	// Return the URI string used to instantiate the Database instance.
 	URI() string
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error

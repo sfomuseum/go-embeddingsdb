@@ -10,7 +10,9 @@ import (
 	"github.com/aaronland/go-roster"
 )
 
-type EmbeddingsDBServer interface {
+// Server defines an interface for a network-based interface for interacting with an embeddings database.
+type Server interface {
+	// ListenAndServe starts a new server and listens for requests.
 	ListenAndServe(context.Context) error
 }
 
@@ -18,11 +20,11 @@ var server_roster roster.Roster
 
 // ServerInitializationFunc is a function defined by individual server package and used to create
 // an instance of that server
-type EmbeddingsDBServerInitializationFunc func(ctx context.Context, uri string) (EmbeddingsDBServer, error)
+type ServerInitializationFunc func(ctx context.Context, uri string) (Server, error)
 
-// RegisterEmbeddingsDBServer registers 'scheme' as a key pointing to 'init_func' in an internal lookup table
-// used to create new `Server` instances by the `NewEmbeddingsDBServer` method.
-func RegisterEmbeddingsDBServer(ctx context.Context, scheme string, init_func EmbeddingsDBServerInitializationFunc) error {
+// RegisterServer registers 'scheme' as a key pointing to 'init_func' in an internal lookup table
+// used to create new `Server` instances by the `NewServer` method.
+func RegisterServer(ctx context.Context, scheme string, init_func ServerInitializationFunc) error {
 
 	err := ensureServerRoster()
 
@@ -53,7 +55,7 @@ func ensureServerRoster() error {
 // as a `url.URL` and its scheme is used as the key for a corresponding `ServerInitializationFunc`
 // function used to instantiate the new `Server`. It is assumed that the scheme (and initialization
 // function) have been registered by the `RegisterServer` method.
-func NewEmbeddingsDBServer(ctx context.Context, uri string) (EmbeddingsDBServer, error) {
+func NewServer(ctx context.Context, uri string) (Server, error) {
 
 	u, err := url.Parse(uri)
 
@@ -73,7 +75,7 @@ func NewEmbeddingsDBServer(ctx context.Context, uri string) (EmbeddingsDBServer,
 		return nil, fmt.Errorf("Unregistered server")
 	}
 
-	init_func := i.(EmbeddingsDBServerInitializationFunc)
+	init_func := i.(ServerInitializationFunc)
 
 	return init_func(ctx, uri)
 }

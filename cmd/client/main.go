@@ -80,7 +80,7 @@ func record(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewEmbeddingsDBClient(ctx, client_uri)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
@@ -130,7 +130,7 @@ func similarById(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewEmbeddingsDBClient(ctx, client_uri)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)

@@ -74,6 +74,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 		}
 
 		dimensions = v
+		slog.Debug("Reassign dimensions", "value", dimensions)
 	}
 
 	if q.Has("max-distance") {
@@ -85,6 +86,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 		}
 
 		max_distance = float32(v)
+		slog.Debug("Reassign max distance", "value", max_distance)
 	}
 
 	if q.Has("max-results") {
@@ -96,6 +98,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 		}
 
 		max_results = v
+		slog.Debug("Reassign max results", "value", max_results)
 	}
 
 	vec_db, err := sql.Open("duckdb", "")
@@ -246,6 +249,9 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 	conditions = append(conditions, "model == ?")
 	args = append(args, rec.Model)
 
+	conditions = append(conditions, "distance > 0")
+	args = append(args, db.max_distance)
+
 	conditions = append(conditions, "distance <= ?")
 	args = append(args, db.max_distance)
 
@@ -255,15 +261,11 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
 		db.dimensions, str_conditions, db.max_results)
 
-	t1 := time.Now()
-
 	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to execute query (%s), %w", q, err)
 	}
-
-	slog.Debug("Query context", "time", time.Since(t1))
 
 	for rows.Next() {
 
@@ -297,8 +299,6 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 
 		results = append(results, r)
 	}
-
-	slog.Debug("Query rows", "time", time.Since(t1))
 
 	return results, nil
 }

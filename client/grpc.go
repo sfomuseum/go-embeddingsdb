@@ -15,25 +15,25 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// GrpcEmbeddingsDBClient implements the [EmbeddingsDBClient] interface for a gRPC-based embeddings database.
-type GrpcEmbeddingsDBClient struct {
-	EmbeddingsDBClient
+// GrpcClient implements the [Client] interface for a gRPC-based embeddings database.
+type GrpcClient struct {
+	Client
 	conn   *grpc.ClientConn
 	client embeddingsdb_grpc.EmbeddingsDBServiceClient
 }
 
 func init() {
 	ctx := context.Background()
-	RegisterEmbeddingsDBClient(ctx, "grpc", NewGrpcEmbeddingsDBClient)
+	RegisterClient(ctx, "grpc", NewGrpcClient)
 }
 
-// NewGrpcEmbeddingsDBClient will return a new [GrpcEmbeddingsDBClient] instance implementing the [EmbeddingsDBClient] interface
+// NewGrpcClient will return a new [GrpcClient] instance implementing the [Client] interface
 // derived from 'uri' which is expected to take the port of:
 //
 //	grpc://{HOST}:{PORT}?{PARAMETERS}
 
 // Where {PARAMETERS} may be one or more of the following:
-func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBClient, error) {
+func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)
 
@@ -108,7 +108,7 @@ func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBCli
 
 	client := embeddingsdb_grpc.NewEmbeddingsDBServiceClient(conn)
 
-	e := &GrpcEmbeddingsDBClient{
+	e := &GrpcClient{
 		conn:   conn,
 		client: client,
 	}
@@ -117,7 +117,7 @@ func NewGrpcEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBCli
 }
 
 // AddRecord adds 'record' to a gRPC-backed embeddings database.
-func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
+func (e *GrpcClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
 
 	db_record := e.recordToEmbeddingsDBRecord(record)
 
@@ -135,7 +135,7 @@ func (e *GrpcEmbeddingsDBClient) AddRecord(ctx context.Context, record *embeddin
 }
 
 // GetRecord retrieves the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
-func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
+func (e *GrpcClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
 
 	req := &embeddingsdb_grpc.GetRecordRequest{
 		Provider:    provider,
@@ -153,7 +153,7 @@ func (e *GrpcEmbeddingsDBClient) GetRecord(ctx context.Context, provider string,
 }
 
 // SimilarRecords retrieves records with embeddings similar to those defined in 'req' from a gRPC-backed embeddings database.
-func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
+func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsRequest{
 		Model:      req.Model,
@@ -174,7 +174,7 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *embedd
 }
 
 // SimilarRecordsById retrieves records with embeddings similar to those for the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
-func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*embeddingsdb.SimilarResult, error) {
+func (e *GrpcClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*embeddingsdb.SimilarResult, error) {
 
 	req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
 		Provider:    provider,
@@ -191,7 +191,7 @@ func (e *GrpcEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provide
 	return e.embeddingsSimilarResultsToSimilarResults(rsp.Records), nil
 }
 
-func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(records []*embeddingsdb_grpc.SimilarRecord) []*embeddingsdb.SimilarResult {
+func (e *GrpcClient) embeddingsSimilarResultsToSimilarResults(records []*embeddingsdb_grpc.SimilarRecord) []*embeddingsdb.SimilarResult {
 
 	count := len(records)
 	results := make([]*embeddingsdb.SimilarResult, count)
@@ -212,7 +212,7 @@ func (e *GrpcEmbeddingsDBClient) embeddingsSimilarResultsToSimilarResults(record
 	return results
 }
 
-func (e *GrpcEmbeddingsDBClient) recordToEmbeddingsDBRecord(record *embeddingsdb.Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
+func (e *GrpcClient) recordToEmbeddingsDBRecord(record *embeddingsdb.Record) *embeddingsdb_grpc.EmbeddingsDBRecord {
 
 	db_rec := &embeddingsdb_grpc.EmbeddingsDBRecord{
 		Provider:    record.Provider,
@@ -227,7 +227,7 @@ func (e *GrpcEmbeddingsDBClient) recordToEmbeddingsDBRecord(record *embeddingsdb
 	return db_rec
 }
 
-func (e *GrpcEmbeddingsDBClient) embeddingsRecordToRecord(db_record *embeddingsdb_grpc.EmbeddingsDBRecord) *embeddingsdb.Record {
+func (e *GrpcClient) embeddingsRecordToRecord(db_record *embeddingsdb_grpc.EmbeddingsDBRecord) *embeddingsdb.Record {
 
 	rec := &embeddingsdb.Record{
 		Provider:    db_record.Provider,

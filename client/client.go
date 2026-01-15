@@ -11,8 +11,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
-// EmbeddingsDBClient defines an interface for clients to interact with an embeddings database.
-type EmbeddingsDBClient interface {
+// Client defines an interface for clients to interact with an embeddings database.
+type Client interface {
 	// Add a new record to an embeddings database.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
@@ -27,11 +27,11 @@ var client_roster roster.Roster
 
 // ClientInitializationFunc is a function defined by individual client package and used to create
 // an instance of that client
-type EmbeddingsDBClientInitializationFunc func(ctx context.Context, uri string) (EmbeddingsDBClient, error)
+type ClientInitializationFunc func(ctx context.Context, uri string) (Client, error)
 
-// RegisterEmbeddingsDBClient registers 'scheme' as a key pointing to 'init_func' in an internal lookup table
-// used to create new `Client` instances by the `NewEmbeddingsDBClient` method.
-func RegisterEmbeddingsDBClient(ctx context.Context, scheme string, init_func EmbeddingsDBClientInitializationFunc) error {
+// RegisterClientregisters 'scheme' as a key pointing to 'init_func' in an internal lookup table
+// used to create new `Client` instances by the `NewClient` method.
+func RegisterClient(ctx context.Context, scheme string, init_func ClientInitializationFunc) error {
 
 	err := ensureClientRoster()
 
@@ -62,7 +62,7 @@ func ensureClientRoster() error {
 // as a `url.URL` and its scheme is used as the key for a corresponding `ClientInitializationFunc`
 // function used to instantiate the new `Client`. It is assumed that the scheme (and initialization
 // function) have been registered by the `RegisterClient` method.
-func NewEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBClient, error) {
+func NewClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)
 
@@ -82,7 +82,7 @@ func NewEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBClient,
 		return nil, fmt.Errorf("Unregistered client")
 	}
 
-	init_func := i.(EmbeddingsDBClientInitializationFunc)
+	init_func := i.(ClientInitializationFunc)
 
 	return init_func(ctx, uri)
 }

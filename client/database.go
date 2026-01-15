@@ -9,23 +9,23 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
 
-type DatabaseEmbeddingsDBClient struct {
-	EmbeddingsDBClient
+type DatabaseClient struct {
+	Client
 	db database.Database
 }
 
 func init() {
 	ctx := context.Background()
-	RegisterEmbeddingsDBClient(ctx, "database", NewDatabaseEmbeddingsDBClient)
+	RegisterClient(ctx, "database", NewDatabaseClient)
 }
 
-// DatabaseEmbeddingsDBClient will return a new [DatabaseEmbeddingsDBClient] instance implementing the [EmbeddingsDBClient] interface
+// DatabaseClient will return a new [DatabaseClient] instance implementing the [Client] interface
 // derived from 'uri' which is expected to take the port of:
 //
 //	database://?{PARAMETERS}
 
 // Where {PARAMETERS} may be one or more of the following:
-func NewDatabaseEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsDBClient, error) {
+func NewDatabaseClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)
 
@@ -47,26 +47,26 @@ func NewDatabaseEmbeddingsDBClient(ctx context.Context, uri string) (EmbeddingsD
 		return nil, err
 	}
 
-	cl := &DatabaseEmbeddingsDBClient{
+	cl := &DatabaseClient{
 		db: db,
 	}
 
 	return cl, nil
 }
 
-func (cl *DatabaseEmbeddingsDBClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
+func (cl *DatabaseClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
 	return cl.db.AddRecord(ctx, record)
 }
 
-func (cl *DatabaseEmbeddingsDBClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
+func (cl *DatabaseClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
 	return cl.db.GetRecord(ctx, provider, depiction_id, model)
 }
 
-func (cl *DatabaseEmbeddingsDBClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
+func (cl *DatabaseClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
 	return cl.db.SimilarRecords(ctx, req)
 }
 
-func (cl *DatabaseEmbeddingsDBClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*embeddingsdb.SimilarResult, error) {
+func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*embeddingsdb.SimilarResult, error) {
 
 	rec, err := cl.GetRecord(ctx, provider, depiction_id, model)
 

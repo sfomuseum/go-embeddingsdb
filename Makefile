@@ -1,6 +1,6 @@
 GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
 
-TAGS=null
+TAGS=duckdb
 
 cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
