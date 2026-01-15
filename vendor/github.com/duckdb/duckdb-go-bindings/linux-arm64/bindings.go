@@ -490,6 +490,7 @@ func DestroyBigNum(i *BigNum) {
 
 // Column wraps duckdb_column.
 // NOTE: Same limitations as Result.
+// Deprecated: See C API documentation.
 type Column struct {
 	data C.duckdb_column
 }
@@ -890,6 +891,7 @@ func DestroyInstanceCache(cache *InstanceCache) {
 
 // Open wraps duckdb_open.
 // outDb must be closed with Close.
+// Deprecated: Use OpenExt.
 func Open(path string, outDb *Database) State {
 	cPath := C.CString(path)
 	defer Free(unsafe.Pointer(cPath))
@@ -1023,7 +1025,6 @@ func DestroyArrowOptions(options *ArrowOptions) {
 
 func LibraryVersion() string {
 	cStr := C.duckdb_library_version()
-	defer Free(unsafe.Pointer(cStr))
 	return C.GoString(cStr)
 }
 
@@ -1225,6 +1226,7 @@ func ResultErrorType(res *Result) ErrorType {
 
 // ResultGetChunk wraps duckdb_result_get_chunk.
 // The return value must be destroyed with DestroyDataChunk.
+// Deprecated: See C API documentation.
 func ResultGetChunk(res Result, index IdxT) DataChunk {
 	chunk := C.duckdb_result_get_chunk(res.data, index)
 	if debugMode {
@@ -1235,6 +1237,7 @@ func ResultGetChunk(res Result, index IdxT) DataChunk {
 	}
 }
 
+// Deprecated: See C API documentation.
 func ResultChunkCount(res Result) IdxT {
 	return C.duckdb_result_chunk_count(res.data)
 }
@@ -1247,6 +1250,7 @@ func ResultReturnType(res Result) ResultType {
 // Safe Fetch Functions (all deprecated)
 // ------------------------------------------------------------------ //
 
+// Deprecated: See C API documentation.
 func ValueInt64(res *Result, col IdxT, row IdxT) int64 {
 	v := C.duckdb_value_int64(&res.data, col, row)
 	return int64(v)
@@ -2201,12 +2205,9 @@ func GetInterval(v Value) Interval {
 }
 
 // GetValueType wraps duckdb_get_value_type.
-// The return value must be destroyed with DestroyLogicalType.
+// The return value must NOT be destroyed. It lives as long as Value (v) is alive.
 func GetValueType(v Value) LogicalType {
 	logicalType := C.duckdb_get_value_type(v.data())
-	if debugMode {
-		incrAllocCount("logicalType")
-	}
 	return LogicalType{
 		Ptr: unsafe.Pointer(logicalType),
 	}
@@ -3412,6 +3413,7 @@ func ProfilingInfoGetChild(info ProfilingInfo, index IdxT) ProfilingInfo {
 
 // AppenderCreate wraps duckdb_appender_create.
 // outAppender must be destroyed with AppenderDestroy.
+// Deprecated: Use AppenderCreateExt or AppenderCreateQuery.
 func AppenderCreate(conn Connection, schema string, table string, outAppender *Appender) State {
 	cSchema := C.CString(schema)
 	defer Free(unsafe.Pointer(cSchema))
@@ -3654,96 +3656,6 @@ func TableDescriptionGetColumnName(desc TableDescription, index IdxT) string {
 	return C.GoString(cName)
 }
 
-// ------------------------------------------------------------------ //
-// Arrow Interface (entire interface has deprecation notice)
-// ------------------------------------------------------------------ //
-
-// TODO:
-// duckdb_to_arrow_schema
-// duckdb_data_chunk_to_arrow
-// duckdb_schema_from_arrow
-// duckdb_data_chunk_from_arrow
-
-// DestroyArrowConvertedSchema wraps duckdb_destroy_arrow_converted_schema.
-func DestroyArrowConvertedSchema(schema *ArrowConvertedSchema) {
-	if schema.Ptr == nil {
-		return
-	}
-	if debugMode {
-		decrAllocCount("arrowConvertedSchema")
-	}
-	data := schema.data()
-	C.duckdb_destroy_arrow_converted_schema(&data)
-	schema.Ptr = nil
-}
-
-// TODO:
-// duckdb_query_arrow
-
-func QueryArrowSchema(arrow Arrow, outSchema *ArrowSchema) State {
-	return C.duckdb_query_arrow_schema(arrow.data(), (*C.duckdb_arrow_schema)(outSchema.Ptr))
-}
-
-// TODO:
-// duckdb_prepared_arrow_schema
-// duckdb_result_arrow_array
-
-func QueryArrowArray(arrow Arrow, outArray *ArrowArray) State {
-	return C.duckdb_query_arrow_array(arrow.data(), (*C.duckdb_arrow_array)(outArray.Ptr))
-}
-
-// TODO:
-// duckdb_arrow_column_count
-
-func ArrowRowCount(arrow Arrow) IdxT {
-	return C.duckdb_arrow_row_count(arrow.data())
-}
-
-// TODO:
-// duckdb_arrow_rows_changed
-
-func QueryArrowError(arrow Arrow) string {
-	err := C.duckdb_query_arrow_error(arrow.data())
-	return C.GoString(err)
-}
-
-// DestroyArrow wraps duckdb_destroy_arrow.
-func DestroyArrow(arrow *Arrow) {
-	if arrow.Ptr == nil {
-		return
-	}
-	if debugMode {
-		decrAllocCount("arrow")
-	}
-	data := arrow.data()
-	C.duckdb_destroy_arrow(&data)
-	arrow.Ptr = nil
-}
-
-// TODO:
-// duckdb_destroy_arrow_stream
-
-// ExecutePreparedArrow wraps duckdb_execute_prepared_arrow.
-// outArrow must be destroyed with DestroyArrow.
-func ExecutePreparedArrow(preparedStmt PreparedStatement, outArrow *Arrow) State {
-	var arrow C.duckdb_arrow
-	state := C.duckdb_execute_prepared_arrow(preparedStmt.data(), &arrow)
-	outArrow.Ptr = unsafe.Pointer(arrow)
-	if debugMode {
-		incrAllocCount("arrow")
-	}
-	return state
-}
-
-func ArrowScan(conn Connection, table string, stream ArrowStream) State {
-	cTable := C.CString(table)
-	defer Free(unsafe.Pointer(cTable))
-	return C.duckdb_arrow_scan(conn.data(), cTable, stream.data())
-}
-
-// TODO:
-// duckdb_arrow_array_scan
-
 //===--------------------------------------------------------------------===//
 // Threading Information
 //===--------------------------------------------------------------------===//
@@ -3764,7 +3676,20 @@ func ArrowScan(conn Connection, table string, stream ArrowStream) State {
 
 // TODO:
 // duckdb_stream_fetch_chunk (deprecation notice)
-// duckdb_fetch_chunk
+
+//===--------------------------------------------------------------------===//
+// Result Interface
+//===--------------------------------------------------------------------===//
+
+func FetchChunk(res Result) DataChunk {
+	chunk := C.duckdb_fetch_chunk(res.data)
+	if debugMode {
+		incrAllocCount("chunk")
+	}
+	return DataChunk{
+		Ptr: unsafe.Pointer(chunk),
+	}
+}
 
 //===--------------------------------------------------------------------===//
 // Cast Functions

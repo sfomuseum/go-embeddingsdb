@@ -20,12 +20,16 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/marcboeker/go-duckdb/v2"
+	_ "github.com/duckdb/duckdb-go/v2"
+
+	"github.com/sfomuseum/go-embeddingsdb"
 )
 
 type DuckDBDatabase struct {
 	// The underlying SQLite database used to store and query embeddings.
 	vec_db *sql.DB
+	// ...
+	db_uri string
 	// The number of dimensions for embeddings
 	dimensions int
 	// The maximum number of results for queries
@@ -117,6 +121,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	db := &DuckDBDatabase{
+		db_uri:       uri,
 		vec_db:       vec_db,
 		dimensions:   dimensions,
 		max_distance: max_distance,
@@ -170,6 +175,52 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return nil
 }
 
+func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
+
+	q := "SELECT subject_id, attributes::TEXT, vec, created FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
+
+	row := db.vec_db.QueryRowContext(ctx, q, provider, depiction_id, model)
+
+	var subject_id string
+	var placeholder_attributes string
+	var placeholder_embeddings []interface{}
+	var created int64
+
+	err := row.Scan(&subject_id, &placeholder_attributes, &placeholder_embeddings, &created)
+
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Info("WTAF", "attrs", placeholder_attributes)
+
+	var attributes map[string]string
+
+	err = json.Unmarshal([]byte(placeholder_attributes), &attributes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	embeddings := make([]float32, len(placeholder_embeddings))
+
+	for idx, v := range placeholder_embeddings {
+		embeddings[idx] = v.(float32)
+	}
+
+	record := &embeddingsdb.Record{
+		Provider:    provider,
+		DepictionId: depiction_id,
+		SubjectId:   subject_id,
+		Model:       model,
+		Attributes:  attributes,
+		Embeddings:  embeddings,
+		Created:     created,
+	}
+
+	return record, nil
+}
+
 func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
 
 	results := make([]*embeddingsdb.SimilarResult, 0)
@@ -199,11 +250,11 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 
 	str_conditions := strings.Join(conditions, " AND ")
 
-	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, array_distance(vec, ?::FLOAT[%d]) AS distance
+	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, attributes, array_distance(vec, ?::FLOAT[%d]) AS distance
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
-		str_conditions, db.dimensions, db.max_results)
+		db.dimensions, str_conditions, db.max_results)
 
-	slog.Debug(q)
+	// slog.Info("WTF", "q", q)
 
 	t1 := time.Now()
 
@@ -220,18 +271,26 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 		var provider string
 		var depiction_id string
 		var subject_id string
+		var placeholder_attributes map[string]interface{}
 		var distance float64
 
-		err = rows.Scan(&provider, &depiction_id, &subject_id, &distance)
+		err = rows.Scan(&provider, &depiction_id, &subject_id, &placeholder_attributes, &distance)
 
 		if err != nil {
 			return nil, fmt.Errorf("Failed to scan row, %w", err)
 		}
 
-		r := &SimilarResult{
+		attributes := make(map[string]string)
+
+		for k, v := range placeholder_attributes {
+			attributes[k] = v.(string)
+		}
+
+		r := &embeddingsdb.SimilarResult{
 			Provider:    provider,
 			SubjectId:   subject_id,
 			DepictionId: depiction_id,
+			Attributes:  attributes,
 			Similarity:  float32(distance),
 		}
 
@@ -241,6 +300,27 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 	slog.Debug("Query rows", "time", time.Since(t1))
 
 	return results, nil
+}
+
+func (db *DuckDBDatabase) LastUpdate(ctx context.Context) (int64, error) {
+
+	q := "SELECT lastmodified FROM embeddings ORDER BY lastmodified DESC LIMIT 1"
+
+	row := db.vec_db.QueryRowContext(ctx, q)
+
+	var lastmod int64
+
+	err := row.Scan(&lastmod)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return lastmod, nil
+}
+
+func (db *DuckDBDatabase) URI() string {
+	return db.db_uri
 }
 
 func (db *DuckDBDatabase) Close(ctx context.Context) error {

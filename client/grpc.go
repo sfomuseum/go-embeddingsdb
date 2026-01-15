@@ -17,6 +17,7 @@ import (
 
 // GrpcEmbeddingsDBClient implements the [EmbeddingsDBClient] interface for a gRPC-based embeddings database.
 type GrpcEmbeddingsDBClient struct {
+	EmbeddingsDBClient
 	conn   *grpc.ClientConn
 	client embeddingsdb_grpc.EmbeddingsDBServiceClient
 }

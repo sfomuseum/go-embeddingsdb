@@ -26,24 +26,33 @@ github.com/apache/arrow-go/v18/internal/bitutils
 github.com/apache/arrow-go/v18/internal/hashing
 github.com/apache/arrow-go/v18/internal/json
 github.com/apache/arrow-go/v18/internal/utils
-# github.com/duckdb/duckdb-go-bindings v0.1.21
+# github.com/duckdb/duckdb-go-bindings v0.1.24
 ## explicit; go 1.24
 github.com/duckdb/duckdb-go-bindings
-# github.com/duckdb/duckdb-go-bindings/darwin-amd64 v0.1.21
+# github.com/duckdb/duckdb-go-bindings/darwin-amd64 v0.1.24
 ## explicit; go 1.24
 github.com/duckdb/duckdb-go-bindings/darwin-amd64
-# github.com/duckdb/duckdb-go-bindings/darwin-arm64 v0.1.21
+# github.com/duckdb/duckdb-go-bindings/darwin-arm64 v0.1.24
 ## explicit; go 1.24
 github.com/duckdb/duckdb-go-bindings/darwin-arm64
-# github.com/duckdb/duckdb-go-bindings/linux-amd64 v0.1.21
+# github.com/duckdb/duckdb-go-bindings/linux-amd64 v0.1.24
 ## explicit; go 1.24
 github.com/duckdb/duckdb-go-bindings/linux-amd64
-# github.com/duckdb/duckdb-go-bindings/linux-arm64 v0.1.21
+# github.com/duckdb/duckdb-go-bindings/linux-arm64 v0.1.24
 ## explicit; go 1.24
 github.com/duckdb/duckdb-go-bindings/linux-arm64
-# github.com/duckdb/duckdb-go-bindings/windows-amd64 v0.1.21
+# github.com/duckdb/duckdb-go-bindings/windows-amd64 v0.1.24
 ## explicit; go 1.24
 github.com/duckdb/duckdb-go-bindings/windows-amd64
+# github.com/duckdb/duckdb-go/arrowmapping v0.0.27
+## explicit; go 1.24
+github.com/duckdb/duckdb-go/arrowmapping
+# github.com/duckdb/duckdb-go/mapping v0.0.27
+## explicit; go 1.24
+github.com/duckdb/duckdb-go/mapping
+# github.com/duckdb/duckdb-go/v2 v2.5.4
+## explicit; go 1.24.0
+github.com/duckdb/duckdb-go/v2
 # github.com/go-viper/mapstructure/v2 v2.4.0
 ## explicit; go 1.18
 github.com/go-viper/mapstructure/v2
@@ -59,14 +68,14 @@ github.com/goccy/go-json/internal/encoder/vm_color_indent
 github.com/goccy/go-json/internal/encoder/vm_indent
 github.com/goccy/go-json/internal/errors
 github.com/goccy/go-json/internal/runtime
-# github.com/google/flatbuffers v25.2.10+incompatible
+# github.com/google/flatbuffers v25.9.23+incompatible
 ## explicit
 github.com/google/flatbuffers/go
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
-# github.com/klauspost/compress v1.18.0
-## explicit; go 1.22
+# github.com/klauspost/compress v1.18.2
+## explicit; go 1.23
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
@@ -78,15 +87,6 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/cpuid/v2 v2.3.0
 ## explicit; go 1.22
 github.com/klauspost/cpuid/v2
-# github.com/marcboeker/go-duckdb/arrowmapping v0.0.21
-## explicit; go 1.24
-github.com/marcboeker/go-duckdb/arrowmapping
-# github.com/marcboeker/go-duckdb/mapping v0.0.21
-## explicit; go 1.24
-github.com/marcboeker/go-duckdb/mapping
-# github.com/marcboeker/go-duckdb/v2 v2.4.3
-## explicit; go 1.24
-github.com/marcboeker/go-duckdb/v2
 # github.com/pierrec/lz4/v4 v4.1.22
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4
@@ -100,15 +100,15 @@ github.com/sfomuseum/go-flags/flagset
 # github.com/zeebo/xxh3 v1.0.2
 ## explicit; go 1.17
 github.com/zeebo/xxh3
-# golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
-## explicit; go 1.23.0
+# golang.org/x/exp v0.0.0-20251209150349-8475f28825e9
+## explicit; go 1.24.0
 golang.org/x/exp/constraints
-# golang.org/x/mod v0.29.0
+# golang.org/x/mod v0.31.0
 ## explicit; go 1.24.0
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.47.0
+# golang.org/x/net v0.48.0
 ## explicit; go 1.24.0
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
@@ -117,27 +117,27 @@ golang.org/x/net/idna
 golang.org/x/net/internal/httpcommon
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sync v0.18.0
+# golang.org/x/sync v0.19.0
 ## explicit; go 1.24.0
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.38.0
+# golang.org/x/sys v0.39.0
 ## explicit; go 1.24.0
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8
+# golang.org/x/telemetry v0.0.0-20251208220230-2638a1023523
 ## explicit; go 1.24.0
 golang.org/x/telemetry/counter
 golang.org/x/telemetry/internal/counter
 golang.org/x/telemetry/internal/mmap
 golang.org/x/telemetry/internal/telemetry
-# golang.org/x/text v0.31.0
+# golang.org/x/text v0.32.0
 ## explicit; go 1.24.0
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.38.0
+# golang.org/x/tools v0.40.0
 ## explicit; go 1.24.0
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/cmd/stringer

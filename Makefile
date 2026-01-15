@@ -1,7 +1,9 @@
 GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
 
+TAGS=null
+
 cli:
-	go build -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 
 # https://developers.google.com/protocol-buffers/docs/reference/go-generated
 # go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest

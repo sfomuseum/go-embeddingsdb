@@ -17,10 +17,16 @@ import (
 type Database interface {
 	// Add adds a `Record` instance to the underlying database implementation.
 	AddRecord(context.Context, *embeddingsdb.Record) error
+	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
+	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
 	// Find similar records for a given model and record instance.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 	Export(context.Context, string) error
+	// ..
+	LastUpdate(context.Context) (int64, error)
+	// ...
+	URI() string
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
