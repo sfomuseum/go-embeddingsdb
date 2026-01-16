@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/url"
 	"strconv"
 
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/credentials/oauth"
 )
 
@@ -40,6 +42,7 @@ func init() {
 // * `tls-key`
 // * `tls-ca-certificate`
 // * `tls-insecure`
+// * `token-uri`
 func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)
@@ -60,6 +63,8 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 	opts := make([]grpc.DialOption, 0)
 
 	if q_tls_cert != "" && q_tls_key != "" {
+
+		slog.Debug("Set up TLS")
 
 		cert, err := tls.LoadX509KeyPair(q_tls_cert, q_tls_key)
 
@@ -104,10 +109,13 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 		opts = append(opts, grpc.WithTransportCredentials(tls_credentials))
 
 	} else {
-		opts = append(opts, grpc.WithInsecure())
+		slog.Debug("Allow insecure connections")
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	if q.Has("token-uri") {
+
+		slog.Debug("Set up token")
 
 		token, err := runtimevar.StringVar(ctx, q.Get("token-uri"))
 
@@ -119,11 +127,11 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 			AccessToken: token,
 		}
 
-		creds := oauth.TokenSource{
+		rpc_creds := oauth.TokenSource{
 			TokenSource: oauth2.StaticTokenSource(token_source),
 		}
 
-		opts = append(opts, grpc.WithPerRPCCredentials(creds))
+		opts = append(opts, grpc.WithPerRPCCredentials(rpc_creds))
 	}
 
 	conn, err := grpc.NewClient(addr, opts...)

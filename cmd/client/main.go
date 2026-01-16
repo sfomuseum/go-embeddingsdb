@@ -122,8 +122,8 @@ func similarById(args []string) {
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&similar_provider, "similar-provider", "", "The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.")
-	fs.IntVar(&max_results, "max-results", 0, "...")
-	fs.Float64Var(&max_distance, "max-distance", 0, "...")
+	fs.IntVar(&max_results, "max-results", 0, "The maximum number of results to return in a query. This will override defaults established by the server.")
+	fs.Float64Var(&max_distance, "max-distance", 0, "The maximum distance allowed when querying records. This will override defaults established by the server.")
 
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 

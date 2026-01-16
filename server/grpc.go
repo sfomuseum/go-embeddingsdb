@@ -81,11 +81,12 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 			return nil, fmt.Errorf("Failed to derive token, %w", err)
 		}
 
-		slog.Debug("TOKEN", "t", token)
 		s.token = &token
 	}
 
 	if q.Has("tls-certificate") && q.Has("tls-key") {
+
+		slog.Debug("Configure TLS")
 
 		cert_file := q.Get("tls-certificate")
 		key_file := q.Get("tls-key")
@@ -171,7 +172,9 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 	slog.Debug("Set up listener")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", s.host, s.port))
+	addr := fmt.Sprintf("%s:%s", s.host, s.port)
+
+	lis, err := net.Listen("tcp", addr)
 
 	if err != nil {
 		return err
@@ -193,13 +196,17 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 	if s.cert != nil {
 		slog.Debug("Set up TLS")
 		opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(s.cert)))
+	} else {
+		slog.Debug("Allow insecure connections")
+		// opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		// opts = append(opts, grpc.WithInsecure())
 	}
 
 	svr := grpc.NewServer(opts...)
 
 	embeddings_grpc.RegisterEmbeddingsDBServiceServer(svr, svc)
 
-	slog.Info("Server listening", "address", lis.Addr())
+	slog.Info("Server listening", "address", addr)
 	err = svr.Serve(lis)
 
 	if err != nil {
