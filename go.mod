@@ -7,11 +7,13 @@ require (
 	github.com/aaronland/gocloud v1.0.2
 	github.com/duckdb/duckdb-go/v2 v2.5.4
 	github.com/sfomuseum/go-flags v0.12.1
+	golang.org/x/oauth2 v0.32.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/aaronland/go-aws/v3 v3.2.0 // indirect
 	github.com/apache/arrow-go/v18 v18.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.40.0 // indirect

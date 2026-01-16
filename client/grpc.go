@@ -9,10 +9,13 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
 	embeddingsdb_grpc "github.com/sfomuseum/go-embeddingsdb/grpc"
+	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 // GrpcClient implements the [Client] interface for a gRPC-based embeddings database.
@@ -102,6 +105,25 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 	} else {
 		opts = append(opts, grpc.WithInsecure())
+	}
+
+	if q.Has("token-uri") {
+
+		token, err := runtimevar.StringVar(ctx, q.Get("token-uri"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to derive token, %w", err)
+		}
+
+		token_source := &oauth2.Token{
+			AccessToken: token,
+		}
+
+		creds := oauth.TokenSource{
+			TokenSource: oauth2.StaticTokenSource(token_source),
+		}
+
+		opts = append(opts, grpc.WithPerRPCCredentials(creds))
 	}
 
 	conn, err := grpc.NewClient(addr, opts...)

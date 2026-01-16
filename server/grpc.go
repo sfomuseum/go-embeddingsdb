@@ -81,6 +81,7 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 			return nil, fmt.Errorf("Failed to derive token, %w", err)
 		}
 
+		slog.Debug("TOKEN", "t", token)
 		s.token = &token
 	}
 
@@ -185,10 +186,12 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 	opts := []grpc.ServerOption{}
 
 	if s.token != nil {
+		slog.Debug("Set up token interceptor")
 		opts = append(opts, grpc.UnaryInterceptor(s.ensureValidToken))
 	}
 
 	if s.cert != nil {
+		slog.Debug("Set up TLS")
 		opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(s.cert)))
 	}
 

@@ -44,7 +44,10 @@ func main() {
 
 	ctx := context.Background()
 
-	if strings.Contains(server_uri, database_placeholder) {
+	swap_database := strings.Contains(server_uri, database_placeholder)
+	swap_token := strings.Contains(server_uri, token_placeholder)
+
+	if swap_database || swap_token {
 
 		server_u, err := url.Parse(server_uri)
 
@@ -54,8 +57,15 @@ func main() {
 
 		server_q := server_u.Query()
 
-		server_q.Del("database-uri")
-		server_q.Set("database-uri", database_uri)
+		if swap_database {
+			server_q.Del("database-uri")
+			server_q.Set("database-uri", database_uri)
+		}
+
+		if swap_token {
+			server_q.Del("token-uri")
+			server_q.Set("token-uri", token_uri)
+		}
 
 		server_u.RawQuery = server_q.Encode()
 		server_uri = server_u.String()
