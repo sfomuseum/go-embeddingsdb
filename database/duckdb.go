@@ -225,14 +225,25 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depict
 	return record, nil
 }
 
-func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
+func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
 
 	results := make([]*embeddingsdb.SimilarResult, 0)
 
-	embeddings, err := json.Marshal(rec.Embeddings)
+	embeddings, err := json.Marshal(req.Embeddings)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to serialize query, %w", err)
+	}
+
+	max_results := db.max_results
+	max_distance := db.max_distance
+
+	if req.MaxResults != 0 {
+		max_results = req.MaxResults
+	}
+
+	if req.MaxDistance != 0 {
+		max_distance = req.MaxDistance
 	}
 
 	conditions := make([]string, 0)
@@ -241,25 +252,38 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 		string(embeddings),
 	}
 
-	if rec.SimilarProvider != nil {
+	if req.SimilarProvider != nil {
 		conditions = append(conditions, "provider = ?")
-		args = append(args, &rec.SimilarProvider)
+		args = append(args, &req.SimilarProvider)
+	}
+
+	count_exclude := len(req.Exclude)
+
+	if count_exclude > 0 {
+
+		placeholders := make([]string, count_exclude)
+
+		for i := 0; i < count_exclude; i++ {
+			args = append(args, req.Exclude[i])
+			placeholders[i] = "?"
+		}
+
+		conditions = append(conditions, fmt.Sprintf("depiction_id NOT IN (%s)", strings.Join(placeholders, ",")))
 	}
 
 	conditions = append(conditions, "model == ?")
-	args = append(args, rec.Model)
+	args = append(args, req.Model)
 
 	conditions = append(conditions, "distance > 0")
-	args = append(args, db.max_distance)
 
 	conditions = append(conditions, "distance <= ?")
-	args = append(args, db.max_distance)
+	args = append(args, max_distance)
 
 	str_conditions := strings.Join(conditions, " AND ")
 
 	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, attributes, array_distance(vec, ?::FLOAT[%d]) AS distance
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
-		db.dimensions, str_conditions, db.max_results)
+		db.dimensions, str_conditions, max_results)
 
 	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 

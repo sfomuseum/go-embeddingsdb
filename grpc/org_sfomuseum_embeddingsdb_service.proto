@@ -41,6 +41,8 @@ message SimilarRecordsRequest {
     string model = 2;
     repeated float embeddings = 3;
     repeated string exclude = 4;
+    optional float max_distance = 5;
+    optional int32 max_results = 6;
 }
 
 message SimilarRecordsByIdRequest {
