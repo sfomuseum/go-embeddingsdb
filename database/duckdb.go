@@ -34,7 +34,7 @@ type DuckDBDatabase struct {
 	// The number of dimensions for embeddings
 	dimensions int
 	// The maximum number of results for queries
-	max_results int
+	max_results int32
 	// The compression type to use for embeddings. Valid options are: quantize, matroyshka, none (default)
 	compression string
 	// ..
@@ -63,7 +63,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dimensions := 512
 	max_distance := float32(1.0)
-	max_results := 10
+	max_results := int32(10)
 
 	if q.Has("dimensions") {
 
@@ -97,7 +97,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 			return nil, fmt.Errorf("Invalid ?max-results= parameter, %w", err)
 		}
 
-		max_results = v
+		max_results = int32(v)
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
@@ -179,11 +179,11 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return nil
 }
 
-func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
+func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
 
 	q := "SELECT subject_id, attributes, vec, created FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
-	row := db.vec_db.QueryRowContext(ctx, q, provider, depiction_id, model)
+	row := db.vec_db.QueryRowContext(ctx, q, req.Provider, req.DepictionId, req.Model)
 
 	var subject_id string
 	var placeholder_attributes string
@@ -213,10 +213,10 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depict
 	}
 
 	record := &embeddingsdb.Record{
-		Provider:    provider,
-		DepictionId: depiction_id,
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
 		SubjectId:   subject_id,
-		Model:       model,
 		Attributes:  attributes,
 		Embeddings:  embeddings,
 		Created:     created,
@@ -225,9 +225,9 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, provider string, depict
 	return record, nil
 }
 
-func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
+func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
-	results := make([]*embeddingsdb.SimilarResult, 0)
+	results := make([]*embeddingsdb.SimilarRecord, 0)
 
 	embeddings, err := json.Marshal(req.Embeddings)
 
@@ -238,12 +238,12 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	max_results := db.max_results
 	max_distance := db.max_distance
 
-	if req.MaxResults != 0 {
-		max_results = req.MaxResults
+	if req.MaxResults != nil {
+		max_results = *req.MaxResults
 	}
 
-	if req.MaxDistance != 0 {
-		max_distance = req.MaxDistance
+	if req.MaxDistance != nil {
+		max_distance = *req.MaxDistance
 	}
 
 	conditions := make([]string, 0)
@@ -313,12 +313,12 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 			return nil, err
 		}
 
-		r := &embeddingsdb.SimilarResult{
+		r := &embeddingsdb.SimilarRecord{
 			Provider:    provider,
 			SubjectId:   subject_id,
 			DepictionId: depiction_id,
 			Attributes:  attributes,
-			Similarity:  float32(distance),
+			Distance:    float32(distance),
 		}
 
 		results = append(results, r)

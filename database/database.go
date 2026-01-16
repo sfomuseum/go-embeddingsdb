@@ -18,9 +18,9 @@ type Database interface {
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
-	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
 	// Find similar records for a given model and record instance.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 	Export(context.Context, string) error
 	// Return the Unix timestamp of the last update to the Database instance.

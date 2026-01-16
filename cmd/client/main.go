@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-flags/flagset"
 )
@@ -86,7 +87,13 @@ func record(args []string) {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	rsp, err := cl.GetRecord(ctx, provider, depiction_id, model)
+	req := &embeddingsdb.GetRecordRequest{
+		Provider:    provider,
+		DepictionId: depiction_id,
+		Model:       model,
+	}
+
+	rsp, err := cl.GetRecord(ctx, req)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)
@@ -103,6 +110,9 @@ func similarById(args []string) {
 	var depiction_id string
 	var model string
 	var similar_provider string
+	var max_results int
+	var max_distance float64
+
 	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
@@ -112,6 +122,9 @@ func similarById(args []string) {
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&similar_provider, "similar-provider", "", "The name of the provider to limit similar record queries to. If empty then all the records for the model chosen will be queried.")
+	fs.IntVar(&max_results, "max-results", 0, "...")
+	fs.Float64Var(&max_distance, "max-distance", 0, "...")
+
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
@@ -136,7 +149,27 @@ func similarById(args []string) {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	rsp, err := cl.SimilarRecordsById(ctx, provider, depiction_id, model)
+	req := &embeddingsdb.SimilarRecordsByIdRequest{
+		Provider:    provider,
+		DepictionId: depiction_id,
+		Model:       model,
+	}
+
+	if similar_provider != "" {
+		req.SimilarProvider = &similar_provider
+	}
+
+	if max_distance > 0 {
+		d := float32(max_distance)
+		req.MaxDistance = &d
+	}
+
+	if max_results > 0 {
+		r := int32(max_results)
+		req.MaxResults = &r
+	}
+
+	rsp, err := cl.SimilarRecordsById(ctx, req)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)

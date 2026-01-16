@@ -33,6 +33,10 @@ func init() {
 //	grpc://{HOST}:{PORT}?{PARAMETERS}
 
 // Where {PARAMETERS} may be one or more of the following:
+// * `tls-certificate`
+// * `tls-key`
+// * `tls-ca-certificate`
+// * `tls-insecure`
 func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)
@@ -135,15 +139,15 @@ func (e *GrpcClient) AddRecord(ctx context.Context, record *embeddingsdb.Record)
 }
 
 // GetRecord retrieves the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
-func (e *GrpcClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
+func (e *GrpcClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
 
-	req := &embeddingsdb_grpc.GetRecordRequest{
-		Provider:    provider,
-		DepictionId: depiction_id,
-		Model:       model,
+	grpc_req := &embeddingsdb_grpc.GetRecordRequest{
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
 	}
 
-	rsp, err := e.client.GetRecord(ctx, req)
+	rsp, err := e.client.GetRecord(ctx, grpc_req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to derive embeddings, %w", err)
@@ -155,15 +159,14 @@ func (e *GrpcClient) GetRecord(ctx context.Context, provider string, depiction_i
 }
 
 // SimilarRecords retrieves records with embeddings similar to those defined in 'req' from a gRPC-backed embeddings database.
-func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
+func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsRequest{
-		Model:      req.Model,
-		Embeddings: req.Embeddings,
-	}
-
-	if req.SimilarProvider != nil {
-		grpc_req.SimilarProvider = req.SimilarProvider
+		Model:           req.Model,
+		Embeddings:      req.Embeddings,
+		SimilarProvider: req.SimilarProvider,
+		MaxResults:      req.MaxResults,
+		MaxDistance:     req.MaxDistance,
 	}
 
 	rsp, err := e.client.SimilarRecords(ctx, grpc_req)
@@ -172,25 +175,28 @@ func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.Simil
 		return nil, fmt.Errorf("Failed to query records, %w", err)
 	}
 
-	results := embeddingsdb.GrpcSimilarRecordsToEmbeddingDBSimilarResults(rsp.Records)
+	results := embeddingsdb.GrpcSimilarRecordsResultsToEmbeddingDBSimilarRecords(rsp.Records)
 	return results, nil
 }
 
 // SimilarRecordsById retrieves records with embeddings similar to those for the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
-func (e *GrpcClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*embeddingsdb.SimilarResult, error) {
+func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
-	req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
-		Provider:    provider,
-		DepictionId: depiction_id,
-		Model:       model,
+	grpc_req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
+		Provider:        req.Provider,
+		DepictionId:     req.DepictionId,
+		Model:           req.Model,
+		SimilarProvider: req.SimilarProvider,
+		MaxResults:      req.MaxResults,
+		MaxDistance:     req.MaxDistance,
 	}
 
-	rsp, err := e.client.SimilarRecordsById(ctx, req)
+	rsp, err := e.client.SimilarRecordsById(ctx, grpc_req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query records, %w", err)
 	}
 
-	results := embeddingsdb.GrpcSimilarRecordsToEmbeddingDBSimilarResults(rsp.Records)
+	results := embeddingsdb.GrpcSimilarRecordsResultsToEmbeddingDBSimilarRecords(rsp.Records)
 	return results, nil
 }

@@ -29,11 +29,13 @@ func (s *grpcService) AddRecord(ctx context.Context, req *grpc.AddRecordRequest)
 
 func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest) (*grpc.GetRecordResponse, error) {
 
-	provider := req.Provider
-	depiction_id := req.DepictionId
-	model := req.Model
+	db_req := &embeddingsdb.GetRecordRequest{
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
+	}
 
-	record, err := s.db.GetRecord(ctx, provider, depiction_id, model)
+	record, err := s.db.GetRecord(ctx, db_req)
 
 	if err != nil {
 		return nil, err
@@ -50,11 +52,13 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 
 func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
 
-	db_req := &embeddingsdb.SimilarRequest{
+	db_req := &embeddingsdb.SimilarRecordsRequest{
 		Model:           req.Model,
 		Embeddings:      req.Embeddings,
 		Exclude:         req.Exclude,
 		SimilarProvider: req.SimilarProvider,
+		MaxDistance:     req.MaxDistance,
+		MaxResults:      req.MaxResults,
 	}
 
 	records, err := s.db.SimilarRecords(ctx, db_req)
@@ -63,7 +67,7 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 		return nil, err
 	}
 
-	grpc_records := embeddingsdb.EmbeddingsDBSimilarResultsToGrpcSimilarRecords(records)
+	grpc_records := embeddingsdb.EmbeddingsDBSimilarRecordsToGrpcSimilarRecords(records)
 
 	rsp := &grpc.SimilarRecordsResponse{
 		Records: grpc_records,
@@ -74,21 +78,27 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 
 func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarRecordsByIdRequest) (*grpc.SimilarRecordsResponse, error) {
 
-	provider := req.Provider
-	depiction_id := req.DepictionId
-	model := req.Model
+	record_req := &embeddingsdb.GetRecordRequest{
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
+	}
 
-	record, err := s.db.GetRecord(ctx, provider, depiction_id, model)
+	record, err := s.db.GetRecord(ctx, record_req)
 
 	if err != nil {
 		return nil, err
 	}
 
 	similar_req := &grpc.SimilarRecordsRequest{
-		Model:           record.Model,
-		Embeddings:      record.Embeddings,
-		Exclude:         []string{depiction_id},
+		Model:      record.Model,
+		Embeddings: record.Embeddings,
+		Exclude: []string{
+			record.DepictionId,
+		},
 		SimilarProvider: req.SimilarProvider,
+		MaxDistance:     req.MaxDistance,
+		MaxResults:      req.MaxResults,
 	}
 
 	return s.SimilarRecords(ctx, similar_req)

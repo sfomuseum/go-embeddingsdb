@@ -34,12 +34,12 @@ func (db *NullDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record)
 	return nil
 }
 
-func (db *NullDatabase) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
+func (db *NullDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
 	return nil, fmt.Errorf("Not found")
 }
 
-func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
-	results := make([]*embeddingsdb.SimilarResult, 0)
+func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil
 }
 

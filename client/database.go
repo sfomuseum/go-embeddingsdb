@@ -58,26 +58,37 @@ func (cl *DatabaseClient) AddRecord(ctx context.Context, record *embeddingsdb.Re
 	return cl.db.AddRecord(ctx, record)
 }
 
-func (cl *DatabaseClient) GetRecord(ctx context.Context, provider string, depiction_id string, model string) (*embeddingsdb.Record, error) {
-	return cl.db.GetRecord(ctx, provider, depiction_id, model)
+func (cl *DatabaseClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+	return cl.db.GetRecord(ctx, req)
 }
 
-func (cl *DatabaseClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error) {
+func (cl *DatabaseClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 	return cl.db.SimilarRecords(ctx, req)
 }
 
-func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, provider string, depiction_id string, model string) ([]*embeddingsdb.SimilarResult, error) {
+func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
-	rec, err := cl.GetRecord(ctx, provider, depiction_id, model)
+	record_req := &embeddingsdb.GetRecordRequest{
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
+	}
+
+	record, err := cl.GetRecord(ctx, record_req)
 
 	if err != nil {
 		return nil, err
 	}
 
-	similar_req := &embeddingsdb.SimilarRequest{
-		Model:      rec.Model,
-		Embeddings: rec.Embeddings,
-		Exclude:    []string{rec.DepictionId},
+	similar_req := &embeddingsdb.SimilarRecordsRequest{
+		Model:      record.Model,
+		Embeddings: record.Embeddings,
+		Exclude: []string{
+			record.DepictionId,
+		},
+		SimilarProvider: req.SimilarProvider,
+		MaxDistance:     req.MaxDistance,
+		MaxResults:      req.MaxResults,
 	}
 
 	return cl.SimilarRecords(ctx, similar_req)

@@ -37,19 +37,21 @@ message GetRecordResponse {
 }
 
 message SimilarRecordsRequest {
-    optional string similar_provider = 1;
-    string model = 2;
-    repeated float embeddings = 3;
-    repeated string exclude = 4;
+    string model = 1;
+    repeated float embeddings = 2;
+    repeated string exclude = 3;
+    optional string similar_provider = 4;    
     optional float max_distance = 5;
     optional int32 max_results = 6;
 }
 
 message SimilarRecordsByIdRequest {
-    optional string similar_provider = 1;
-    string provider = 2;
-    string depiction_id = 3;
-    string model = 4;
+    string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
+    optional string similar_provider = 4;
+    optional float max_distance = 5;
+    optional int32 max_results = 6;    
 }
 
 message SimilarRecordsResponse {
@@ -60,6 +62,6 @@ message SimilarRecord {
     string provider = 1;
     string depiction_id = 2;
     string subject_id = 3;
-    float similarity = 4;
+    float distance = 4;
     map<string, string> attributes = 5;
 }

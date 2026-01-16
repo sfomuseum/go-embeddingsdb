@@ -16,11 +16,11 @@ type Client interface {
 	// Add a new record to an embeddings database.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
-	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
 	// Retrieve records with similar embeddings from an embeddings database.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
-	SimilarRecordsById(context.Context, string, string, string) ([]*embeddingsdb.SimilarResult, error)
+	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error)
 }
 
 var client_roster roster.Roster
