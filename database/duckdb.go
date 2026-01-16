@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -51,6 +53,10 @@ func init() {
 	}
 }
 
+// * `dimensions
+// * `max-distance`
+// * `max-results`
+// * `vss-extension`
 func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -107,7 +113,17 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, fmt.Errorf("Failed to open database connection, %w", err)
 	}
 
-	err = setupDuckDBDatabase(ctx, vec_db, u.Path, dimensions)
+	setup_opts := &setupDuckDBDatabaseOptions{
+		DatabasePath: u.Path,
+		Dimensions:   dimensions,
+	}
+
+	if q.Has("vss-extension") {
+		slog.Debug("Load custom VSS extension", "path", q.Get("vss-extension"))
+		setup_opts.VSSExtensionPath = q.Get("vss-extension")
+	}
+
+	err = setupDuckDBDatabase(ctx, vec_db, setup_opts)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup database, %w", err)
@@ -352,7 +368,13 @@ func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }
 
-func setupDuckDBDatabase(ctx context.Context, db *sql.DB, path string, dimensions int) error {
+type setupDuckDBDatabaseOptions struct {
+	Dimensions       int
+	DatabasePath     string
+	VSSExtensionPath string
+}
+
+func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatabaseOptions) error {
 
 	t1 := time.Now()
 
@@ -360,15 +382,38 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, path string, dimension
 		slog.Debug("Finished setting up database", "time", time.Since(t1))
 	}()
 
-	cmds := []string{
-		"INSTALL vss",
-		"LOAD vss",
+	cmds := make([]string, 0)
+
+	// https://duckdb.org/docs/stable/extensions/advanced_installation_methods#installing-an-extension-from-an-explicit-path
+
+	if opts.VSSExtensionPath != "" {
+
+		abs_path, err := filepath.Abs(opts.VSSExtensionPath)
+
+		if err != nil {
+			return fmt.Errorf("Failed to derive absolute path for VSS extension path, %w", err)
+		}
+
+		info, err := os.Stat(abs_path)
+
+		if err != nil {
+			return fmt.Errorf("Failed to stat VSS extension path, %w", err)
+		}
+
+		if info.IsDir() {
+			return fmt.Errorf("VSS extention path is directory")
+		}
+
+		cmds = append(cmds, fmt.Sprintf("LOAD '%s'", abs_path))
+
+	} else {
+		cmds = append(cmds, "LOAD VSS")
 	}
 
-	if path != "" {
-		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", path))
+	if opts.DatabasePath != "" {
+		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", opts.DatabasePath))
 	} else {
-		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes TEXT, vec FLOAT[%d], created BIGINT, lastmodified BIGINT", dimensions))
+		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes TEXT, vec FLOAT[%d], created BIGINT, lastmodified BIGINT", opts.Dimensions))
 		cmds = append(cmds, "CREATE UNIQUE INDEX id_model ON embeddings (provider, depiction_id, model)")
 		cmds = append(cmds, "CREATE INDEX by_provider ON embeddings (provider, model, created)")
 		cmds = append(cmds, "CREATE INDEX by_model ON embeddings (model, provider, created)")
