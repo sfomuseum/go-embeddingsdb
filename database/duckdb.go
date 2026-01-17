@@ -404,10 +404,11 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatab
 			return fmt.Errorf("VSS extention path is directory")
 		}
 
-		cmds = append(cmds, fmt.Sprintf("LOAD '%s'", abs_path))
+		// cmds = append(cmds, fmt.Sprintf("LOAD '%s'", abs_path))
 
 	} else {
-		cmds = append(cmds, "LOAD VSS")
+		// cmds = append(cmds, "INSTALL VSS")		
+		// cmds = append(cmds, "LOAD VSS")
 	}
 
 	if opts.DatabasePath != "" {

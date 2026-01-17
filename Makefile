@@ -6,6 +6,9 @@ cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
 
+server-bundle:
+	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L/usr/local/src/duckdb/build/release -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+
 # https://developers.google.com/protocol-buffers/docs/reference/go-generated
 # go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
