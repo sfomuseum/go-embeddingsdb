@@ -114,6 +114,12 @@ Valid parameters are:
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 
+For example:
+
+```
+duckdb:///usr/local/data/embeddings
+```
+
 ## Servers
 
 ### grcp://
@@ -132,6 +138,8 @@ Valid parameters are:
 | token-uri | string | no | A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests. |
 | tls-certificate | string | no | The path to a valid TLS certificate to use for encrypted connections. |
 | tls-key | string | no | The path to a valid TLS key file to use for encrypted connections. |
+
+For example:
 
 ```
 grpc://localhost:8080?database-uri=database-uri=duckdb:///usr/local/data/embeddings&token-uri=constant%3A%2F%2F%3Fval%3Ds33kret
