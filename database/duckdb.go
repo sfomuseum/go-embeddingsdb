@@ -16,8 +16,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -56,7 +54,6 @@ func init() {
 // * `dimensions
 // * `max-distance`
 // * `max-results`
-// * `vss-extension`
 func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -116,11 +113,6 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 	setup_opts := &setupDuckDBDatabaseOptions{
 		DatabasePath: u.Path,
 		Dimensions:   dimensions,
-	}
-
-	if q.Has("vss-extension") {
-		slog.Debug("Load custom VSS extension", "path", q.Get("vss-extension"))
-		setup_opts.VSSExtensionPath = q.Get("vss-extension")
 	}
 
 	err = setupDuckDBDatabase(ctx, vec_db, setup_opts)
@@ -371,7 +363,6 @@ func (db *DuckDBDatabase) Close(ctx context.Context) error {
 type setupDuckDBDatabaseOptions struct {
 	Dimensions       int
 	DatabasePath     string
-	VSSExtensionPath string
 }
 
 func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatabaseOptions) error {
@@ -384,34 +375,26 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatab
 
 	cmds := make([]string, 0)
 
-	// https://duckdb.org/docs/stable/extensions/advanced_installation_methods#installing-an-extension-from-an-explicit-path
+	q := "SELECT CAST(1 AS BOOL) AS vss FROM duckdb_extensions() WHERE installed = true AND loaded = true AND extension_name = 'vss'"
 
-	if opts.VSSExtensionPath != "" {
+	row := db.QueryRowContext(ctx, q)
 
-		abs_path, err := filepath.Abs(opts.VSSExtensionPath)
+	var has_vss bool
+	err := row.Scan(&has_vss)
 
-		if err != nil {
-			return fmt.Errorf("Failed to derive absolute path for VSS extension path, %w", err)
-		}
+	if err != nil {
+		return fmt.Errorf("Failed to determine whether VSS extension is loaded, %w", err)
+	}
 
-		info, err := os.Stat(abs_path)
-
-		if err != nil {
-			return fmt.Errorf("Failed to stat VSS extension path, %w", err)
-		}
-
-		if info.IsDir() {
-			return fmt.Errorf("VSS extention path is directory")
-		}
-
-		// cmds = append(cmds, fmt.Sprintf("LOAD '%s'", abs_path))
-
+	if has_vss {
+		slog.Debug("Statically linked VSS extension installed and loaded")
 	} else {
-		// cmds = append(cmds, "INSTALL VSS")		
-		// cmds = append(cmds, "LOAD VSS")
+		cmds = append(cmds, "INSTALL VSS")		
+		cmds = append(cmds, "LOAD VSS")
 	}
 
 	if opts.DatabasePath != "" {
+		slog.Debug("Load database from path", "path", opts.DatabasePath)
 		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", opts.DatabasePath))
 	} else {
 		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes TEXT, vec FLOAT[%d], created BIGINT, lastmodified BIGINT", opts.Dimensions))

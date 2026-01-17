@@ -4,6 +4,10 @@ An opinionated Go package for storing, indexing and querying vector embeddings.
 
 ## Motivation
 
+## Caveats
+
+This package and the tools it exports still occupy the in-between state of being general purpose tools and specific to the immediate needs of SFO Museum. That means it may not do what you need it to out of the box. If it doesn't we're certainly open to entertaining changes.
+
 ## Concepts
 
 ### Records
@@ -80,17 +84,86 @@ type Clientinterface {
 
 ### duckdb://
 
+Manage embeddings use the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension.
+
+```
+duckdb://{PATH}?{QUERY_PARAMETERS}
+```
+
+Where `{PATH}` is an optional value mapped to the location of an existing DuckDB database. If present this database will be used to instantiate the database. Depending on the size of the database this can take a noticeable amount of time.
+
 ## Servers
 
 ### grcp://
+
+Create a gRPC-based server for managing embeddings-related operations. Servers are created using a URI-based syntax as follows:
+
+```
+grpc://{HOST}:{ADDRESS}?{QUERY_PARAMETERS}
+```
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| database-uri | string | yes | A registered `sfomuseum/go-embeddingsdb/database.Database` URI for the underlying database implementation to use. |
+| token-uri | string | no | A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests. |
+| tls-certificate | string | no | The path to a valid TLS certificate to use for encrypted connections. |
+| tls-key | string | no | The path to a valid TLS key file to use for encrypted connections. |
+
+```
+grpc://localhost:8080?database-uri=database-uri=duckdb:///usr/local/data/embeddings&token-uri=constant%3A%2F%2F%3Fval%3Ds33kret
+```
 
 ## Clients
 
 ### grpc://
 
+Create a gRPC-based client for managing embeddings-related operations. Clients are created using a URI-based syntax as follows:
+
+```
+grpc://{HOST}:{ADDRESS}?{QUERY_PARAMETERS}
+```
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| token-uri | string | no | A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests. |
+| tls-certificate | string | no | The path to a valid TLS certificate to use for encrypted connections. |
+| tls-key | string | no | The path to a valid TLS key file to use for encrypted connections. |
+| tls-ca-certificate | string | no | The path to a custom TLS authority certificate to use for encrypted connections. |
+| tls-insecure | bool | no | Skip TLS verification steps. Use with caution. |
+
+For example:
+
+```
+grpc://localhost:8080?token-uri=constant%3A%2F%2F%3Fval%3Ds33kret
+```
+
 ### database://
 
+Create a client with a direct database connection for managing embeddings-related operations. Clients are created using a URI-based syntax as follows:
+
+```
+database://?{QUERY_PARAMETERS}
+```
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| database-uri | string | yes | A registered `sfomuseum/go-embeddingsdb/database.Database` URI for the underlying database implementation to use. |
+
+For example:
+
+```
+database://?database-uri=duckdb:///usr/local/data/embeddings
+```
+
 ## Tools
+
+The easiest way to build the included tools is to run the handy `cli` Makefile target. For example:
 
 ```
 $> make cli
@@ -98,16 +171,53 @@ go build -tags=duckdb -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cm
 go build -tags=duckdb -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
 ```
 
+### Build tags
+
+This package uses build tags to enable support for various features. The default set of tags is `duckdb` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
+
+#### duckdb
+
+The `duckdb` tag adds support for the [DuckDB](https://duckdb.org/) database as an embeddings database.
+
+It also uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
+
+Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#).
+
 ### embeddingsdb-server
+
+Start a network-based server for managing embeddings.
 
 ```
 $> ./bin/embeddingsdb-server -h
+Start a network-based server for managing embeddings.
+Usage:
+	./bin/embeddingsdb-server [options]
+Valid options are:
   -database-uri string
-    	An optional value which be used to replace the '{database}' placeholder, if present, in the -server-uri flag.
+    	An optional value which be used to replace the '{database}' placeholder, if present, in the -server-uri flag. This is expected to be a registered sfomuseum/go-embeddingsdb/database.Database URI
   -server-uri string
-    	A registered sfomuseum/go-embeddingsdb/server.EmbeddingsDBServer URI. (default "grpc://localhost:8081?database-uri={database}")
+    	A registered sfomuseum/go-embeddingsdb/server.EmbeddingsDBServer URI. (default "grpc://localhost:8081?database-uri={database}&token-uri={token}")
+  -token-uri string
+    	An optional value which be used to replace the '{token}' placeholder, if present, in the -server-uri flag. This is expected to be a registered gocloud.dev/runtimevar URI that resolves to a shared authentication token.
   -verbose
     	Enable vebose (debug) logging.
+```	
+
+For example:
+
+```
+$> ./bin/embeddingsdb-server -server-uri 'grpc://localhost:8081?database-uri={database}' -database-uri 'duckdb:///usr/local/data/embeddings' -verbose
+2026/01/17 06:24:58 DEBUG Verbose logging enabled
+2026/01/17 06:24:58 DEBUG Set up database
+2026/01/17 06:24:58 DEBUG Statically linked VSS extension installed and loaded
+2026/01/17 06:24:58 DEBUG Load database from path path=/usr/local/data/embeddings
+2026/01/17 06:24:58 DEBUG IMPORT DATABASE '/usr/local/data/embeddings'
+2026/01/17 06:25:40 DEBUG Finished setting up database time=41.931554166s
+2026/01/17 06:25:40 DEBUG Set up database export timer path=/usr/local/data/embeddings
+2026/01/17 06:25:40 DEBUG Set up listener
+2026/01/17 06:25:40 DEBUG Set up server
+2026/01/17 06:25:40 DEBUG Allow insecure connections
+2026/01/17 06:25:40 INFO Server listening address=localhost:8081
 ```
 
 ### embeddingsdb-client
@@ -171,7 +281,9 @@ Valid options are:
 
 ### Statically linked extensions (MacOS)
 
-If you want to build a `emeddingsdb-server` binary with support for DuckDB for MacOS _and_ that has been signed and notarized you will need to compile a custom `libduckdb_bundle.a` library with both the JSON and VSS extensions statically linked. Then you will need to use specify that custom library when build the `emeddingsdb-server` binary. This is because by default DuckDB loads (and caches) extensions on the fly and those extensions will have been signed by someone other than the "team" with notarized your application.
+If you want to build a `emeddingsdb-server` binary (or any other tool that uses this package as a library) for MacOS with support for DuckDB _and_ that has been signed and notarized you will need to compile a custom `libduckdb_bundle.a` library with both the JSON and VSS extensions statically linked. Then you will need to use specify that custom library when building the `emeddingsdb-server` binary. This is because the default behaviour for DuckDB is to load (and cache) extensions on the fly and those extensions will have been signed by someone other than the "team" (you) that notarized the `emeddingsdb-server` binary.
+
+_Note: The following instructions will work if you don't care about notarizing the `emeddingsdb-server` binary but still want local, statically-linked extensions that don't require a network connection to use._
 
 After a fair amount of trial and error this is what I managed to get working. It _should_ work for you but you know how these things end up changing when you're not looking.
 
@@ -252,13 +364,13 @@ Build DuckDB again as a library:
 ```
 $> make bundle-library
 
-... Stuff happens
+... stuff happens
 
 $> du -h /usr/local/src/duckdb/build/release/libduckdb_bundle.a
  79M	/usr/local/src/duckdb/build/release/libduckdb_bundle.a
 ```
 
-Apply extra MacOS hoop-jumping:
+Apply extra MacOS hoop-jumping, appending the `generated_extension_loader.cpp.o` file to the `libduckdb_bundle.a` file::
 
 ```
 $> find /usr/local/src/duckdb/build/release -name "generated_extension_loader.cpp.o"
@@ -271,7 +383,9 @@ Finally rebuild the `embeddingsdb-server` with the customized DuckDB library:
 
 ```
 $> make server-bundle
-CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L/usr/local/src/duckdb/build/release -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L/usr/local/src/duckdb/build/release -lduckdb_bundle -lc++" \
+	go build -tags=duckdb,duckdb_use_static_lib -mod vendor -ldflags="-s -w" \
+	-o bin/embeddingsdb-server cmd/server/main.go
 ```
 
 ## See also

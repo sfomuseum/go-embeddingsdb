@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"net/url"
 	"strings"
 
@@ -22,7 +23,7 @@ func main() {
 	var token_uri string
 	var verbose bool
 
-	server_uri_default := fmt.Sprintf("grpc://localhost:8081?database-uri=%s&token-uri={token}", database_placeholder, token_placeholder)
+	server_uri_default := fmt.Sprintf("grpc://localhost:8081?database-uri=%s&token-uri=%s", database_placeholder, token_placeholder)
 
 	database_uri_desc := fmt.Sprintf("An optional value which be used to replace the '%s' placeholder, if present, in the -server-uri flag. This is expected to be a registered sfomuseum/go-embeddingsdb/database.Database URI", database_placeholder)
 
@@ -35,6 +36,13 @@ func main() {
 	fs.StringVar(&token_uri, "token-uri", "", token_uri_desc)
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
+	fs.Usage = func(){
+		fmt.Fprintf(os.Stderr, "Start a network-based server for managing embeddings.\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Valid options are:\n")
+		fs.PrintDefaults()
+	}
+	
 	flagset.Parse(fs)
 
 	if verbose {
