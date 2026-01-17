@@ -8,9 +8,15 @@ An opinionated Go package for storing, indexing and querying vector embeddings.
 
 This package and the tools it exports still occupy the in-between state of being general purpose tools and specific to the immediate needs of SFO Museum. That means it may not do what you need it to out of the box. If it doesn't we're certainly open to entertaining changes.
 
+## Documentation
+
+At this time `godoc` documentation is incomplete.
+
 ## Concepts
 
 ### Records
+
+Records contain individual embeddings values and related metadata. While not specific to image embeddings they are what most of the work modeling records reflects.
 
 ```
 // Record defines a struct containing properties associated with individual records stored in an embeddings database.
@@ -34,15 +40,17 @@ type Record struct {
 
 ### Databases
 
+A database is a system for managing (storing, indexing and querying) embeddings. This package aims to be agnostic to the underlying database system focusing instead on a common interface for use.
+
 ```
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
-	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
 	// Find similar records for a given model and record instance.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 	Export(context.Context, string) error
 	// Return the Unix timestamp of the last update to the Database instance.
@@ -56,6 +64,8 @@ type Database interface {
 
 ### Servers
 
+A server is a network-based service for managing (storing, indexing and querying) embeddings. This package aims to be agnostic to the underlying server semantics focusing instead on a common interface for use.
+
 ```
 // Server defines an interface for a network-based interface for interacting with an embeddings database.
 type Server interface {
@@ -66,17 +76,19 @@ type Server interface {
 
 ### Clients
 
+A client communicates with a server for managing (storing, indexing and querying) embeddings. This package aims to be agnostic to the underlying client semantics focusing instead on a common interface for use.
+
 ```
-// Clientdefines an interface for clients to interact with an embeddings database.
-type Clientinterface {
+// Client defines an interface for clients to interact with an embeddings database.
+type Client interface {
 	// Add a new record to an embeddings database.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
-	GetRecord(context.Context, string, string, string) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
 	// Retrieve records with similar embeddings from an embeddings database.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRequest) ([]*embeddingsdb.SimilarResult, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
-	SimilarRecordsById(context.Context, string, string, string) ([]*embeddingsdb.SimilarResult, error)
+	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error)
 }
 ```
 
@@ -222,6 +234,8 @@ $> ./bin/embeddingsdb-server -server-uri 'grpc://localhost:8081?database-uri={da
 
 ### embeddingsdb-client
 
+Command-line tool for interacting with a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+
 ```
 $> ./bin/embeddingsdb-client -h
 Command-line tool for interacting with a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
@@ -233,7 +247,11 @@ Valid commands are:
 * similar-by-id [options]
 ```
 
+_Note: This tool does implement all of the `Client` interface methods (yet)._
+
 #### embeddingsdb-client record
+
+Command-line tool for retrieving a record from a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
 
 ```
 $> ./bin/embeddingsdb-client record -h
@@ -254,7 +272,24 @@ Valid options are:
     	Enable vebose (debug) logging.
 ```
 
+For example:
+
+```
+$> ./bin/embeddingsdb-client record -provider sfomuseum-data-media-collection -depiction-id 1527858087 -client-uri 'grpc://localhost:8080' | jq
+{
+  "provider": "sfomuseum-data-media-collection",
+  "depiction_id": "1527858087",
+  "subject_id": "1511924695",
+  "model": "apple/mobileclip_s0",
+  "embeddings": [
+    -0.017242432,
+    -0.021408081,
+    ... and so on
+```
+
 #### embeddingsdb-client query-by-id
+
+Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
 
 ```
 $> ./bin/embeddingsdb-client similar-by-id -h
@@ -267,6 +302,10 @@ Valid options are:
     	A valid sfomuseum/go-mobileclip.EmbeddingsClient URI. (default "grpc://localhost:8080")
   -depiction-id string
     	The unique depiction ID associated with the record to retrieve to establish embeddings to compare.
+  -max-distance float
+    	The maximum distance allowed when querying records. This will override defaults established by the server.
+  -max-results int
+    	The maximum number of results to return in a query. This will override defaults established by the server.
   -model string
     	The name of the model associated with the record to retrieve to establish embeddings to compare. (default "apple/mobileclip_s0")
   -provider string
@@ -276,6 +315,24 @@ Valid options are:
   -verbose
     	Enable vebose (debug) logging.
 ```	
+
+For example:
+
+```
+$> ./bin/embeddingsdb-client similar-by-id -provider sfomuseum-data-media-collection -depiction-id 1527858087 -client-uri 'grpc://localhost:8081' \
+	| jq -r '.[]["depiction_id"]'
+	
+1527858091
+1527858093
+1880320457
+1880320459
+1880320639
+1914676715
+1914058931
+1880273579
+1880319239
+1964039457
+```
 
 ## DuckDB
 
@@ -389,3 +446,6 @@ CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L/usr/local/src/duc
 ```
 
 ## See also
+
+* https://github.com/sfomuseum/go-embeddings
+* https://github.com/sfomuseum/swift-mobileclip
