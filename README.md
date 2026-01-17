@@ -371,7 +371,7 @@ $> git clone https://github.com/microsoft/vcpkg.git /usr/local/src/vcpkg
 $> cd /usr/local/src/duckdb
 ```
 
-Now copy the `vss.cmake` in to the root directory:
+Now copy the `vss.cmake` config file in to the root directory:
 
 ```
 $> cp .github/config/extensions/vss.cmake ./vss_config.cmake
