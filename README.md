@@ -250,6 +250,8 @@ $> ./bin/embeddingsdb-server -server-uri 'grpc://localhost:8081?database-uri={da
 2026/01/17 06:25:40 INFO Server listening address=localhost:8081
 ```
 
+_Note: Did you notice the "Statically linked VSS extension installed and loaded" message in the example above? This is NOT the default behaviour (which is to install and load the `VSS` extension on the fly, downloading it from the DuckDB servers as necessary). See below [for details](#statically-linked-extensions-macos)_ 
+
 ### embeddingsdb-client
 
 Command-line tool for interacting with a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
