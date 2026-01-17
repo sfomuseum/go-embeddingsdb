@@ -305,7 +305,7 @@ $> ./bin/embeddingsdb-client record -provider sfomuseum-data-media-collection -d
     ... and so on
 ```
 
-#### embeddingsdb-client query-by-id
+#### embeddingsdb-client similar-by-id
 
 Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
 
