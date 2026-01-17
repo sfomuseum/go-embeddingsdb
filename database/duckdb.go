@@ -51,9 +51,14 @@ func init() {
 	}
 }
 
-// * `dimensions
-// * `max-distance`
-// * `max-results`
+// Create a new [DuckDBDatabase] instance for managing embeddings using the DuckDB database and VSS extension derived from 'uri' which is expected to take the form of:
+//
+//	duckdb://{PATH}?{QUERY_PARAMETERS}
+//
+// Valid query parameters are:
+// * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
+// * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
+// * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
 func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -361,8 +366,8 @@ func (db *DuckDBDatabase) Close(ctx context.Context) error {
 }
 
 type setupDuckDBDatabaseOptions struct {
-	Dimensions       int
-	DatabasePath     string
+	Dimensions   int
+	DatabasePath string
 }
 
 func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatabaseOptions) error {
@@ -389,7 +394,7 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatab
 	if has_vss {
 		slog.Debug("Statically linked VSS extension installed and loaded")
 	} else {
-		cmds = append(cmds, "INSTALL VSS")		
+		cmds = append(cmds, "INSTALL VSS")
 		cmds = append(cmds, "LOAD VSS")
 	}
 

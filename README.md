@@ -4,9 +4,13 @@ An opinionated Go package for storing, indexing and querying vector embeddings.
 
 ## Motivation
 
+There are many vector databases or databases with support for managing vector embeddings. This is not another one. This is, instead, an opinionated Go package for storing, indexing and querying vector embeddings independent of the underlying database using a common interface.
+
+For background, please consult the [Similar object images derived using the MobileCLIP computer-vision models](https://millsfield.sfomuseum.org/blog/2026/01/09/similar/) blog post.
+
 ## Caveats
 
-This package and the tools it exports still occupy the in-between state of being general purpose tools and specific to the immediate needs of SFO Museum. That means it may not do what you need it to out of the box. If it doesn't we're certainly open to entertaining changes.
+This package and the tools it exports still occupy the in-between state of being general purpose and specific to the immediate needs of SFO Museum. That means it may not do what you need it to out of the box. If it doesn't we're certainly open to entertaining changes.
 
 ## Documentation
 
@@ -104,6 +108,14 @@ duckdb://{PATH}?{QUERY_PARAMETERS}
 
 Where `{PATH}` is an optional value mapped to the location of an existing DuckDB database. If present this database will be used to instantiate the database. Depending on the size of the database this can take a noticeable amount of time.
 
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+| max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
+| max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
+
 ## Servers
 
 ### grcp://
@@ -193,7 +205,7 @@ The `duckdb` tag adds support for the [DuckDB](https://duckdb.org/) database as 
 
 It also uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
 
-Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#).
+Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#statically-linked-extensions-macos).
 
 ### embeddingsdb-server
 
@@ -247,7 +259,7 @@ Valid commands are:
 * similar-by-id [options]
 ```
 
-_Note: This tool does implement all of the `Client` interface methods (yet)._
+_Note: This tool does implement all of the `Client` interface methods (notably for adding records) yet._
 
 #### embeddingsdb-client record
 
@@ -384,6 +396,8 @@ VCPKG_TOOLCHAIN_PATH=/usr/local/src/vcpkg/scripts/buildsystems/vcpkg.cmake
 VCPKG_ROOT=/usr/local/src/vcpkg
 ```
 
+Note the use of the `BUILD_JSON` environment variable. This will bundle the JSON extension which is necessary to use the VSS extension.
+
 First, build the command line tool so you can verify that the VSS (and JSON) extensions are statically linked:
 
 ```
@@ -427,7 +441,7 @@ $> du -h /usr/local/src/duckdb/build/release/libduckdb_bundle.a
  79M	/usr/local/src/duckdb/build/release/libduckdb_bundle.a
 ```
 
-Apply extra MacOS hoop-jumping, appending the `generated_extension_loader.cpp.o` file to the `libduckdb_bundle.a` file::
+Apply additional MacOS hoop-jumping, appending the `generated_extension_loader.cpp.o` file to the `libduckdb_bundle.a` file::
 
 ```
 $> find /usr/local/src/duckdb/build/release -name "generated_extension_loader.cpp.o"
@@ -439,6 +453,8 @@ $> ar rcs /usr/local/src/duckdb/build/release/libduckdb_bundle.a /usr/local/src/
 Finally rebuild the `embeddingsdb-server` with the customized DuckDB library:
 
 ```
+$> cd /usr/local/src/go-embeddingsdb
+
 $> make server-bundle
 CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L/usr/local/src/duckdb/build/release -lduckdb_bundle -lc++" \
 	go build -tags=duckdb,duckdb_use_static_lib -mod vendor -ldflags="-s -w" \

@@ -44,10 +44,15 @@ func init() {
 	}
 }
 
-// * `database-uri`
-// * `token-uri`
-// * `tls-certificate`
-// * `tls-key`
+// Create a gRPC-based server for managing embeddings-related operations derived from 'uri' which is expected to take the form of:
+//
+//	grpc://{HOST}:{ADDRESS}?{QUERY_PARAMETERS}
+//
+// Where {QUERY_PARAMETERS} may be:
+// * `database-uri` – A registered `sfomuseum/go-embeddingsdb/database.Database` URI for the underlying database implementation to use. (required)
+// * `token-uri` – A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests.
+// * `tls-certificate` – The path to a valid TLS certificate to use for encrypted connections.
+// * `tls-key` – The path to a valid TLS key file to use for encrypted connections.
 func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 
 	u, err := url.Parse(uri)

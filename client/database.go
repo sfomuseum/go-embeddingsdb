@@ -23,8 +23,9 @@ func init() {
 // derived from 'uri' which is expected to take the port of:
 //
 //	database://?{PARAMETERS}
-
+//
 // Where {PARAMETERS} may be one or more of the following:
+// * `database-uri` – A registered `sfomuseum/go-embeddingsdb/database.Database` URI for the underlying database implementation to use.
 func NewDatabaseClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)

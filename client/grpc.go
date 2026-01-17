@@ -36,13 +36,13 @@ func init() {
 // derived from 'uri' which is expected to take the port of:
 //
 //	grpc://{HOST}:{PORT}?{PARAMETERS}
-
+//
 // Where {PARAMETERS} may be one or more of the following:
-// * `tls-certificate`
-// * `tls-key`
-// * `tls-ca-certificate`
-// * `tls-insecure`
-// * `token-uri`
+// * `tls-certificate` – The path to a valid TLS certificate to use for encrypted connections.
+// * `tls-key` – The path to a valid TLS key file to use for encrypted connections.
+// * `tls-ca-certificate` – The path to a custom TLS authority certificate to use for encrypted connections.
+// * `tls-insecure` – Skip TLS verification steps. Use with caution.
+// * `token-uri` – A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests.
 func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 	u, err := url.Parse(uri)

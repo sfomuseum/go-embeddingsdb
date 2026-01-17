@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"os"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/sfomuseum/go-embeddingsdb/server"
@@ -36,13 +36,13 @@ func main() {
 	fs.StringVar(&token_uri, "token-uri", "", token_uri_desc)
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
-	fs.Usage = func(){
+	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Start a network-based server for managing embeddings.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	flagset.Parse(fs)
 
 	if verbose {
