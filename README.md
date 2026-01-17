@@ -404,7 +404,7 @@ VCPKG_ROOT=/usr/local/src/vcpkg
 
 Note the use of the `BUILD_JSON` environment variable. This will bundle the JSON extension which is necessary to use the VSS extension.
 
-First, build the command line tool so you can verify that the VSS (and JSON) extensions are statically linked:
+Now build the command line tool so you can verify that the VSS (and JSON) extensions are statically linked:
 
 ```
 $> make
@@ -415,7 +415,7 @@ $> du -h /usr/local/src/duckdb/build/release/duckdb
  43M	/usr/local/src/duckdb/build/release/duckdb
 ```
 
-Now check the installed (and loaded) extensions:
+Once built, check the installed (and loaded) extensions:
 
 ```
 $> /usr/local/src/duckdb/build/release/duckdb
@@ -436,7 +436,7 @@ memory D SELECT extension_name, loaded, installed, install_mode FROM duckdb_exte
 └────────────────┴─────────┴───────────┴───────────────────┘
 ```
 
-Build DuckDB again as a library:
+Assuming that the `vss` extension is installed and loaded build DuckDB again as a library:
 
 ```
 $> make bundle-library
@@ -456,7 +456,7 @@ $> find /usr/local/src/duckdb/build/release -name "generated_extension_loader.cp
 $> ar rcs /usr/local/src/duckdb/build/release/libduckdb_bundle.a /usr/local/src/duckdb/build/release/extension/CMakeFiles/duckdb_generated_extension_loader.dir/__/codegen/src/generated_extension_loader.cpp.o
 ```
 
-Finally rebuild the `embeddingsdb-server` with the customized DuckDB library:
+Finally rebuild the `embeddingsdb-server` with the customized DuckDB library using the handy `server-bundle` Makefile target (in this repo):
 
 ```
 $> cd /usr/local/src/go-embeddingsdb
