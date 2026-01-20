@@ -60,7 +60,7 @@ func main() {
 		server_u, err := url.Parse(server_uri)
 
 		if err != nil {
-			log.Fatalf("Failed to parse server URI, %w", err)
+			log.Fatalf("Failed to parse server URI, %v", err)
 		}
 
 		server_q := server_u.Query()

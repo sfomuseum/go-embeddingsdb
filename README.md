@@ -104,7 +104,7 @@ Manage embeddings use the [DuckDB](https://duckdb.org/) database and the [VSS](h
 duckdb://{PATH}?{QUERY_PARAMETERS}
 ```
 
-Where `{PATH}` is an optional value mapped to the location of an existing DuckDB database. If present this database will be used to instantiate the database. Depending on the size of the database this can take a noticeable amount of time.
+Where `{PATH}` is an optional value mapped to the location of an existing DuckDB database. If present this database will be used to instantiate the database. Depending on the size of the database this can take a noticeable amount of time. It is also the location where the database will exported to if the `Server.Export` method is called.
 
 Valid parameters are:
 

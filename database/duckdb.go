@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -116,8 +118,18 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	setup_opts := &setupDuckDBDatabaseOptions{
-		DatabasePath: u.Path,
-		Dimensions:   dimensions,
+		Dimensions: dimensions,
+	}
+
+	if u.Path != "" {
+
+		abs_path, err := filepath.Abs(u.Path)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to derive absolute path for database, %w", err)
+		}
+
+		setup_opts.DatabasePath = abs_path
 	}
 
 	err = setupDuckDBDatabase(ctx, vec_db, setup_opts)
@@ -398,7 +410,40 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatab
 		cmds = append(cmds, "LOAD VSS")
 	}
 
+	import_db := false
+
 	if opts.DatabasePath != "" {
+
+		import_db = true
+
+		ensure_present := []string{
+			"embeddings.csv",
+			"load.sql",
+			"schema.sql",
+		}
+
+		for _, path := range ensure_present {
+
+			path = filepath.Join(opts.DatabasePath, path)
+
+			info, err := os.Stat(path)
+
+			if err != nil {
+				slog.Debug("Required database path not present", "path", path, "error", err)
+				import_db = false
+				break
+			}
+
+			if info.IsDir() {
+				slog.Debug("Required database is a directory", "path", path)
+				import_db = false
+				break
+			}
+		}
+
+	}
+
+	if import_db {
 		slog.Debug("Load database from path", "path", opts.DatabasePath)
 		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", opts.DatabasePath))
 	} else {
