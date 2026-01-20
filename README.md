@@ -462,12 +462,16 @@ Finally rebuild the `embeddingsdb-server` with the customized DuckDB library usi
 
 ```
 $> cd /usr/local/src/go-embeddingsdb
+$> mkdir work
+$> cp cp /usr/local/src/duckdb/build/release/libduckdb_bundle.a ./work/
 
 $> make server-bundle
-CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L/usr/local/src/duckdb/build/release -lduckdb_bundle -lc++" \
+CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" \
 	go build -tags=duckdb,duckdb_use_static_lib -mod vendor -ldflags="-s -w" \
 	-o bin/embeddingsdb-server cmd/server/main.go
 ```
+
+_Note: You don't have to copy `libduckdb_bundle.a` in to a local `work` folder but this way you don't have remember where it is or what happened to it the next time you clean up your `/usr/local/src` directory. The `work` directory is explicitly excluded from Git checkins in this repository._
 
 ## See also
 
