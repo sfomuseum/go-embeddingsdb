@@ -161,7 +161,6 @@ Valid parameters are:
 | --- | --- | --- | --- |
 | token-uri | string | no | A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests. |
 | tls-certificate | string | no | The path to a valid TLS certificate to use for encrypted connections. |
-| tls-key | string | no | The path to a valid TLS key file to use for encrypted connections. |
 | tls-ca-certificate | string | no | The path to a custom TLS authority certificate to use for encrypted connections. |
 | tls-insecure | bool | no | Skip TLS verification steps. Use with caution. |
 

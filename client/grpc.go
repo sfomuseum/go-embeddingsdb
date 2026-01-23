@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log/slog"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -39,7 +40,6 @@ func init() {
 //
 // Where {PARAMETERS} may be one or more of the following:
 // * `tls-certificate` – The path to a valid TLS certificate to use for encrypted connections.
-// * `tls-key` – The path to a valid TLS key file to use for encrypted connections.
 // * `tls-ca-certificate` – The path to a custom TLS authority certificate to use for encrypted connections.
 // * `tls-insecure` – Skip TLS verification steps. Use with caution.
 // * `token-uri` – A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests.
@@ -54,7 +54,6 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 	q := u.Query()
 
 	q_tls_cert := q.Get("tls-certificate")
-	q_tls_key := q.Get("tls-key")
 	q_tls_ca := q.Get("tls-ca-certificate")
 	q_tls_insecure := q.Get("tls-insecure")
 
@@ -62,18 +61,22 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 
 	opts := make([]grpc.DialOption, 0)
 
-	if q_tls_cert != "" && q_tls_key != "" {
+	if q_tls_cert != "" {
 
 		slog.Debug("Set up TLS")
 
-		cert, err := tls.LoadX509KeyPair(q_tls_cert, q_tls_key)
+		cert_pool := x509.NewCertPool()
+
+		cert, err := os.ReadFile(q_tls_cert)
 
 		if err != nil {
-			return nil, fmt.Errorf("Failed to load TLS pair, %w", err)
+			return nil, fmt.Errorf("Failed to read certificate file, %w", err)
 		}
 
-		tls_config := &tls.Config{
-			Certificates: []tls.Certificate{cert},
+		ok := cert_pool.AppendCertsFromPEM(cert)
+
+		if !ok {
+			return nil, fmt.Errorf("Failed to append certificate, %w", err)
 		}
 
 		if q_tls_ca != "" {
@@ -84,17 +87,18 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 				return nil, fmt.Errorf("Failed to create CA certificate, %w", err)
 			}
 
-			cert_pool := x509.NewCertPool()
-
 			ok := cert_pool.AppendCertsFromPEM(ca_cert)
 
 			if !ok {
 				return nil, fmt.Errorf("Failed to append CA certificate, %w", err)
 			}
+		}
 
-			tls_config.RootCAs = cert_pool
+		tls_config := &tls.Config{
+			RootCAs: cert_pool,
+		}
 
-		} else if q_tls_insecure != "" {
+		if q_tls_ca == "" && q_tls_insecure != "" {
 
 			v, err := strconv.ParseBool(q_tls_insecure)
 
