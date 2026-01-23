@@ -2,10 +2,13 @@ package server
 
 import (
 	"context"
+	"log/slog"
+	"time"
 
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
+	"google.golang.org/grpc/peer"
 )
 
 type grpcService struct {
@@ -15,11 +18,23 @@ type grpcService struct {
 
 func (s *grpcService) AddRecord(ctx context.Context, req *grpc.AddRecordRequest) (*grpc.AddRecordResponse, error) {
 
+	logger := s.Logger(ctx)
+	t1 := time.Now()
+
+	defer func() {
+		logger.Debug("Time to add record", "time", time.Since(t1))
+	}()
+
 	record := embeddingsdb.GrpcEmbeddingsRecordToEmbeddingsDBRecord(req.Record)
+
+	logger = logger.With("provider", record.Provider)
+	logger = logger.With("depiction_id", record.DepictionId)
+	logger = logger.With("model", record.Model)
 
 	err := s.db.AddRecord(ctx, record)
 
 	if err != nil {
+		logger.Error("Failed to add record", "error", err)
 		return nil, err
 	}
 
@@ -28,6 +43,14 @@ func (s *grpcService) AddRecord(ctx context.Context, req *grpc.AddRecordRequest)
 }
 
 func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest) (*grpc.GetRecordResponse, error) {
+
+	logger := s.Logger(ctx)
+	logger = logger.With("provider", req.Provider)
+	logger = logger.With("depiction_id", req.DepictionId)
+	logger = logger.With("model", req.Model)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to get record", "time", time.Since(t1))
 
 	db_req := &embeddingsdb.GetRecordRequest{
 		Provider:    req.Provider,
@@ -38,6 +61,7 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 	record, err := s.db.GetRecord(ctx, db_req)
 
 	if err != nil {
+		logger.Error("Failed to get record", "error", err)
 		return nil, err
 	}
 
@@ -52,6 +76,13 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 
 func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
 
+	logger := s.Logger(ctx)
+	logger = logger.With("provider", req.SimilarProvider)
+	logger = logger.With("model", req.Model)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to retrieve similar records", "time", time.Since(t1))
+
 	db_req := &embeddingsdb.SimilarRecordsRequest{
 		Model:           req.Model,
 		Embeddings:      req.Embeddings,
@@ -64,6 +95,7 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 	records, err := s.db.SimilarRecords(ctx, db_req)
 
 	if err != nil {
+		logger.Error("Failed to retrieve similar records", "error", err)
 		return nil, err
 	}
 
@@ -78,6 +110,14 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 
 func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarRecordsByIdRequest) (*grpc.SimilarRecordsResponse, error) {
 
+	logger := s.Logger(ctx)
+	logger = logger.With("provider", req.Provider)
+	logger = logger.With("depiction_id", req.DepictionId)
+	logger = logger.With("model", req.Model)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to retrieve similar records by ID", "time", time.Since(t1))
+
 	record_req := &embeddingsdb.GetRecordRequest{
 		Provider:    req.Provider,
 		DepictionId: req.DepictionId,
@@ -87,6 +127,7 @@ func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarR
 	record, err := s.db.GetRecord(ctx, record_req)
 
 	if err != nil {
+		logger.Error("Failed to get record", "error", err)
 		return nil, err
 	}
 
@@ -102,4 +143,17 @@ func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarR
 	}
 
 	return s.SimilarRecords(ctx, similar_req)
+}
+
+func (s *grpcService) Logger(ctx context.Context) *slog.Logger {
+
+	logger := slog.Default()
+
+	p, ok := peer.FromContext(ctx)
+
+	if ok {
+		logger = logger.With("remote address", p.Addr.String())
+	}
+
+	return logger
 }

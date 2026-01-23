@@ -400,7 +400,12 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatab
 	err := row.Scan(&has_vss)
 
 	if err != nil {
-		return fmt.Errorf("Failed to determine whether VSS extension is loaded, %w", err)
+
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("Failed to determine whether VSS extension is loaded, %w", err)
+		}
+
+		has_vss = false
 	}
 
 	if has_vss {
