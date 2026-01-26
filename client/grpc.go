@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"strings"
 	"strconv"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -127,6 +128,8 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 			return nil, fmt.Errorf("Failed to derive token, %w", err)
 		}
 
+		token = strings.TrimSpace(token)
+		
 		token_source := &oauth2.Token{
 			AccessToken: token,
 		}

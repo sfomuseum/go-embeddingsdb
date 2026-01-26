@@ -86,6 +86,7 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 			return nil, fmt.Errorf("Failed to derive token, %w", err)
 		}
 
+		token = strings.TrimSpace(token)
 		s.token = &token
 	}
 
