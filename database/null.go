@@ -51,6 +51,16 @@ func (db *NullDatabase) URI() string {
 	return "null://"
 }
 
+func (db *NullDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+	models := make([]string, 0)
+	return models, nil
+}
+
+func (db *NullDatabase) Providers(ctx context.Context) ([]string, error) {
+	providers := make([]string, 0)
+	return providers, nil
+}
+
 func (db *NullDatabase) Close(ctx context.Context) error {
 	return nil
 }

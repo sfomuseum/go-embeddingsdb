@@ -145,6 +145,48 @@ func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarR
 	return s.SimilarRecords(ctx, similar_req)
 }
 
+func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest) (*grpc.GetModelsResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to list models", "time", time.Since(t1))
+
+	models, err := s.db.Models(ctx, req.Providers...)
+
+	if err != nil {
+		logger.Error("Failed to list models", "error", err)
+		return nil, err
+	}
+
+	rsp := &grpc.GetModelsResponse{
+		Models: models,
+	}
+
+	return rsp
+}
+
+func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRequest) (*grpc.GetProvidersResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to list providers", "time", time.Since(t1))
+
+	providers, err := s.db.Providers(ctx)
+
+	if err != nil {
+		logger.Error("Failed to list providers", "error", err)
+		return nil, err
+	}
+
+	rsp := &grpc.GetProvidersResponse{
+		Providers: providers,
+	}
+
+	return rsp
+}
+
 func (s *grpcService) Logger(ctx context.Context) *slog.Logger {
 
 	logger := slog.Default()

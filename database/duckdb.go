@@ -373,6 +373,76 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
+func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+
+	count_providers := len(providers)
+
+	q := "SELECT DISTINCT(model) AS model FROM embeddings"
+	args := make([]any, 0)
+
+	if count_providers > 0 {
+
+		in := make([]string, count_providers)
+		args = make([]any, count_providers)
+
+		for i, pr := range providers {
+			in[i] = "?"
+			args[i] = pr
+		}
+
+		q = fmt.Sprintf("%s WHERE provider IN (%s)", strings.Join(in, ","))
+	}
+
+	rows, err := db.vec_db.QueryRowsContext(ctx, q, args...)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query models, %w", err)
+	}
+
+	models := make([]string, 0)
+
+	for rows.Next() {
+
+		var model string
+		err := rows.Scan(&model)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to scan model row, %w", err)
+		}
+
+		models = append(models, model)
+	}
+
+	return models, nil
+}
+
+func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
+
+	q := "SELECT DISTINCT(provider) AS provider FROM embeddings"
+
+	rows, err := db.vec_db.QueryRowsContext(ctx, q)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query providers, %w", err)
+	}
+
+	providers := make([]string, 0)
+
+	for rows.Next() {
+
+		var provider string
+		err := rows.Scan(&provider)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to scan provider row, %w", err)
+		}
+
+		providers = append(providers, provider)
+	}
+
+	return providers, nil
+}
+
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }

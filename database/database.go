@@ -27,6 +27,10 @@ type Database interface {
 	LastUpdate(context.Context) (int64, error)
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
+	// Return the unique list of models, for zero or more providers, across all the embeddings.
+	Models(context.Context, ...string) ([]string, error)
+	// Return the unique list of providers across all the embeddings.
+	Providers(context.Context) ([]string, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }

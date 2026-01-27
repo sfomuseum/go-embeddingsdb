@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -129,7 +129,7 @@ func NewGrpcClient(ctx context.Context, uri string) (Client, error) {
 		}
 
 		token = strings.TrimSpace(token)
-		
+
 		token_source := &oauth2.Token{
 			AccessToken: token,
 		}
