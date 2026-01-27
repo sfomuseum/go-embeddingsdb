@@ -152,7 +152,7 @@ func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest)
 	t1 := time.Now()
 	defer logger.Debug("Time to list models", "time", time.Since(t1))
 
-	models, err := s.db.Models(ctx, req.Providers...)
+	models, err := s.db.Models(ctx, req.Provider...)
 
 	if err != nil {
 		logger.Error("Failed to list models", "error", err)
@@ -160,10 +160,10 @@ func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest)
 	}
 
 	rsp := &grpc.GetModelsResponse{
-		Models: models,
+		Model: models,
 	}
 
-	return rsp
+	return rsp, nil
 }
 
 func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRequest) (*grpc.GetProvidersResponse, error) {
@@ -181,10 +181,10 @@ func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRe
 	}
 
 	rsp := &grpc.GetProvidersResponse{
-		Providers: providers,
+		Provider: providers,
 	}
 
-	return rsp
+	return rsp, nil
 }
 
 func (s *grpcService) Logger(ctx context.Context) *slog.Logger {

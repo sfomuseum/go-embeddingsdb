@@ -21,6 +21,10 @@ type Client interface {
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
 	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error)
+	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
+	Models(context.Context, ...string) ([]string, error)
+	// Return the unique list of providers across all the embeddings.
+	Providers(context.Context) ([]string, error)
 }
 
 var client_roster roster.Roster

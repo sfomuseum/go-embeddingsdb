@@ -59,6 +59,10 @@ type Database interface {
 	LastUpdate(context.Context) (int64, error)
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
+	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
+	Models(context.Context, ...string) ([]string, error)
+	// Return the unique list of providers across all the embeddings.
+	Providers(context.Context) ([]string, error)	
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
@@ -91,6 +95,10 @@ type Client interface {
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
 	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error)
+	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
+	Models(context.Context, ...string) ([]string, error)
+	// Return the unique list of providers across all the embeddings.
+	Providers(context.Context) ([]string, error)	
 }
 ```
 
@@ -264,6 +272,8 @@ Usage:
 Valid commands are:
 * record [options]
 * similar-by-id [options]
+* models [options]
+* providers [options]
 ```
 
 _Note: This tool does implement all of the `Client` interface methods (notably for adding records) yet._
@@ -280,7 +290,7 @@ Usage:
 
 Valid options are:
   -client-uri string
-    	A valid sfomuseum/go-mobileclip.EmbeddingsClient URI. (default "grpc://localhost:8080")
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -depiction-id string
     	The unique depiction ID associated with the record to retrieve.
   -model string
@@ -318,7 +328,7 @@ Usage:
 
 Valid options are:
   -client-uri string
-    	A valid sfomuseum/go-mobileclip.EmbeddingsClient URI. (default "grpc://localhost:8080")
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -depiction-id string
     	The unique depiction ID associated with the record to retrieve to establish embeddings to compare.
   -max-distance float
@@ -351,6 +361,62 @@ $> ./bin/embeddingsdb-client similar-by-id -provider sfomuseum-data-media-collec
 1880273579
 1880319239
 1964039457
+```
+
+#### embeddingsdb-client models
+
+Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+
+```
+$> ./bin/embeddingsdb-client models -h
+Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Usage:
+	models [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -provider value
+    	Zero or more providers to limit model selection by.
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/embeddingsdb-client models -client-uri 'grpc://localhost:8081' | jq
+[
+  "apple/mobileclip_s0",
+  "apple/mobileclip_s2",
+  "apple/mobileclip_s1"
+]
+```
+
+#### embeddingsdb-client providers
+
+Command-line tool for retrieving the unique list of providers stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+
+```
+$> ./bin/embeddingsdb-client providers -h
+Command-line tool for retrieving the unique list of providers stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Usage:
+	models [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/embeddingsdb-client providers -client-uri 'grpc://localhost:8081' | jq
+[
+  "sfomuseum-data-media-collection"
+]
 ```
 
 ## DuckDB

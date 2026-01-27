@@ -237,3 +237,31 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.S
 	results := embeddingsdb.GrpcSimilarRecordsResultsToEmbeddingDBSimilarRecords(rsp.Records)
 	return results, nil
 }
+
+func (e *GrpcClient) Models(ctx context.Context, providers ...string) ([]string, error) {
+
+	req := &embeddingsdb_grpc.GetModelsRequest{
+		Provider: providers,
+	}
+
+	rsp, err := e.client.GetModels(ctx, req)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to list models, %w", err)
+	}
+
+	return rsp.Model, nil
+}
+
+func (e *GrpcClient) Providers(ctx context.Context) ([]string, error) {
+
+	req := &embeddingsdb_grpc.GetProvidersRequest{}
+
+	rsp, err := e.client.GetProviders(ctx, req)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to list providers, %w", err)
+	}
+
+	return rsp.Provider, nil
+}

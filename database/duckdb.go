@@ -390,10 +390,10 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 			args[i] = pr
 		}
 
-		q = fmt.Sprintf("%s WHERE provider IN (%s)", strings.Join(in, ","))
+		q = fmt.Sprintf("%s WHERE provider IN (%s)", q, strings.Join(in, ","))
 	}
 
-	rows, err := db.vec_db.QueryRowsContext(ctx, q, args...)
+	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query models, %w", err)
@@ -420,7 +420,7 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 
 	q := "SELECT DISTINCT(provider) AS provider FROM embeddings"
 
-	rows, err := db.vec_db.QueryRowsContext(ctx, q)
+	rows, err := db.vec_db.QueryContext(ctx, q)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query providers, %w", err)
