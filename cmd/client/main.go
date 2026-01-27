@@ -12,6 +12,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-flags/flagset"
+	"github.com/sfomuseum/go-flags/multi"
 )
 
 func main() {
@@ -31,6 +32,10 @@ func main() {
 		record(args[2:])
 	case "similar-by-id":
 		similarById(args[2:])
+	case "models":
+		models(args[2:])
+	case "providers":
+		providers(args[2:])
 	default:
 		slog.Warn("Unsupported command", "command", cmd)
 		usage()
@@ -44,6 +49,8 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Valid commands are:\n")
 	fmt.Fprintf(os.Stderr, "* record [options]\n")
 	fmt.Fprintf(os.Stderr, "* similar-by-id [options]\n")
+	fmt.Fprintf(os.Stderr, "* models [options]\n")
+	fmt.Fprintf(os.Stderr, "* providers [options]\n")
 	flag.PrintDefaults()
 
 	os.Exit(1)
@@ -59,7 +66,7 @@ func record(args []string) {
 
 	fs := flagset.NewFlagSet("record")
 
-	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
+	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve.")
@@ -117,7 +124,7 @@ func similarById(args []string) {
 
 	fs := flagset.NewFlagSet("record")
 
-	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A valid sfomuseum/go-mobileclip.EmbeddingsClient URI.")
+	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
@@ -177,4 +184,92 @@ func similarById(args []string) {
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.Encode(rsp)
+}
+
+func models(args []string) {
+
+	var client_uri string
+	var providers multi.MultiString
+
+	var verbose bool
+
+	fs := flagset.NewFlagSet("record")
+
+	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&providers, "provider", "Zero or more providers to limit model selection by.")
+
+	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "models")
+		fmt.Fprintf(os.Stderr, "Valid options are:\n")
+		fs.PrintDefaults()
+	}
+
+	fs.Parse(args)
+
+	ctx := context.Background()
+
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+		slog.Debug("Verbose logging enabled")
+	}
+
+	cl, err := client.NewClient(ctx, client_uri)
+
+	if err != nil {
+		log.Fatalf("Failed to create new embeddings client, %v", err)
+	}
+
+	models, err := cl.Models(ctx, providers...)
+
+	if err != nil {
+		log.Fatalf("Failed to get models, %v", err)
+	}
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.Encode(models)
+}
+
+func providers(args []string) {
+
+	var client_uri string
+	var verbose bool
+
+	fs := flagset.NewFlagSet("record")
+
+	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving the unique list of providers stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "models")
+		fmt.Fprintf(os.Stderr, "Valid options are:\n")
+		fs.PrintDefaults()
+	}
+
+	fs.Parse(args)
+
+	ctx := context.Background()
+
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+		slog.Debug("Verbose logging enabled")
+	}
+
+	cl, err := client.NewClient(ctx, client_uri)
+
+	if err != nil {
+		log.Fatalf("Failed to create new embeddings client, %v", err)
+	}
+
+	providers, err := cl.Providers(ctx)
+
+	if err != nil {
+		log.Fatalf("Failed to get models, %v", err)
+	}
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.Encode(providers)
 }

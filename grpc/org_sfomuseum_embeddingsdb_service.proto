@@ -8,6 +8,8 @@ service EmbeddingsDBService {
     rpc GetRecord(GetRecordRequest) returns (GetRecordResponse) {}
     rpc SimilarRecords(SimilarRecordsRequest) returns (SimilarRecordsResponse) {}
     rpc SimilarRecordsById(SimilarRecordsByIdRequest) returns (SimilarRecordsResponse) {}
+    rpc GetModels(GetModelsRequest) returns (GetModelsResponse) {}
+    rpc GetProviders(GetProvidersRequest) returns (GetProvidersResponse) {}    
 }
 
 message EmbeddingsDBRecord {
@@ -64,4 +66,19 @@ message SimilarRecord {
     string subject_id = 3;
     float distance = 4;
     map<string, string> attributes = 5;
+}
+
+message GetModelsRequest {
+    repeated string provider = 1;
+}
+
+message GetModelsResponse {
+    repeated string model = 1;
+}
+
+message GetProvidersRequest {
+}
+
+message GetProvidersResponse {
+    repeated string provider = 1;
 }

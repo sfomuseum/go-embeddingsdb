@@ -67,6 +67,14 @@ func (cl *DatabaseClient) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	return cl.db.SimilarRecords(ctx, req)
 }
 
+func (cl *DatabaseClient) Models(ctx context.Context, providers ...string) ([]string, error) {
+	return cl.db.Models(ctx, providers...)
+}
+
+func (cl *DatabaseClient) Providers(ctx context.Context) ([]string, error) {
+	return cl.db.Providers(ctx)
+}
+
 func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
 	record_req := &embeddingsdb.GetRecordRequest{

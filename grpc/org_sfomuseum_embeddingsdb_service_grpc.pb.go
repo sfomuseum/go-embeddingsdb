@@ -23,6 +23,8 @@ const (
 	EmbeddingsDBService_GetRecord_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetRecord"
 	EmbeddingsDBService_SimilarRecords_FullMethodName     = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/SimilarRecords"
 	EmbeddingsDBService_SimilarRecordsById_FullMethodName = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/SimilarRecordsById"
+	EmbeddingsDBService_GetModels_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetModels"
+	EmbeddingsDBService_GetProviders_FullMethodName       = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetProviders"
 )
 
 // EmbeddingsDBServiceClient is the client API for EmbeddingsDBService service.
@@ -33,6 +35,8 @@ type EmbeddingsDBServiceClient interface {
 	GetRecord(ctx context.Context, in *GetRecordRequest, opts ...grpc.CallOption) (*GetRecordResponse, error)
 	SimilarRecords(ctx context.Context, in *SimilarRecordsRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error)
 	SimilarRecordsById(ctx context.Context, in *SimilarRecordsByIdRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error)
+	GetModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error)
+	GetProviders(ctx context.Context, in *GetProvidersRequest, opts ...grpc.CallOption) (*GetProvidersResponse, error)
 }
 
 type embeddingsDBServiceClient struct {
@@ -79,6 +83,24 @@ func (c *embeddingsDBServiceClient) SimilarRecordsById(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *embeddingsDBServiceClient) GetModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error) {
+	out := new(GetModelsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingsDBService_GetModels_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingsDBServiceClient) GetProviders(ctx context.Context, in *GetProvidersRequest, opts ...grpc.CallOption) (*GetProvidersResponse, error) {
+	out := new(GetProvidersResponse)
+	err := c.cc.Invoke(ctx, EmbeddingsDBService_GetProviders_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EmbeddingsDBServiceServer is the server API for EmbeddingsDBService service.
 // All implementations must embed UnimplementedEmbeddingsDBServiceServer
 // for forward compatibility
@@ -87,6 +109,8 @@ type EmbeddingsDBServiceServer interface {
 	GetRecord(context.Context, *GetRecordRequest) (*GetRecordResponse, error)
 	SimilarRecords(context.Context, *SimilarRecordsRequest) (*SimilarRecordsResponse, error)
 	SimilarRecordsById(context.Context, *SimilarRecordsByIdRequest) (*SimilarRecordsResponse, error)
+	GetModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error)
+	GetProviders(context.Context, *GetProvidersRequest) (*GetProvidersResponse, error)
 	mustEmbedUnimplementedEmbeddingsDBServiceServer()
 }
 
@@ -105,6 +129,12 @@ func (UnimplementedEmbeddingsDBServiceServer) SimilarRecords(context.Context, *S
 }
 func (UnimplementedEmbeddingsDBServiceServer) SimilarRecordsById(context.Context, *SimilarRecordsByIdRequest) (*SimilarRecordsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SimilarRecordsById not implemented")
+}
+func (UnimplementedEmbeddingsDBServiceServer) GetModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetModels not implemented")
+}
+func (UnimplementedEmbeddingsDBServiceServer) GetProviders(context.Context, *GetProvidersRequest) (*GetProvidersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProviders not implemented")
 }
 func (UnimplementedEmbeddingsDBServiceServer) mustEmbedUnimplementedEmbeddingsDBServiceServer() {}
 
@@ -191,6 +221,42 @@ func _EmbeddingsDBService_SimilarRecordsById_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EmbeddingsDBService_GetModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingsDBServiceServer).GetModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingsDBService_GetModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingsDBServiceServer).GetModels(ctx, req.(*GetModelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingsDBService_GetProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProvidersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingsDBServiceServer).GetProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingsDBService_GetProviders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingsDBServiceServer).GetProviders(ctx, req.(*GetProvidersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EmbeddingsDBService_ServiceDesc is the grpc.ServiceDesc for EmbeddingsDBService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -213,6 +279,14 @@ var EmbeddingsDBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SimilarRecordsById",
 			Handler:    _EmbeddingsDBService_SimilarRecordsById_Handler,
+		},
+		{
+			MethodName: "GetModels",
+			Handler:    _EmbeddingsDBService_GetModels_Handler,
+		},
+		{
+			MethodName: "GetProviders",
+			Handler:    _EmbeddingsDBService_GetProviders_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
