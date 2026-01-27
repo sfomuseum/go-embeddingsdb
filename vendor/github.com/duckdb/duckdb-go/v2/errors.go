@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/duckdb/duckdb-go/mapping"
+	"github.com/duckdb/duckdb-go/v2/mapping"
 )
 
 func getError(errDriver, err error) error {
@@ -33,6 +33,10 @@ func structFieldError(actual, expected string) error {
 
 func columnCountError(actual, expected int) error {
 	return fmt.Errorf("%s: expected %d, got %d", columnCountErrMsg, expected, actual)
+}
+
+func setValueError(colIdx, rowIdx int, val any, err error) error {
+	return fmt.Errorf("%s: at row %d, col %d, val: %v: %w", setValueErrMsg, rowIdx, colIdx, val, err)
 }
 
 func paramIndexError(idx int, max uint64) error {
@@ -77,6 +81,7 @@ const (
 	invalidInputErrMsg      = "invalid input"
 	structFieldErrMsg       = "invalid STRUCT field"
 	columnCountErrMsg       = "invalid column count"
+	setValueErrMsg          = "failed to set value"
 	unprojectedColumnErrMsg = "unprojected column"
 	unsupportedTypeErrMsg   = "unsupported data type"
 	invalidatedAppenderMsg  = "appended and not yet flushed data has been invalidated due to error"
@@ -278,8 +283,8 @@ func getDuckDBError(errMsg string) error {
 	errType := ErrorTypeInvalid
 
 	// Find the end of the prefix ("<error-type> Error: ").
-	if idx := strings.Index(errMsg, ": "); idx != -1 {
-		if typ, ok := errorPrefixMap[errMsg[:idx]]; ok {
+	if prefix, _, ok := strings.Cut(errMsg, ": "); ok {
+		if typ, ok := errorPrefixMap[prefix]; ok {
 			errType = typ
 		}
 	}

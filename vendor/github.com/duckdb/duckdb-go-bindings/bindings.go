@@ -219,12 +219,12 @@ type (
 	// Use the respective Blob functions to access / write to this type.
 	// This type must be destroyed with DestroyBlob.
 	Blob = C.duckdb_blob
-	// Bit does not export New and Members.
-	// Use the respective Bit functions to access / write to this type.
+	// Bit stores a bit string.
+	// Use NewBit/BitMembers to access this type.
 	// This type must be destroyed with DestroyBit.
 	Bit = C.duckdb_bit
-	// BigNum does not export New and Members.
-	// Use the respective BigNum functions to access / write to this type.
+	// BigNum stores arbitrary precision integers.
+	// Use NewBigNum/BigNumMembers to access/write to this type.
 	// This type must be destroyed with DestroyBigNum.
 	BigNum = C.duckdb_bignum
 )
@@ -449,6 +449,52 @@ func NewListEntry(offset uint64, length uint64) ListEntry {
 // ListEntryMembers returns the offset and length of a duckdb_list_entry.
 func ListEntryMembers(entry *ListEntry) (uint64, uint64) {
 	return uint64(entry.offset), uint64(entry.length)
+}
+
+// NewBigNum creates a BigNum from a byte slice and sign.
+// The data is stored in little endian format (absolute value).
+// The returned BigNum must be destroyed with DestroyBigNum.
+func NewBigNum(data []byte, isNegative bool) BigNum {
+	if debugMode {
+		incrAllocCount("bigNum")
+	}
+	cData := (*C.uint8_t)(C.CBytes(data))
+	return BigNum{
+		data:        cData,
+		size:        C.idx_t(len(data)),
+		is_negative: C.bool(isNegative),
+	}
+}
+
+// BigNumMembers returns the data bytes and sign of a BigNum.
+// The data is in little endian format (absolute value).
+func BigNumMembers(bn *BigNum) ([]byte, bool) {
+	size := int(bn.size)
+	data := C.GoBytes(unsafe.Pointer(bn.data), C.int(size))
+	return data, bool(bn.is_negative)
+}
+
+// NewBit creates a Bit from the given data bytes.
+// BIT byte data has 0 to 7 bits of padding.
+// The first byte contains the number of padding bits.
+// The padding bits of the second byte are set to 1, starting from the MSB.
+func NewBit(data []byte) Bit {
+	if debugMode {
+		incrAllocCount("bit")
+	}
+	cData := (*C.uint8_t)(C.CBytes(data))
+	return Bit{
+		data: cData,
+		size: C.idx_t(len(data)),
+	}
+}
+
+// BitMembers returns the data bytes of a Bit.
+// The first byte contains the padding (number of unused bits in the last byte).
+// Remaining bytes contain the actual bit data.
+func BitMembers(b *Bit) []byte {
+	size := int(b.size)
+	return C.GoBytes(unsafe.Pointer(b.data), C.int(size))
 }
 
 // Helper functions for types with internal fields that need freeing:
@@ -1237,6 +1283,12 @@ func ResultGetChunk(res Result, index IdxT) DataChunk {
 	}
 }
 
+// ResultIsStreaming wraps duckdb_result_is_streaming.
+// Deprecated: ResultIsStreaming is deprecated.
+func ResultIsStreaming(res Result) bool {
+	return bool(C.duckdb_result_is_streaming(res.data))
+}
+
 // Deprecated: See C API documentation.
 func ResultChunkCount(res Result) IdxT {
 	return C.duckdb_result_chunk_count(res.data)
@@ -1456,6 +1508,7 @@ func PreparedStatementColumnCount(preparedStmt PreparedStatement) IdxT {
 
 func PreparedStatementColumnName(preparedStmt PreparedStatement, index IdxT) string {
 	name := C.duckdb_prepared_statement_column_name(preparedStmt.data(), index)
+	defer Free(unsafe.Pointer(name))
 	return C.GoString(name)
 }
 
@@ -1600,6 +1653,16 @@ func ExecutePrepared(preparedStmt PreparedStatement, outRes *Result) State {
 	return C.duckdb_execute_prepared(preparedStmt.data(), &outRes.data)
 }
 
+// ExecutePreparedStreaming wraps duckdb_execute_prepared_streaming.
+// outRes must be destroyed with DestroyResult.
+// Deprecated: ExecutePreparedStreaming is deprecated.
+func ExecutePreparedStreaming(preparedStmt PreparedStatement, outRes *Result) State {
+	if debugMode {
+		incrAllocCount("res")
+	}
+	return C.duckdb_execute_prepared_streaming(preparedStmt.data(), &outRes.data)
+}
+
 // ------------------------------------------------------------------ //
 // Extract Statements
 // ------------------------------------------------------------------ //
@@ -1658,6 +1721,19 @@ func DestroyExtracted(extractedStmts *ExtractedStatements) {
 func PendingPrepared(preparedStmt PreparedStatement, outPendingRes *PendingResult) State {
 	var pendingRes C.duckdb_pending_result
 	state := C.duckdb_pending_prepared(preparedStmt.data(), &pendingRes)
+	outPendingRes.Ptr = unsafe.Pointer(pendingRes)
+	if debugMode {
+		incrAllocCount("pendingRes")
+	}
+	return state
+}
+
+// PendingPreparedStreaming wraps duckdb_pending_prepared_streaming.
+// outPendingRes must be destroyed with DestroyPending.
+// Deprecated: PendingPreparedStreaming is deprecated.
+func PendingPreparedStreaming(preparedStmt PreparedStatement, outPendingRes *PendingResult) State {
+	var pendingRes C.duckdb_pending_result
+	state := C.duckdb_pending_prepared_streaming(preparedStmt.data(), &pendingRes)
 	outPendingRes.Ptr = unsafe.Pointer(pendingRes)
 	if debugMode {
 		incrAllocCount("pendingRes")
@@ -3674,8 +3750,23 @@ func TableDescriptionGetColumnName(desc TableDescription, index IdxT) string {
 // Streaming Result Interface
 //===--------------------------------------------------------------------===//
 
-// TODO:
-// duckdb_stream_fetch_chunk (deprecation notice)
+// StreamFetchChunk wraps duckdb_stream_fetch_chunk.
+// Returns a data chunk from the streaming result.
+// The returned data chunk must be destroyed with DestroyDataChunk.
+// Returns a data chunk with size 0 when the result is exhausted.
+// Deprecated: StreamFetchChunk is deprecated.
+func StreamFetchChunk(res Result, outChunk *DataChunk) State {
+	chunk := C.duckdb_stream_fetch_chunk(res.data)
+	// duckdb_stream_fetch_chunk returns NULL if the result has an error.
+	if chunk == nil {
+		return StateError
+	}
+	outChunk.Ptr = unsafe.Pointer(chunk)
+	if debugMode {
+		incrAllocCount("chunk")
+	}
+	return StateSuccess
+}
 
 //===--------------------------------------------------------------------===//
 // Result Interface
