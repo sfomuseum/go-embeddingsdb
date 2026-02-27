@@ -37,6 +37,9 @@ github.com/apache/arrow-go/v18/internal/bitutils
 github.com/apache/arrow-go/v18/internal/hashing
 github.com/apache/arrow-go/v18/internal/json
 github.com/apache/arrow-go/v18/internal/utils
+# github.com/asg017/sqlite-vec-go-bindings v0.1.6
+## explicit; go 1.22.5
+github.com/asg017/sqlite-vec-go-bindings/cgo
 # github.com/aws/aws-sdk-go-v2 v1.40.0
 ## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/aws
@@ -264,6 +267,9 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/cpuid/v2 v2.3.0
 ## explicit; go 1.22
 github.com/klauspost/cpuid/v2
+# github.com/mattn/go-sqlite3 v1.14.34
+## explicit; go 1.19
+github.com/mattn/go-sqlite3
 # github.com/pierrec/lz4/v4 v4.1.25
 ## explicit; go 1.17
 github.com/pierrec/lz4/v4
