@@ -1,0 +1,28 @@
+package database
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+)
+
+// Compliment method to SerializeFloat32
+// https://github.com/asg017/sqlite-vec-go-bindings/blob/main/cgo/lib.go#L33
+
+func DeserializeFloat32(b []byte) ([]float32, error) {
+
+	if len(b)%4 != 0 {
+		return nil, fmt.Errorf("byte slice length %d is not a multiple of 4", len(b))
+	}
+
+	n := len(b) / 4           // number of float32 values
+	vec := make([]float32, n) // allocate destination slice
+
+	buf := bytes.NewReader(b)
+
+	// binary.Read will read n float32 values into vec
+	if err := binary.Read(buf, binary.LittleEndian, vec); err != nil {
+		return nil, err
+	}
+	return vec, nil
+}

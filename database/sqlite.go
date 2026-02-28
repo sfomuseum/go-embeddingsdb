@@ -1,11 +1,9 @@
 package database
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"embed"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -189,7 +187,7 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 		return err
 	}
 
-	vec_q := fmt.Sprintf("INSERT INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
+	vec_q := fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 
 	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
 
@@ -206,7 +204,7 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	now := time.Now()
 	lastmod := now.Unix()
 
-	records_q := fmt.Sprintf("INSERT INTO %s (id, provider, depiction_id, subject_id, model, attributes, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", db.records_table.Name())
+	records_q := fmt.Sprintf("INSERT OR REPLACE INTO %s (id, provider, depiction_id, subject_id, model, attributes, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", db.records_table.Name())
 
 	_, err = db.vec_db.ExecContext(ctx, records_q, id, rec.Provider, rec.DepictionId, rec.SubjectId, rec.Model, string(enc_attrs), rec.Created, lastmod)
 
@@ -228,46 +226,7 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.attributes, r.created FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
 
 	row := db.vec_db.QueryRowContext(ctx, records_q, id)
-
-	var enc_embeddings []byte
-	var provider string
-	var depiction_id string
-	var subject_id string
-	var model string
-	var str_attrs string
-	var created int64
-
-	err = row.Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
-
-	if err != nil {
-		return nil, err
-	}
-
-	e32, err := DeserializeFloat32(enc_embeddings)
-
-	if err != nil {
-		slog.Error("Failed to deserialize embeddings", "error", err)
-	}
-
-	var attrs map[string]string
-
-	err = json.Unmarshal([]byte(str_attrs), &attrs)
-
-	if err != nil {
-		return nil, err
-	}
-
-	r := &embeddingsdb.Record{
-		Provider:    provider,
-		Embeddings:  e32,
-		DepictionId: depiction_id,
-		SubjectId:   subject_id,
-		Model:       model,
-		Attributes:  attrs,
-		Created:     created,
-	}
-
-	return r, nil
+	return db.rowToEmbeddingsDBRecord(ctx, row)
 }
 
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
@@ -333,23 +292,54 @@ func (db *SQLiteDatabase) uidForRecord(ctx context.Context, provider string, dep
 	}
 }
 
-// Compliment method to SerializeFloat32
-// https://github.com/asg017/sqlite-vec-go-bindings/blob/main/cgo/lib.go#L33
+func (db *SQLiteDatabase) rowToEmbeddingsDBRecord(ctx context.Context, r any) (*embeddingsdb.Record, error) {
 
-func DeserializeFloat32(b []byte) ([]float32, error) {
+	var enc_embeddings []byte
+	var provider string
+	var depiction_id string
+	var subject_id string
+	var model string
+	var str_attrs string
+	var created int64
 
-	if len(b)%4 != 0 {
-		return nil, fmt.Errorf("byte slice length %d is not a multiple of 4", len(b))
+	var err error
+
+	switch r.(type) {
+	case *sql.Row:
+		err = r.(*sql.Row).Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
+	case *sql.Rows:
+		err = r.(*sql.Rows).Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
+	default:
+		return nil, fmt.Errorf("Invalid row type")
 	}
 
-	n := len(b) / 4           // number of float32 values
-	vec := make([]float32, n) // allocate destination slice
-
-	buf := bytes.NewReader(b)
-
-	// binary.Read will read n float32 values into vec
-	if err := binary.Read(buf, binary.LittleEndian, vec); err != nil {
+	if err != nil {
 		return nil, err
 	}
-	return vec, nil
+
+	e32, err := DeserializeFloat32(enc_embeddings)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var attrs map[string]string
+
+	err = json.Unmarshal([]byte(str_attrs), &attrs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rec := &embeddingsdb.Record{
+		Provider:    provider,
+		Embeddings:  e32,
+		DepictionId: depiction_id,
+		SubjectId:   subject_id,
+		Model:       model,
+		Attributes:  attrs,
+		Created:     created,
+	}
+
+	return rec, nil
 }
