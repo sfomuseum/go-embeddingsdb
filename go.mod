@@ -6,6 +6,7 @@ require (
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/gocloud v1.0.2
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/duckdb/duckdb-go/v2 v2.5.5
 	github.com/mattn/go-sqlite3 v1.14.34
 	github.com/sfomuseum/go-database v0.0.18

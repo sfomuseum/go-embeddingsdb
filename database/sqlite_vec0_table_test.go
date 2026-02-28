@@ -12,7 +12,7 @@ func TestSQLiteTable(t *testing.T) {
 
 	tb_uri := "sqlite://?dimensions=384"
 
-	tb, err := NewSQLiteTable(ctx, tb_uri)
+	tb, err := NewSQLiteVec0Table(ctx, tb_uri)
 
 	if err != nil {
 		t.Fatalf("Failed to create new SQLite table, %v", err)

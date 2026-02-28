@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"embed"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -15,10 +14,7 @@ import (
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 )
 
-//go:embed sqlite_schema.txt
-var fs embed.FS
-
-type SQLiteTable struct {
+type SQLiteVec0Table struct {
 	sfom_sql.Table
 	dimensions   int
 	max_distance float32
@@ -26,12 +22,12 @@ type SQLiteTable struct {
 	name         string
 }
 
-type SQLiteTableSchemaVars struct {
+type SQLiteVec0TableSchemaVars struct {
 	Dimensions int
 	TableName  string
 }
 
-func NewSQLiteTable(ctx context.Context, uri string) (sfom_sql.Table, error) {
+func NewSQLiteVec0Table(ctx context.Context, uri string) (sfom_sql.Table, error) {
 
 	u, err := url.Parse(uri)
 
@@ -81,7 +77,7 @@ func NewSQLiteTable(ctx context.Context, uri string) (sfom_sql.Table, error) {
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
-	t := &SQLiteTable{
+	t := &SQLiteVec0Table{
 		name:         "vec",
 		dimensions:   dimensions,
 		max_results:  max_results,
@@ -91,25 +87,25 @@ func NewSQLiteTable(ctx context.Context, uri string) (sfom_sql.Table, error) {
 	return t, nil
 }
 
-func (t *SQLiteTable) Name() string {
+func (t *SQLiteVec0Table) Name() string {
 	return t.name
 }
 
-func (t *SQLiteTable) Schema(*sql.DB) (string, error) {
+func (t *SQLiteVec0Table) Schema(*sql.DB) (string, error) {
 
-	tp, err := template.ParseFS(fs, "*_schema.txt")
+	tp, err := template.ParseFS(sqlite_schema_fs, "sqlite_*_schema.txt")
 
 	if err != nil {
 		return "", err
 	}
 
-	tp = tp.Lookup("sqlite_schema")
+	tp = tp.Lookup("sqlite_vec0")
 
 	if tp == nil {
 		return "", fmt.Errorf("Missing schema template")
 	}
 
-	vars := SQLiteTableSchemaVars{
+	vars := SQLiteVec0TableSchemaVars{
 		Dimensions: t.dimensions,
 		TableName:  t.Name(),
 	}
@@ -127,10 +123,10 @@ func (t *SQLiteTable) Schema(*sql.DB) (string, error) {
 	return buf.String(), nil
 }
 
-func (t *SQLiteTable) InitializeTable(context.Context, *sql.DB) error {
+func (t *SQLiteVec0Table) InitializeTable(context.Context, *sql.DB) error {
 	return nil
 }
 
-func (t *SQLiteTable) IndexRecord(context.Context, *sql.DB, *sql.Tx, interface{}) error {
+func (t *SQLiteVec0Table) IndexRecord(context.Context, *sql.DB, *sql.Tx, interface{}) error {
 	return fmt.Errorf("Not implemented")
 }

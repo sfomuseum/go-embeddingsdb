@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"database/sql"
+	"embed"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -12,27 +14,43 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
+//go:embed sqlite_*_schema.txt
+var sqlite_schema_fs embed.FS
+
+var snowflake_node *snowflake.Node
+
 type SQLiteDatabase struct {
 	Database
-	db_uri       string
-	vec_db       *sql.DB
-	dimensions   int
-	max_distance float32
-	max_results  int32
+	db_uri        string
+	vec_db        *sql.DB
+	vec_table     sfom_sql.Table
+	records_table sfom_sql.Table
+	dimensions    int
+	max_distance  float32
+	max_results   int32
 }
 
 func init() {
 
 	ctx := context.Background()
-	err := RegisterDatabase(ctx, "sqlite3", NewSQLiteDatabase)
+	err := RegisterDatabase(ctx, "sqlite", NewSQLiteDatabase)
 
 	if err != nil {
 		panic(err)
 	}
+
+	n, err := snowflake.NewNode(1)
+
+	if err != nil {
+		panic(err)
+	}
+
+	snowflake_node = n
 }
 
 func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
@@ -88,21 +106,43 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	dsn := q.Get("dsn")
-
 	vec_db, err := sql.Open("sqlite3", dsn)
+
+	// vec_db, err := sfom_sql.OpenWithURI(ctx, uri)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to open database connection, %w", err)
 	}
 
-	setup_opts := &setupSQLiteDatabaseOptions{
-		Dimensions: dimensions,
-	}
+	t_query := url.Values{}
+	t_query.Set("dimensions", strconv.Itoa(dimensions))
 
-	err = setupSQLiteDatabase(ctx, vec_db, setup_opts)
+	t_uri := url.URL{}
+	t_uri.Scheme = "sqlite"
+	t_uri.RawQuery = t_query.Encode()
+
+	vec_t, err := NewSQLiteVec0Table(ctx, t_uri.String())
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to setup database, %w", err)
+		return nil, err
+	}
+
+	err = sfom_sql.CreateTableIfNecessary(ctx, vec_db, vec_t)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to setup vec table, %w", err)
+	}
+
+	records_t, err := NewSQLiteRecordsTable(ctx, "sqlite://")
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = sfom_sql.CreateTableIfNecessary(ctx, vec_db, records_t)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to setup records table, %w", err)
 	}
 
 	if q.Has("max-conns") {
@@ -117,11 +157,13 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	db := &SQLiteDatabase{
-		db_uri:       uri,
-		vec_db:       vec_db,
-		dimensions:   dimensions,
-		max_distance: max_distance,
-		max_results:  max_results,
+		db_uri:        uri,
+		vec_db:        vec_db,
+		vec_table:     vec_t,
+		records_table: records_t,
+		dimensions:    dimensions,
+		max_distance:  max_distance,
+		max_results:   max_results,
 	}
 
 	return db, nil
@@ -132,7 +174,45 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string) error {
 }
 
 func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
-	return nil
+
+	id, err := db.uidForRecord(ctx, rec)
+
+	if err != nil {
+		return err
+	}
+
+	enc_e, err := json.Marshal(rec.Embeddings)
+
+	if err != nil {
+		return err
+	}
+
+	vec_q := fmt.Sprintf("INSERT INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
+
+	_, err = db.vec_db.ExecContext(ctx, vec_q, id, string(enc_e))
+
+	if err != nil {
+		return err
+	}
+
+	enc_attrs, err := json.Marshal(rec.Attributes)
+
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	lastmod := now.Unix()
+
+	records_q := fmt.Sprintf("INSERT INTO %s (id, provider, depiction_id, subject_id, model, attributes, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", db.records_table.Name())
+
+	_, err = db.vec_db.ExecContext(ctx, records_q, id, rec.Provider, rec.DepictionId, rec.SubjectId, rec.Model, string(enc_attrs), rec.Created, lastmod)
+
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
@@ -166,23 +246,22 @@ func (db *SQLiteDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }
 
-type setupSQLiteDatabaseOptions struct {
-	Dimensions int
-}
+func (db *SQLiteDatabase) uidForRecord(ctx context.Context, rec *embeddingsdb.Record) (int64, error) {
 
-func setupSQLiteDatabase(ctx context.Context, db *sql.DB, opts *setupSQLiteDatabaseOptions) error {
+	q := fmt.Sprintf("SELECT id FROM %s WHERE provider= ? AND depiction_id = ? AND model = ?", db.records_table.Name())
 
-	t1 := time.Now()
+	row := db.vec_db.QueryRowContext(ctx, q, rec.Provider, rec.DepictionId, rec.Model)
 
-	defer func() {
-		slog.Debug("Finished setting up database", "time", time.Since(t1))
-	}()
+	var id int64
+	err := row.Scan(&id)
 
-	vec_t, err := NewSQLiteTable(ctx, "")
-
-	if err != nil {
-		return err
+	switch {
+	case err == sql.ErrNoRows:
+		new_id := snowflake_node.Generate()
+		return new_id.Int64(), nil
+	case err != nil:
+		return 0, err
+	default:
+		return id, nil
 	}
-
-	return sfom_sql.CreateTableIfNecessary(ctx, db, vec_t)
 }
