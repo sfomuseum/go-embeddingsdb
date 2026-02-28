@@ -1,6 +1,5 @@
 package embeddingsdb
 
-
 type GetRecordRequest struct {
 	// Provider is the name (or context) of the provider responsible for DepictionId.
 	Provider string `json:"provider"`

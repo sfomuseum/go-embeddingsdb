@@ -1,9 +1,11 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -175,13 +177,13 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string) error {
 
 func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
 
-	id, err := db.uidForRecord(ctx, rec)
+	id, err := db.uidForRecord(ctx, rec.Provider, rec.DepictionId, rec.Model)
 
 	if err != nil {
 		return err
 	}
 
-	enc_e, err := json.Marshal(rec.Embeddings)
+	enc_e, err := sqlite_vec.SerializeFloat32(rec.Embeddings)
 
 	if err != nil {
 		return err
@@ -189,7 +191,7 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 
 	vec_q := fmt.Sprintf("INSERT INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 
-	_, err = db.vec_db.ExecContext(ctx, vec_q, id, string(enc_e))
+	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
 
 	if err != nil {
 		return err
@@ -216,7 +218,56 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 }
 
 func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
-	return nil, fmt.Errorf("Not found")
+
+	id, err := db.uidForRecord(ctx, req.Provider, req.DepictionId, req.Model)
+
+	if err != nil {
+		return nil, err
+	}
+
+	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.attributes, r.created FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
+
+	row := db.vec_db.QueryRowContext(ctx, records_q, id)
+
+	var enc_embeddings []byte
+	var provider string
+	var depiction_id string
+	var subject_id string
+	var model string
+	var str_attrs string
+	var created int64
+
+	err = row.Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
+
+	if err != nil {
+		return nil, err
+	}
+
+	e32, err := DeserializeFloat32(enc_embeddings)
+
+	if err != nil {
+		slog.Error("Failed to deserialize embeddings", "error", err)
+	}
+
+	var attrs map[string]string
+
+	err = json.Unmarshal([]byte(str_attrs), &attrs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	r := &embeddingsdb.Record{
+		Provider:    provider,
+		Embeddings:  e32,
+		DepictionId: depiction_id,
+		SubjectId:   subject_id,
+		Model:       model,
+		Attributes:  attrs,
+		Created:     created,
+	}
+
+	return r, nil
 }
 
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
@@ -225,7 +276,23 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.
 }
 
 func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
-	return 0, nil
+
+	q := fmt.Sprintf("SELECT lastmodified FROM %s ORDER BY lastmodified DESC LIMIT 1", db.records_table.Name())
+
+	row := db.vec_db.QueryRowContext(ctx, q)
+
+	var lastmod int64
+	err := row.Scan(&lastmod)
+
+	switch {
+	case err == sql.ErrNoRows:
+		new_id := snowflake_node.Generate()
+		return new_id.Int64(), nil
+	case err != nil:
+		return 0, err
+	default:
+		return lastmod, nil
+	}
 }
 
 func (db *SQLiteDatabase) URI() string {
@@ -246,11 +313,11 @@ func (db *SQLiteDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }
 
-func (db *SQLiteDatabase) uidForRecord(ctx context.Context, rec *embeddingsdb.Record) (int64, error) {
+func (db *SQLiteDatabase) uidForRecord(ctx context.Context, provider string, depiction_id string, model string) (int64, error) {
 
 	q := fmt.Sprintf("SELECT id FROM %s WHERE provider= ? AND depiction_id = ? AND model = ?", db.records_table.Name())
 
-	row := db.vec_db.QueryRowContext(ctx, q, rec.Provider, rec.DepictionId, rec.Model)
+	row := db.vec_db.QueryRowContext(ctx, q, provider, depiction_id, model)
 
 	var id int64
 	err := row.Scan(&id)
@@ -264,4 +331,25 @@ func (db *SQLiteDatabase) uidForRecord(ctx context.Context, rec *embeddingsdb.Re
 	default:
 		return id, nil
 	}
+}
+
+// Compliment method to SerializeFloat32
+// https://github.com/asg017/sqlite-vec-go-bindings/blob/main/cgo/lib.go#L33
+
+func DeserializeFloat32(b []byte) ([]float32, error) {
+
+	if len(b)%4 != 0 {
+		return nil, fmt.Errorf("byte slice length %d is not a multiple of 4", len(b))
+	}
+
+	n := len(b) / 4           // number of float32 values
+	vec := make([]float32, n) // allocate destination slice
+
+	buf := bytes.NewReader(b)
+
+	// binary.Read will read n float32 values into vec
+	if err := binary.Read(buf, binary.LittleEndian, vec); err != nil {
+		return nil, err
+	}
+	return vec, nil
 }
