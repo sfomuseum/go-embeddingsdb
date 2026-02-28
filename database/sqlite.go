@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+	"net/url"
+	"strconv"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -14,7 +18,11 @@ import (
 
 type SQLiteDatabase struct {
 	Database
-	db *sql.DB
+	db_uri       string
+	vec_db       *sql.DB
+	dimensions   int
+	max_distance float32
+	max_results  int32
 }
 
 func init() {
@@ -89,17 +97,6 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 
 	setup_opts := &setupSQLiteDatabaseOptions{
 		Dimensions: dimensions,
-	}
-
-	if u.Path != "" {
-
-		abs_path, err := filepath.Abs(u.Path)
-
-		if err != nil {
-			return nil, fmt.Errorf("Failed to derive absolute path for database, %w", err)
-		}
-
-		setup_opts.DatabasePath = abs_path
 	}
 
 	err = setupSQLiteDatabase(ctx, vec_db, setup_opts)
