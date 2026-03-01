@@ -10,19 +10,20 @@ func TestSQLiteTable(t *testing.T) {
 
 	ctx := context.Background()
 
-	tb_uri := "sqlite://?dimensions=512"
+	for _, compression := range sqlite_vec_compressions {
 
-	tb, err := NewSQLiteVec0Table(ctx, tb_uri)
+		tb_uri := fmt.Sprintf("sqlite://?dimensions=512&compression=%s", compression)
 
-	if err != nil {
-		t.Fatalf("Failed to create new SQLite table, %v", err)
+		tb, err := NewSQLiteVec0Table(ctx, tb_uri)
+
+		if err != nil {
+			t.Fatalf("[%s] Failed to create new SQLite table, %v", compression, err)
+		}
+
+		_, err = tb.Schema(nil)
+
+		if err != nil {
+			t.Fatalf("[%s] Failed to derive SQLite table schema, %v", compression, err)
+		}
 	}
-
-	schema, err := tb.Schema(nil)
-
-	if err != nil {
-		t.Fatalf("Failed to derive SQLite table schema, %v", err)
-	}
-
-	fmt.Println(schema)
 }

@@ -301,8 +301,8 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
-	if req.MaxDistance == nil && req.MaxResults == nil {
-		return nil, fmt.Errorf("FOO")
+	if req.MaxResults == nil {
+		return nil, fmt.Errorf("Query requires max results value")
 	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)
@@ -332,15 +332,15 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		return nil, fmt.Errorf("Invalid or unsupported compression '%s'", db.compression)
 	}
 
+	q = fmt.Sprintf("%s AND v.distance > 0", q)
+
 	if req.MaxDistance != nil {
 		q = fmt.Sprintf("%s AND v.distance <= %f", q, *req.MaxDistance)
 	}
 
 	if req.MaxResults != nil {
-		q = fmt.Sprintf("%s LIMIT %d", q, *req.MaxResults)
+		q = fmt.Sprintf("%s AND k=%d", q, *req.MaxResults)
 	}
-
-	slog.Info("Q", "q", q)
 
 	rows, err := db.vec_db.QueryContext(ctx, q, enc_e)
 

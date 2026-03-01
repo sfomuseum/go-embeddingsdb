@@ -2,10 +2,10 @@ package database
 
 import (
 	"context"
-	"encoding/json"
+	_ "encoding/json"
 	"fmt"
 	"math/rand"
-	"os"
+	_ "os"
 	"testing"
 	"time"
 
@@ -81,12 +81,14 @@ func TestSQLiteDatabase(t *testing.T) {
 			t.Fatalf("[%s] Unexpected record key. Got '%s' but expected '%s'", compression, get_rec.Key(), rec.Key())
 		}
 
-		enc := json.NewEncoder(os.Stderr)
-		err = enc.Encode(get_rec)
+		/*
+			enc := json.NewEncoder(os.Stderr)
+			err = enc.Encode(get_rec)
 
-		if err != nil {
-			t.Fatalf("[%s] Failed to encode record, %v", compression, err)
-		}
+			if err != nil {
+				t.Fatalf("[%s] Failed to encode record, %v", compression, err)
+			}
+		*/
 
 		rec2 := &embeddingsdb.Record{
 			Provider:    "provider",
@@ -126,8 +128,6 @@ func TestSQLiteDatabase(t *testing.T) {
 			t.Fatalf("[%s] Unexpected providers length %d", compression, len(providers))
 		}
 
-		continue
-
 		max_results := int32(10)
 
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
@@ -140,10 +140,12 @@ func TestSQLiteDatabase(t *testing.T) {
 		similar_rsp, err := db.SimilarRecords(ctx, similar_req)
 
 		if err != nil {
-			t.Fatalf("Failed to determine similar records for rec 2, %v", err)
+			t.Fatalf("[%s] Failed to determine similar records for rec 2, %v", compression, err)
 		}
 
-		fmt.Println(len(similar_rsp))
+		if len(similar_rsp) != 1 {
+			t.Fatalf("[%s] Expected 1 result but got %d", compression, len(similar_rsp))
+		}
 	}
 }
 
