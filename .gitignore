@@ -5,3 +5,4 @@ build.sh
 dist
 work
 .build
+*.db
