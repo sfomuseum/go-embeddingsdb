@@ -10,7 +10,7 @@ func TestSQLiteTable(t *testing.T) {
 
 	ctx := context.Background()
 
-	tb_uri := "sqlite://?dimensions=384"
+	tb_uri := "sqlite://?dimensions=512"
 
 	tb, err := NewSQLiteVec0Table(ctx, tb_uri)
 

@@ -20,7 +20,7 @@ type SQLiteVec0Table struct {
 	max_distance float32
 	max_results  int32
 	name         string
-	compression string
+	compression  string
 }
 
 type SQLiteVec0TableSchemaVars struct {
@@ -42,7 +42,7 @@ func NewSQLiteVec0Table(ctx context.Context, uri string) (sfom_sql.Table, error)
 	max_distance := float32(1.0)
 	max_results := int32(10)
 	compression := sqlite_vec_default_compression
-	
+
 	if q.Has("dimensions") {
 
 		v, err := strconv.Atoi(q.Get("dimensions"))
@@ -79,11 +79,11 @@ func NewSQLiteVec0Table(ctx context.Context, uri string) (sfom_sql.Table, error)
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
-	if q.Has("compression"){
-		
+	if q.Has("compression") {
+
 		compression = q.Get("compression")
 
-		if !IsValidSQLiteCompression(compression){
+		if !IsValidSQLiteCompression(compression) {
 			return nil, fmt.Errorf("Invalid or unsupported compression")
 		}
 	}
@@ -93,6 +93,7 @@ func NewSQLiteVec0Table(ctx context.Context, uri string) (sfom_sql.Table, error)
 		dimensions:   dimensions,
 		max_results:  max_results,
 		max_distance: max_distance,
+		compression:  compression,
 	}
 
 	return t, nil
@@ -112,13 +113,13 @@ func (t *SQLiteVec0Table) Schema(*sql.DB) (string, error) {
 
 	switch t.compression {
 	case sqlite_vec_quantize_compression:
-		tp = tp.Lookup("sqlite_quantize")				
+		tp = tp.Lookup("sqlite_quantize")
 	case sqlite_vec_matroyshka_compression:
-		tp = tp.Lookup("sqlite_matroyshka")		
+		tp = tp.Lookup("sqlite_matroyshka")
 	case sqlite_vec_default_compression:
 		tp = tp.Lookup("sqlite_vec0")
 	default:
-		return "", fmt.Errorf("Invalid or unsupported compression")
+		return "", fmt.Errorf("Invalid or unsupported compression '%s'", t.compression)
 	}
 
 	if tp == nil {

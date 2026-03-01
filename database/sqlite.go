@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-	
+
 	_ "github.com/mattn/go-sqlite3"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
@@ -33,7 +33,7 @@ type SQLiteDatabase struct {
 	dimensions    int
 	max_distance  float32
 	max_results   int32
-	compression string
+	compression   string
 }
 
 func init() {
@@ -107,16 +107,16 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
-	if q.Has("compression"){
-		
+	if q.Has("compression") {
+
 		compression = q.Get("compression")
 
-		if !IsValidSQLiteCompression(compression){
-			return nil, fmt.Errorf("Invalid or unsupported compression")
+		if !IsValidSQLiteCompression(compression) {
+			return nil, fmt.Errorf("Invalid or unsupported compression '%s'", compression)
 		}
-		
+
 	}
-	
+
 	dsn := q.Get("dsn")
 	vec_db, err := sql.Open("sqlite3", dsn)
 
@@ -129,7 +129,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	t_query := url.Values{}
 	t_query.Set("dimensions", strconv.Itoa(dimensions))
 	t_query.Set("compression", compression)
-	
+
 	t_uri := url.URL{}
 	t_uri.Scheme = "sqlite"
 	t_uri.RawQuery = t_query.Encode()
@@ -177,7 +177,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 		dimensions:    dimensions,
 		max_distance:  max_distance,
 		max_results:   max_results,
-		compression: compression,
+		compression:   compression,
 	}
 
 	return db, nil
@@ -205,15 +205,15 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 
 	switch db.compression {
 	case sqlite_vec_quantize_compression:
-		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_quantize_binary(?))", db.vec_table.Name())				
+		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_quantize_binary(?))", db.vec_table.Name())
 	case sqlite_vec_matroyshka_compression:
-		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), matroyshka_dimensions)		
+		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), matroyshka_dimensions)
 	case sqlite_vec_default_compression:
 		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 	default:
-		return fmt.Errorf("Invalid or unsupported compression")
+		return fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
 	}
-	
+
 	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
 
 	if err != nil {
@@ -251,10 +251,59 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.attributes, r.created FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
 
 	row := db.vec_db.QueryRowContext(ctx, records_q, id)
-	return db.rowToEmbeddingsDBRecord(ctx, row)
+
+	var enc_embeddings []byte
+	var provider string
+	var depiction_id string
+	var subject_id string
+	var model string
+	var str_attrs string
+	var created int64
+
+	err = row.Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var attrs map[string]string
+
+	err = json.Unmarshal([]byte(str_attrs), &attrs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rec := &embeddingsdb.Record{
+		Provider:    provider,
+		DepictionId: depiction_id,
+		SubjectId:   subject_id,
+		Model:       model,
+		Attributes:  attrs,
+		Created:     created,
+	}
+
+	switch db.compression {
+	case sqlite_vec_quantize_compression:
+		//
+	default:
+		e32, err := DeserializeFloat32(enc_embeddings)
+
+		if err != nil {
+			return nil, err
+		}
+
+		rec.Embeddings = e32
+	}
+
+	return rec, nil
 }
 
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+
+	if req.MaxDistance == nil && req.MaxResults == nil {
+		return nil, fmt.Errorf("FOO")
+	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)
 
@@ -265,24 +314,34 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 
 	var q string
-	
+
 	switch db.compression {
 	case sqlite_vec_quantize_compression:
 
 		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH vec_quantize_binary(?) AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
-		
+
 	case sqlite_vec_matroyshka_compression:
 
 		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH vec_normalize(vec_slice(?, 0, %d)) AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name(), matroyshka_dimensions)
-		
+
 	case sqlite_vec_default_compression:
-		
+
 		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH ? AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
-		
+
 	default:
-		return nil, fmt.Errorf("Invalid or unsupported compression")
+		return nil, fmt.Errorf("Invalid or unsupported compression '%s'", db.compression)
 	}
-	
+
+	if req.MaxDistance != nil {
+		q = fmt.Sprintf("%s AND v.distance <= %f", q, *req.MaxDistance)
+	}
+
+	if req.MaxResults != nil {
+		q = fmt.Sprintf("%s LIMIT %d", q, *req.MaxResults)
+	}
+
+	slog.Info("Q", "q", q)
+
 	rows, err := db.vec_db.QueryContext(ctx, q, enc_e)
 
 	if err != nil {
@@ -467,56 +526,4 @@ func (db *SQLiteDatabase) uidForRecord(ctx context.Context, provider string, dep
 	default:
 		return id, nil
 	}
-}
-
-func (db *SQLiteDatabase) rowToEmbeddingsDBRecord(ctx context.Context, r any) (*embeddingsdb.Record, error) {
-
-	var enc_embeddings []byte
-	var provider string
-	var depiction_id string
-	var subject_id string
-	var model string
-	var str_attrs string
-	var created int64
-
-	var err error
-
-	switch r.(type) {
-	case *sql.Row:
-		err = r.(*sql.Row).Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
-	case *sql.Rows:
-		err = r.(*sql.Rows).Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
-	default:
-		return nil, fmt.Errorf("Invalid row type")
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	e32, err := DeserializeFloat32(enc_embeddings)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var attrs map[string]string
-
-	err = json.Unmarshal([]byte(str_attrs), &attrs)
-
-	if err != nil {
-		return nil, err
-	}
-
-	rec := &embeddingsdb.Record{
-		Provider:    provider,
-		Embeddings:  e32,
-		DepictionId: depiction_id,
-		SubjectId:   subject_id,
-		Model:       model,
-		Attributes:  attrs,
-		Created:     created,
-	}
-
-	return rec, nil
 }

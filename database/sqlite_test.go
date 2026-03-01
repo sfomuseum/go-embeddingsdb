@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -14,65 +15,137 @@ func TestSQLiteDatabase(t *testing.T) {
 
 	ctx := context.Background()
 
-	db_uri := "sqlite3://?dsn=:memory:&dimensions=3"
+	for _, compression := range sqlite_vec_compressions {
 
-	db, err := NewSQLiteDatabase(ctx, db_uri)
+		if compression == sqlite_vec_quantize_compression {
+			// continue
+		}
 
-	if err != nil {
-		t.Fatalf("Failed to create database, %v", err)
-	}
+		if compression == sqlite_vec_matroyshka_compression {
+			continue
+		}
 
-	defer db.Close(ctx)
+		db_uri := fmt.Sprintf("sqlite3://?dsn=:memory:&dimensions=8&compression=%s", compression)
 
-	now := time.Now()
-	ts := now.Unix()
+		db, err := NewSQLiteDatabase(ctx, db_uri)
 
-	rec := &embeddingsdb.Record{
-		Provider:    "provider",
-		Model:       "model",
-		DepictionId: "1234",
-		SubjectId:   "6789",
-		Embeddings: []float32{
-			0.0, 0.2344, 0.122873,
-		},
-		Created: ts,
-		Attributes: map[string]string{
-			"hello": "world",
-		},
-	}
+		if err != nil {
+			t.Fatalf("[%s] Failed to create database, %v", compression, err)
+		}
 
-	err = db.AddRecord(ctx, rec)
+		defer db.Close(ctx)
 
-	if err != nil {
-		t.Fatalf("Failed to add record, %v", err)
-	}
+		now := time.Now()
+		ts := now.Unix()
 
-	_, err = db.LastUpdate(ctx)
+		rec := &embeddingsdb.Record{
+			Provider:    "provider",
+			Model:       "model",
+			DepictionId: "1234",
+			SubjectId:   "6789",
+			Embeddings: []float32{
+				0.0, 0.2344, 0.122873, 0.0007,
+				0.987, 0.3244, 0.73, 0.0055664008,
+			},
+			Created: ts,
+			Attributes: map[string]string{
+				"hello": "world",
+			},
+		}
 
-	if err != nil {
-		t.Fatalf("Failed to determine last update value, %v", err)
-	}
+		err = db.AddRecord(ctx, rec)
 
-	req := &embeddingsdb.GetRecordRequest{
-		Provider:    "provider",
-		Model:       "model",
-		DepictionId: "1234",
-	}
+		if err != nil {
+			t.Fatalf("[%s] Failed to add record, %v", compression, err)
+		}
 
-	rec2, err := db.GetRecord(ctx, req)
+		_, err = db.LastUpdate(ctx)
 
-	if err != nil {
-		t.Fatalf("Failed to get record, %v", err)
-	}
+		if err != nil {
+			t.Fatalf("[%s] Failed to determine last update value, %v", compression, err)
+		}
 
-	if rec2.Key() != rec.Key() {
-		t.Fatalf("Unexpected record key. Got '%s' but expected '%s'", rec2.Key(), rec.Key())
-	}
+		req := &embeddingsdb.GetRecordRequest{
+			Provider:    "provider",
+			Model:       "model",
+			DepictionId: "1234",
+		}
 
-	enc := json.NewEncoder(os.Stderr)
-	err = enc.Encode(rec2)
+		get_rec, err := db.GetRecord(ctx, req)
 
-	if err != nil {
-		t.Fatalf("Failed to encode record, %v", err)
+		if err != nil {
+			t.Fatalf("[%s] Failed to get record, %v", compression, err)
+		}
+
+		if get_rec.Key() != rec.Key() {
+			t.Fatalf("[%s] Unexpected record key. Got '%s' but expected '%s'", compression, get_rec.Key(), rec.Key())
+		}
+
+		enc := json.NewEncoder(os.Stderr)
+		err = enc.Encode(get_rec)
+
+		if err != nil {
+			t.Fatalf("[%s] Failed to encode record, %v", compression, err)
+		}
+
+		rec2 := &embeddingsdb.Record{
+			Provider:    "provider",
+			Model:       "model",
+			DepictionId: "abc",
+			SubjectId:   "def",
+			Embeddings: []float32{
+				0.00002, 0.3644, 0.52873, 0.0673,
+				0.799, 0.3874, 0.8003, 0.264008,
+			},
+			Created: ts,
+			Attributes: map[string]string{
+				"foo": "bar",
+			},
+		}
+
+		err = db.AddRecord(ctx, rec2)
+
+		if err != nil {
+			t.Fatalf("[%s] Failed to add record 2, %v", compression, err)
+		}
+
+		models, err := db.Models(ctx)
+
+		if err != nil {
+			t.Fatalf("[%s] Failed to derive models", compression)
+		}
+
+		if len(models) != 1 {
+			t.Fatalf("[%s] Unexpected models length %d", compression, len(models))
+		}
+
+		providers, err := db.Providers(ctx)
+
+		if err != nil {
+			t.Fatalf("[%s] Failed to derive providers", compression)
+		}
+
+		if len(providers) != 1 {
+			t.Fatalf("[%s] Unexpected providers length %d", compression, len(providers))
+		}
+
+		continue
+
+		max_results := int32(10)
+
+		similar_req := &embeddingsdb.SimilarRecordsRequest{
+			SimilarProvider: &rec2.Provider,
+			Model:           rec2.Model,
+			Embeddings:      rec2.Embeddings,
+			MaxResults:      &max_results,
+		}
+
+		similar_rsp, err := db.SimilarRecords(ctx, similar_req)
+
+		if err != nil {
+			t.Fatalf("Failed to determine similar records for rec 2, %v", err)
+		}
+
+		fmt.Println(len(similar_rsp))
 	}
 }

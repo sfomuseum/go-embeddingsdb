@@ -19,7 +19,6 @@ var sqlite_vec_compressions = []string{
 	sqlite_vec_matroyshka_compression,
 }
 
-
 func IsValidSQLiteCompression(c string) bool {
 	return slices.Contains(sqlite_vec_compressions, c)
 }
