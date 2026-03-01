@@ -128,6 +128,28 @@ For example:
 duckdb:///usr/local/data/embeddings
 ```
 
+### sqlite://
+
+Manage embeddings use the [SQLite](https://www.sqlite.org/) database and the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| dsn | string | yes | A registered `database/sql.Driver` DSN string. |
+| dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+| max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
+| max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
+| compression | string | no | The type of compression to use when storing embeddings. Options are: none, quantized, matroyshka. Default is "none". |
+
+For example:
+
+```
+sqlite://?dsn=file:/usr/local/data/embeddings.db
+```
+
+_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
+
 ## Servers
 
 ### grcp://
@@ -204,13 +226,13 @@ The easiest way to build the included tools is to run the handy `cli` Makefile t
 
 ```
 $> make cli
-go build -tags=duckdb -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
-go build -tags=duckdb -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
 ```
 
 ### Build tags
 
-This package uses build tags to enable support for various features. The default set of tags is `duckdb` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
+This package uses build tags to enable support for various features. The default set of tags are `duckdb,sqlite` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
 
 #### duckdb
 
@@ -219,6 +241,12 @@ The `duckdb` tag adds support for the [DuckDB](https://duckdb.org/) database as 
 It also uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
 
 Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#statically-linked-extensions-macos).
+
+#### sqlite
+
+The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://alexgarcia.xyz/sqlite-vec/) extension for vector embeddings support.
+
+_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
 
 ### embeddingsdb-server
 

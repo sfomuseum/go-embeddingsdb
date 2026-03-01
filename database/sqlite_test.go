@@ -1,3 +1,5 @@
+//go:build sqlite
+
 package database
 
 import (
@@ -28,7 +30,7 @@ func TestSQLiteDatabase(t *testing.T) {
 			dims = matroyshka_dimensions
 		}
 
-		db_uri := fmt.Sprintf("sqlite3://?dsn=:memory:&dimensions=%d&compression=%s", dims, compression)
+		db_uri := fmt.Sprintf("sqlite3://?dsn=:memory:&dimensions=%d&compression=%s&max-distance=10", dims, compression)
 
 		db, err := NewSQLiteDatabase(ctx, db_uri)
 
@@ -154,7 +156,7 @@ func randomFloat32(n int) []float32 {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	out := make([]float32, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		out[i] = r.Float32()*2 - 1
 	}
 

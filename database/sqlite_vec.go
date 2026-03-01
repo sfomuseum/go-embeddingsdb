@@ -1,3 +1,5 @@
+//go:build sqlite
+
 package database
 
 import (
@@ -52,7 +54,7 @@ func DeserializeQuantizedBinary(data []byte) []float32 {
 	unpacked := make([]float32, dims)
 
 	for i, b := range data {
-		for j := 0; j < 8; j++ {
+		for j := range 8 {
 			if (b & (1 << (7 - j))) != 0 {
 				unpacked[i*8+j] = 1.0
 			} else {

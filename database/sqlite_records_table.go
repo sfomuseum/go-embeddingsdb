@@ -1,3 +1,5 @@
+//go:build sqlite
+
 package database
 
 import (
@@ -68,6 +70,6 @@ func (t *SQLiteRecordsTable) InitializeTable(context.Context, *sql.DB) error {
 	return nil
 }
 
-func (t *SQLiteRecordsTable) IndexRecord(context.Context, *sql.DB, *sql.Tx, interface{}) error {
+func (t *SQLiteRecordsTable) IndexRecord(context.Context, *sql.DB, *sql.Tx, any) error {
 	return fmt.Errorf("Not implemented")
 }

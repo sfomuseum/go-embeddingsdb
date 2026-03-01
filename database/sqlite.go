@@ -1,3 +1,5 @@
+//go:build sqlite
+
 package database
 
 import (
@@ -54,6 +56,17 @@ func init() {
 	snowflake_node = n
 }
 
+// NewSQLiteDatabase returns an implementation of the [Database] interface using the `sqlite-vec`
+// SQLite database extension, configured using 'uri' which is expected to take the form of:
+//
+//	sqlite://{QUERY_PARAMETERS}
+//
+// Where {QUERY_PARAMETERS) may be:
+// * `dsn` - A registered [database/sql.Driver] DSN string. Required.
+// * `dimension` - The number of dimensions for the embeddings DB. Default is 512.
+// * `max-distance` - The maximum distance between records when performing a similar records query. Default is 1.0.
+// * `max-results` - The maximum number of results when	performing a similar records query. Default is 10.
+// * `compression` - The type of compression to use when storing embeddings. Options are: none, quantized, matroyshka. Default is "none".
 func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 
 	sqlite_vec.Auto()
@@ -301,8 +314,15 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
-	if req.MaxResults == nil {
-		return nil, fmt.Errorf("Query requires max results value")
+	max_distance := db.max_distance
+	max_results := db.max_results
+
+	if req.MaxDistance != nil && *req.MaxDistance <= max_distance {
+		max_distance = *req.MaxDistance
+	}
+
+	if req.MaxResults != nil && *req.MaxResults <= max_results {
+		max_results = *req.MaxResults
 	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)
@@ -333,14 +353,8 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	}
 
 	q = fmt.Sprintf("%s AND v.distance > 0", q)
-
-	if req.MaxDistance != nil {
-		q = fmt.Sprintf("%s AND v.distance <= %f", q, *req.MaxDistance)
-	}
-
-	if req.MaxResults != nil {
-		q = fmt.Sprintf("%s AND k=%d", q, *req.MaxResults)
-	}
+	q = fmt.Sprintf("%s AND v.distance <= %f", q, max_distance)
+	q = fmt.Sprintf("%s AND k=%d", q, max_results)
 
 	rows, err := db.vec_db.QueryContext(ctx, q, enc_e)
 

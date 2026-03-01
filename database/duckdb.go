@@ -1,7 +1,5 @@
 //go:build duckdb
 
-// This is all up for debate. Just testing things right now.
-
 package database
 
 // https://duckdb.org/2024/05/03/vector-similarity-search-vss.html
@@ -37,8 +35,6 @@ type DuckDBDatabase struct {
 	dimensions int
 	// The maximum number of results for queries
 	max_results int32
-	// The compression type to use for embeddings. Valid options are: quantize, matroyshka, none (default)
-	compression string
 	// ..
 	max_distance float32
 }
