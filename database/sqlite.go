@@ -285,7 +285,7 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 
 	switch db.compression {
 	case sqlite_vec_quantize_compression:
-		//
+		rec.Embeddings = DeserializeQuantizedBinary(enc_embeddings)
 	default:
 		e32, err := DeserializeFloat32(enc_embeddings)
 

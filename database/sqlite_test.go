@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -17,15 +18,17 @@ func TestSQLiteDatabase(t *testing.T) {
 
 	for _, compression := range sqlite_vec_compressions {
 
+		dims := 16
+
 		if compression == sqlite_vec_quantize_compression {
 			// continue
 		}
 
 		if compression == sqlite_vec_matroyshka_compression {
-			continue
+			dims = matroyshka_dimensions
 		}
 
-		db_uri := fmt.Sprintf("sqlite3://?dsn=:memory:&dimensions=8&compression=%s", compression)
+		db_uri := fmt.Sprintf("sqlite3://?dsn=:memory:&dimensions=%d&compression=%s", dims, compression)
 
 		db, err := NewSQLiteDatabase(ctx, db_uri)
 
@@ -43,11 +46,8 @@ func TestSQLiteDatabase(t *testing.T) {
 			Model:       "model",
 			DepictionId: "1234",
 			SubjectId:   "6789",
-			Embeddings: []float32{
-				0.0, 0.2344, 0.122873, 0.0007,
-				0.987, 0.3244, 0.73, 0.0055664008,
-			},
-			Created: ts,
+			Embeddings:  randomFloat32(dims),
+			Created:     ts,
 			Attributes: map[string]string{
 				"hello": "world",
 			},
@@ -93,11 +93,8 @@ func TestSQLiteDatabase(t *testing.T) {
 			Model:       "model",
 			DepictionId: "abc",
 			SubjectId:   "def",
-			Embeddings: []float32{
-				0.00002, 0.3644, 0.52873, 0.0673,
-				0.799, 0.3874, 0.8003, 0.264008,
-			},
-			Created: ts,
+			Embeddings:  randomFloat32(dims),
+			Created:     ts,
 			Attributes: map[string]string{
 				"foo": "bar",
 			},
@@ -148,4 +145,16 @@ func TestSQLiteDatabase(t *testing.T) {
 
 		fmt.Println(len(similar_rsp))
 	}
+}
+
+func randomFloat32(n int) []float32 {
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	out := make([]float32, n)
+
+	for i := 0; i < n; i++ {
+		out[i] = r.Float32()*2 - 1
+	}
+
+	return out
 }

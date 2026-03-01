@@ -43,3 +43,23 @@ func DeserializeFloat32(b []byte) ([]float32, error) {
 	}
 	return vec, nil
 }
+
+func DeserializeQuantizedBinary(data []byte) []float32 {
+
+	// https://alexgarcia.xyz/sqlite-vec/guides/binary-quant.html
+
+	dims := len(data) * 8
+	unpacked := make([]float32, dims)
+
+	for i, b := range data {
+		for j := 0; j < 8; j++ {
+			if (b & (1 << (7 - j))) != 0 {
+				unpacked[i*8+j] = 1.0
+			} else {
+				unpacked[i*8+j] = -1.0
+			}
+		}
+	}
+
+	return unpacked
+}
