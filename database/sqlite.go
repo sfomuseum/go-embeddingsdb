@@ -229,8 +229,71 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return db.rowToEmbeddingsDBRecord(ctx, row)
 }
 
-func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+
+	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)
+
+	if err != nil {
+		return nil, err
+	}
+
 	results := make([]*embeddingsdb.SimilarRecord, 0)
+
+	records_q := fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH ? AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
+
+	rows, err := db.vec_db.QueryContext(ctx, records_q, enc_e)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+
+		var distance float32
+		var provider string
+		var depiction_id string
+		var subject_id string
+		var str_attrs string
+
+		err := rows.Scan(&distance, &provider, &depiction_id, &subject_id, &str_attrs)
+
+		if err != nil {
+			return nil, err
+		}
+
+		var attrs map[string]string
+
+		err = json.Unmarshal([]byte(str_attrs), &attrs)
+
+		if err != nil {
+			return nil, err
+		}
+
+		rec := &embeddingsdb.SimilarRecord{
+			Provider:    provider,
+			DepictionId: depiction_id,
+			SubjectId:   subject_id,
+			Attributes:  attrs,
+			Distance:    distance,
+		}
+
+		results = append(results, rec)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = rows.Err()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return results, nil
 }
 
@@ -259,12 +322,84 @@ func (db *SQLiteDatabase) URI() string {
 }
 
 func (db *SQLiteDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+
 	models := make([]string, 0)
+
+	q := fmt.Sprintf("SELECT DISTINCT(model) FROM %s", db.records_table.Name())
+	rows, err := db.vec_db.QueryContext(ctx, q)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+
+		var model string
+
+		err := rows.Scan(&model)
+
+		if err != nil {
+			return nil, err
+		}
+
+		models = append(models, model)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = rows.Err()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return models, nil
 }
 
 func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
+
 	providers := make([]string, 0)
+
+	q := fmt.Sprintf("SELECT DISTINCT(provider) FROM %s", db.records_table.Name())
+	rows, err := db.vec_db.QueryContext(ctx, q)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+
+		var provider string
+
+		err := rows.Scan(&provider)
+
+		if err != nil {
+			return nil, err
+		}
+
+		providers = append(providers, provider)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = rows.Err()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return providers, nil
 }
 
