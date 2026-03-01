@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
+	
 	_ "github.com/mattn/go-sqlite3"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
@@ -33,6 +33,7 @@ type SQLiteDatabase struct {
 	dimensions    int
 	max_distance  float32
 	max_results   int32
+	compression string
 }
 
 func init() {
@@ -68,6 +69,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	dimensions := 512
 	max_distance := float32(1.0)
 	max_results := int32(10)
+	compression := sqlite_vec_default_compression
 
 	if q.Has("dimensions") {
 
@@ -105,6 +107,16 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
+	if q.Has("compression"){
+		
+		compression = q.Get("compression")
+
+		if !IsValidSQLiteCompression(compression){
+			return nil, fmt.Errorf("Invalid or unsupported compression")
+		}
+		
+	}
+	
 	dsn := q.Get("dsn")
 	vec_db, err := sql.Open("sqlite3", dsn)
 
@@ -116,7 +128,8 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 
 	t_query := url.Values{}
 	t_query.Set("dimensions", strconv.Itoa(dimensions))
-
+	t_query.Set("compression", compression)
+	
 	t_uri := url.URL{}
 	t_uri.Scheme = "sqlite"
 	t_uri.RawQuery = t_query.Encode()
@@ -164,6 +177,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 		dimensions:    dimensions,
 		max_distance:  max_distance,
 		max_results:   max_results,
+		compression: compression,
 	}
 
 	return db, nil
@@ -187,8 +201,19 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 		return err
 	}
 
-	vec_q := fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
+	var vec_q string
 
+	switch db.compression {
+	case sqlite_vec_quantize_compression:
+		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_quantize_binary(?))", db.vec_table.Name())				
+	case sqlite_vec_matroyshka_compression:
+		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), matroyshka_dimensions)		
+	case sqlite_vec_default_compression:
+		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
+	default:
+		return fmt.Errorf("Invalid or unsupported compression")
+	}
+	
 	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
 
 	if err != nil {
@@ -239,9 +264,26 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 
-	records_q := fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH ? AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
+	var q string
+	
+	switch db.compression {
+	case sqlite_vec_quantize_compression:
 
-	rows, err := db.vec_db.QueryContext(ctx, records_q, enc_e)
+		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH vec_quantize_binary(?) AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
+		
+	case sqlite_vec_matroyshka_compression:
+
+		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH vec_normalize(vec_slice(?, 0, %d)) AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name(), matroyshka_dimensions)
+		
+	case sqlite_vec_default_compression:
+		
+		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v WHERE v.embedding MATCH ? AND r.id = v.rowid", db.records_table.Name(), db.vec_table.Name())
+		
+	default:
+		return nil, fmt.Errorf("Invalid or unsupported compression")
+	}
+	
+	rows, err := db.vec_db.QueryContext(ctx, q, enc_e)
 
 	if err != nil {
 		return nil, err

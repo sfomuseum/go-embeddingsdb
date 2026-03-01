@@ -4,7 +4,25 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"slices"
 )
+
+const matroyshka_dimensions int = 512
+
+const sqlite_vec_default_compression string = "none"
+const sqlite_vec_quantize_compression string = "quantize"
+const sqlite_vec_matroyshka_compression string = "matroyshka"
+
+var sqlite_vec_compressions = []string{
+	sqlite_vec_default_compression,
+	sqlite_vec_quantize_compression,
+	sqlite_vec_matroyshka_compression,
+}
+
+
+func IsValidSQLiteCompression(c string) bool {
+	return slices.Contains(sqlite_vec_compressions, c)
+}
 
 // Compliment method to SerializeFloat32
 // https://github.com/asg017/sqlite-vec-go-bindings/blob/main/cgo/lib.go#L33

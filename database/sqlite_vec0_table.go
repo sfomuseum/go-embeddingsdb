@@ -20,6 +20,7 @@ type SQLiteVec0Table struct {
 	max_distance float32
 	max_results  int32
 	name         string
+	compression string
 }
 
 type SQLiteVec0TableSchemaVars struct {
@@ -40,7 +41,8 @@ func NewSQLiteVec0Table(ctx context.Context, uri string) (sfom_sql.Table, error)
 	dimensions := 512
 	max_distance := float32(1.0)
 	max_results := int32(10)
-
+	compression := sqlite_vec_default_compression
+	
 	if q.Has("dimensions") {
 
 		v, err := strconv.Atoi(q.Get("dimensions"))
@@ -77,6 +79,15 @@ func NewSQLiteVec0Table(ctx context.Context, uri string) (sfom_sql.Table, error)
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
+	if q.Has("compression"){
+		
+		compression = q.Get("compression")
+
+		if !IsValidSQLiteCompression(compression){
+			return nil, fmt.Errorf("Invalid or unsupported compression")
+		}
+	}
+
 	t := &SQLiteVec0Table{
 		name:         "vec",
 		dimensions:   dimensions,
@@ -99,7 +110,16 @@ func (t *SQLiteVec0Table) Schema(*sql.DB) (string, error) {
 		return "", err
 	}
 
-	tp = tp.Lookup("sqlite_vec0")
+	switch t.compression {
+	case sqlite_vec_quantize_compression:
+		tp = tp.Lookup("sqlite_quantize")				
+	case sqlite_vec_matroyshka_compression:
+		tp = tp.Lookup("sqlite_matroyshka")		
+	case sqlite_vec_default_compression:
+		tp = tp.Lookup("sqlite_vec0")
+	default:
+		return "", fmt.Errorf("Invalid or unsupported compression")
+	}
 
 	if tp == nil {
 		return "", fmt.Errorf("Missing schema template")
