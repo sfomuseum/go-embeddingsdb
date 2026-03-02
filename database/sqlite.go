@@ -26,6 +26,7 @@ var sqlite_schema_fs embed.FS
 
 var snowflake_node *snowflake.Node
 
+// SQLiteDatabase implements the [Database] interface using a SQLite database and the `sqlite-vec` extension.
 type SQLiteDatabase struct {
 	Database
 	db_uri        string
@@ -133,8 +134,6 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	dsn := q.Get("dsn")
 	vec_db, err := sql.Open("sqlite3", dsn)
 
-	// vec_db, err := sfom_sql.OpenWithURI(ctx, uri)
-
 	if err != nil {
 		return nil, fmt.Errorf("Failed to open database connection, %w", err)
 	}
@@ -200,6 +199,7 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string) error {
 	return nil
 }
 
+// Add adds a [embeddingsdb.Record] instance to the SQLite database.
 func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
 
 	id, err := db.uidForRecord(ctx, rec.Provider, rec.DepictionId, rec.Model)
@@ -253,6 +253,7 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return err
 }
 
+// Return the [embeddingsdb.Record] record matching 'provider', 'depiction_id' and 'model'.
 func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
 
 	id, err := db.uidForRecord(ctx, req.Provider, req.DepictionId, req.Model)
@@ -312,6 +313,7 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return rec, nil
 }
 
+// Find similar records for a given model and record instance.
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
 	max_distance := db.max_distance
@@ -412,6 +414,7 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	return results, nil
 }
 
+// Return the Unix timestamp of the last update to the SQLite database.
 func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
 
 	q := fmt.Sprintf("SELECT lastmodified FROM %s ORDER BY lastmodified DESC LIMIT 1", db.records_table.Name())
@@ -432,10 +435,12 @@ func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
 	}
 }
 
+// Return the URI string used to instantiate the SQLite database.
 func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
 }
 
+// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *SQLiteDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
 
 	models := make([]string, 0)
@@ -477,6 +482,7 @@ func (db *SQLiteDatabase) Models(ctx context.Context, providers ...string) ([]st
 	return models, nil
 }
 
+// Return the unique list of providers across all the embeddings.
 func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
 
 	providers := make([]string, 0)
@@ -518,6 +524,7 @@ func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
 	return providers, nil
 }
 
+// Close performs and terminating functions required by the SQLite database.
 func (db *SQLiteDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }

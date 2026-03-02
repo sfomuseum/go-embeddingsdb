@@ -82,10 +82,10 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 
 	t1 := time.Now()
 
-	defer func(){
+	defer func() {
 		logger.Debug("Time to retrieve similar records", "time", time.Since(t1))
 	}()
-	
+
 	db_req := &embeddingsdb.SimilarRecordsRequest{
 		Model:           req.Model,
 		Embeddings:      req.Embeddings,
@@ -103,7 +103,7 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 	}
 
 	logger = logger.With("count", len(records))
-	
+
 	grpc_records := embeddingsdb.EmbeddingsDBSimilarRecordsToGrpcSimilarRecords(records)
 
 	rsp := &grpc.SimilarRecordsResponse{

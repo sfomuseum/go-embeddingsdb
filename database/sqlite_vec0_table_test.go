@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestSQLiteTable(t *testing.T) {
+func TestSQLiteVec0Table(t *testing.T) {
 
 	ctx := context.Background()
 
