@@ -77,11 +77,14 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
 
 	logger := s.Logger(ctx)
-	logger = logger.With("provider", req.SimilarProvider)
+	logger = logger.With("provider", *req.SimilarProvider)
 	logger = logger.With("model", req.Model)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to retrieve similar records", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to retrieve similar records", "time", time.Since(t1))
+	}()
 
 	db_req := &embeddingsdb.SimilarRecordsRequest{
 		Model:           req.Model,
@@ -98,6 +101,8 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 		logger.Error("Failed to retrieve similar records", "error", err)
 		return nil, err
 	}
+
+	logger = logger.With("count", len(records))
 
 	grpc_records := embeddingsdb.EmbeddingsDBSimilarRecordsToGrpcSimilarRecords(records)
 
