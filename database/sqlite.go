@@ -138,6 +138,13 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, fmt.Errorf("Failed to open database connection, %w", err)
 	}
 
+	pragma := sfom_sql.DefaultSQLitePragma()
+	err = sfom_sql.ConfigureSQLitePragma(ctx, vec_db, pragma)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to config SQLite pragma, %w", err)
+	}
+
 	t_query := url.Values{}
 	t_query.Set("dimensions", strconv.Itoa(dimensions))
 	t_query.Set("compression", compression)
