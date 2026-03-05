@@ -11,4 +11,6 @@ CREATE TABLE {{ .TableName  }} (
 );
 
 CREATE UNIQUE INDEX id_model ON {{ .TableName }} (provider, depiction_id, model);
+CREATE INDEX by_model ON {{ .TableName }} (model, provider, created);
+CREATE INDEX by_lastmod ON {{ .TableName }} (lastmodified);
 {{ end -}}
