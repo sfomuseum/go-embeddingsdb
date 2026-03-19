@@ -15,6 +15,14 @@ Minimum Go version: 1.24.
 
 ## Releases
 
+### Semantic versioning
+
+Starting with DuckDB `v1.5.0` the duckdb-go-bindings package changes its versioning scheme to contain
+- the DuckDB release version
+- the duckdb-go-bindings patch iteration
+
+For `v1.5.0` the corresponding tagged release is `v0.10500.0`.
+
 ### Single module (v0.3.0+)
 
 Starting with v0.3.0, the module includes pre-built static libraries for all platforms. Simply import `github.com/duckdb/duckdb-go-bindings`.
@@ -40,6 +48,17 @@ Older versions require platform-specific imports (e.g., `github.com/duckdb/duckd
 | v1.2.2         | v0.1.14 | v0.1.9  | v0.1.9  | v0.1.9  |
 | v1.2.1         | v0.1.13 | v0.1.8  | v0.1.8  | v0.1.8  |
 | v1.2.0         | v0.1.10 | v0.1.5  | v0.1.5  | v0.1.5  |
+
+## Known Issues
+
+### Malformed default extension directory on Windows (DuckDB v1.5.0)
+
+DuckDB v1.5.0 has a [regression](https://github.com/duckdb/duckdb/pull/21260) where the default extension directory is malformed on Windows. This causes extension directory creation to fail. To work around this, set `extension_directory` explicitly in your DuckDB configuration:
+
+```go
+config := duckdb.CreateConfig()
+duckdb.SetConfig(config, "extension_directory", `C:\path\to\ext\dir`)
+```
 
 ## Local Development
 
