@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"log/slog"
 	"net/url"
 	"os"
@@ -369,16 +370,17 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *DuckDBDatabase) Range() iter.Seq2[*embeddingsdb.Record, error] {
+func (db *DuckDBDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
 		q := "SELECT provider, depiction_id, subject_id, model, TO_JSON(embeddings), created, attributes FROM embeddings ORDER BY created ASC"
 
-		rows, err := db.vec_db.QueryContext(ctx, q, args...)
+		rows, err := db.vec_db.QueryContext(ctx, q)
 
 		if err != nil {
-			return nil, fmt.Errorf("Failed to execute query (%s), %w", q, err)
+			yield(nil, fmt.Errorf("Failed to execute query (%s), %w", q, err))
+			return
 		}
 
 		defer rows.Close()
@@ -389,8 +391,8 @@ func (db *DuckDBDatabase) Range() iter.Seq2[*embeddingsdb.Record, error] {
 			var depiction_id string
 			var subject_id string
 			var model string
-			var str_embeddings any
-			var created float64
+			var str_embeddings string
+			var created int64
 			var str_attrs string
 
 			err = rows.Scan(&provider, &depiction_id, &subject_id, &model, &str_embeddings, &created, &str_attrs)
@@ -429,7 +431,7 @@ func (db *DuckDBDatabase) Range() iter.Seq2[*embeddingsdb.Record, error] {
 				continue
 			}
 
-			r := &embeddingsdb.SimilarRecord{
+			r := &embeddingsdb.Record{
 				Provider:    provider,
 				SubjectId:   subject_id,
 				DepictionId: depiction_id,
@@ -508,7 +510,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 		return nil, err
 	}
 
-	err = rows.Error()
+	err = rows.Err()
 
 	if err != nil {
 		return nil, err
@@ -549,7 +551,7 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	err = rows.Error()
+	err = rows.Err()
 
 	if err != nil {
 		return nil, err

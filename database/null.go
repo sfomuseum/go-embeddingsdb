@@ -44,11 +44,8 @@ func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.Si
 	return results, nil
 }
 
-func (db *NullDatabase) Range() iter.Seq2[*embeddingsdb.Record, error] {
-
-	return func(yield func(*embeddingsdb.Record, error) bool) {
-
-	}
+func (db *NullDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+	return func(yield func(*embeddingsdb.Record, error) bool) {}
 }
 
 func (db *NullDatabase) LastUpdate(ctx context.Context) (int64, error) {

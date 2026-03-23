@@ -29,7 +29,7 @@ type Database interface {
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
 	//
-	Range() iter.Seq2[*embeddingsdb.Record, error]
+	Iterate(context.Context) iter.Seq2[*embeddingsdb.Record, error]
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
