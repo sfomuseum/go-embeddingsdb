@@ -28,5 +28,5 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) error {
 		}
 	}
 
-	return nil
+	return p_wr.Close()
 }
