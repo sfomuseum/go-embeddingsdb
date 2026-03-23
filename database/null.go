@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"iter"
 
 	"github.com/sfomuseum/go-embeddingsdb"
 )
@@ -41,6 +42,13 @@ func (db *NullDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetReco
 func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil
+}
+
+func (db *NullDatabase) Range() iter.Seq2[*embeddingsdb.Record, error] {
+
+	return func(yield func(*embeddingsdb.Record, error) bool) {
+
+	}
 }
 
 func (db *NullDatabase) LastUpdate(ctx context.Context) (int64, error) {

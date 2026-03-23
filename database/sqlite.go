@@ -8,6 +8,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"log/slog"
 	"net/url"
 	"strconv"
@@ -445,6 +446,13 @@ func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
 // Return the URI string used to instantiate the SQLite database.
 func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
+}
+
+func (db *SQLiteDatabase) Range() iter.Seq2[*embeddingsdb.Record, error] {
+
+	return func(yield func(*embeddingsdb.Record, error) bool) {
+		yield(nil, fmt.Errorf("Not implemented"))
+	}
 }
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.

@@ -5,6 +5,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"iter"
 	"net/url"
 	"sort"
 	"strings"
@@ -27,6 +28,8 @@ type Database interface {
 	LastUpdate(context.Context) (int64, error)
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
+	//
+	Range() iter.Seq2[*embeddingsdb.Record, error]
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
