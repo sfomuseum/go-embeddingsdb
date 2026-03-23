@@ -374,7 +374,7 @@ func (db *DuckDBDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.R
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
-		q := "SELECT provider, depiction_id, subject_id, model, TO_JSON(embeddings), created, attributes FROM embeddings ORDER BY created ASC"
+		q := "SELECT provider, depiction_id, subject_id, model, TO_JSON(vec)::TEXT, created, attributes FROM embeddings ORDER BY created ASC"
 
 		rows, err := db.vec_db.QueryContext(ctx, q)
 
