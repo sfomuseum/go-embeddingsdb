@@ -9,6 +9,7 @@ require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/duckdb/duckdb-go/v2 v2.10500.0
 	github.com/mattn/go-sqlite3 v1.14.37
+	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-database v0.0.18
 	github.com/sfomuseum/go-flags v0.12.1
 	golang.org/x/oauth2 v0.36.0
@@ -19,6 +20,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/aaronland/go-aws/v3 v3.5.0 // indirect
+	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apache/arrow-go/v18 v18.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
@@ -61,7 +63,10 @@ require (
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/parquet-go/bitpack v1.0.0 // indirect
+	github.com/parquet-go/jsonlite v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/twpayne/go-geom v1.6.1 // indirect
 	github.com/whosonfirst/go-ioutil v1.0.2 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
