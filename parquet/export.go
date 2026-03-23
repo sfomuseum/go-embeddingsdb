@@ -13,7 +13,7 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) error {
 
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
 
-	for row, err := range db.Iterate() {
+	for row, err := range db.Iterate(ctx) {
 
 		if err != nil {
 			return err
