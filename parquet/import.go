@@ -12,7 +12,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
-func Import(ctx context.Context, cl client.Client, r io.ReaderAt) error {
+// Import [*embeddingsdb.Record] records stored in a Parquet file and add them to an embeddings database using 'cl'.
+func Import(ctx context.Context, cl client.Client, r io.ReaderAt) (int64, error) {
 
 	logger := slog.Default()
 	parquet_r := parquet_go.NewGenericReader[*embeddingsdb.Record](r)
@@ -22,7 +23,7 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) error {
 	ticker := time.NewTicker(60 * time.Second)
 	done_ch := make(chan bool)
 
-	count := 0
+	count := int64(0)
 
 	defer func() {
 		ticker.Stop()
@@ -31,14 +32,15 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) error {
 
 	go func() {
 
-		select {
-		case <-done_ch:
-			logger.Debug("Records imported", "count", count)
-			return
-		case <-ticker.C:
-			logger.Debug("Records imported", "count", count)
+		for {
+			select {
+			case <-done_ch:
+				logger.Debug("Records imported", "count", count)
+				return
+			case <-ticker.C:
+				logger.Debug("Records imported", "count", count)
+			}
 		}
-
 	}()
 
 	for {
@@ -51,7 +53,7 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) error {
 				break
 			}
 
-			return fmt.Errorf("Failed to read record, %w", err)
+			return count, fmt.Errorf("Failed to read record, %w", err)
 		}
 
 		rows = rows[:n]
@@ -61,13 +63,13 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) error {
 			err := cl.AddRecord(ctx, row)
 
 			if err != nil {
-				return fmt.Errorf("Failed to add record '%s', %w", row.Key(), err)
+				return count, fmt.Errorf("Failed to add record '%s', %w", row.Key(), err)
 			}
 
 			count += 1
 		}
 	}
 
-	return nil
+	return count, nil
 
 }

@@ -12,7 +12,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
 
-func Export(ctx context.Context, db database.Database, wr io.Writer) error {
+// Export will export all the [*embeddingsdb.Record] records stored in 'db' as Parquet-encoded data to 'wr'.
+func Export(ctx context.Context, db database.Database, wr io.Writer) (int64, error) {
 
 	logger := slog.Default()
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
@@ -20,7 +21,7 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) error {
 	ticker := time.NewTicker(60 * time.Second)
 	done_ch := make(chan bool)
 
-	count := 0
+	count := int64(0)
 
 	defer func() {
 		ticker.Stop()
@@ -29,20 +30,21 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) error {
 
 	go func() {
 
-		select {
-		case <-done_ch:
-			logger.Debug("Records exported", "count", count)
-			return
-		case <-ticker.C:
-			logger.Debug("Records exported", "count", count)
+		for {
+			select {
+			case <-done_ch:
+				logger.Debug("Records exported", "count", count)
+				return
+			case <-ticker.C:
+				logger.Debug("Records exported", "count", count)
+			}
 		}
-
 	}()
 
 	for row, err := range db.Iterate(ctx) {
 
 		if err != nil {
-			return fmt.Errorf("Iterator yielded an error, %w", err)
+			return count, fmt.Errorf("Iterator yielded an error, %w", err)
 		}
 
 		_, err = p_wr.Write([]*embeddingsdb.Record{
@@ -50,11 +52,19 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) error {
 		})
 
 		if err != nil {
-			return fmt.Errorf("Failed to export %s, %w", row.Key(), err)
+			return count, fmt.Errorf("Failed to export %s, %w", row.Key(), err)
 		}
 
 		count += 1
 	}
 
-	return p_wr.Close()
+	p_wr.Flush()
+
+	err := p_wr.Close()
+
+	if err != nil {
+		return count, fmt.Errorf("Failed to close Parquet writer, %w", err)
+	}
+
+	return count, nil
 }
