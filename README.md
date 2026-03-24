@@ -541,6 +541,8 @@ D SELECT COUNT(depiction_id) FROM read_parquet('test2.parquet');
 └─────────────────────┘
 ```
 
+_Note: There is currently no way to export, or iterate through, all the records in an `embeddingsdb` instance using the `client.Client` interface. Maybe there will be in the future but today there is no so this tool will need un-mediated access (aka a "client") to the database itself._
+
 ## DuckDB
 
 ### Statically linked extensions (MacOS)
