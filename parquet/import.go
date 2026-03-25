@@ -67,7 +67,7 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) (int64, error)
 			}
 
 			count += 1
-			logger.Debug("Add record", "key", row.Key(), "total", count)			
+			logger.Debug("Add record", "key", row.Key(), "total", count)
 		}
 	}
 
