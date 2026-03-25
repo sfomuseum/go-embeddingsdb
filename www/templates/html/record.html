@@ -1,53 +1,61 @@
 {{ define "record" -}}
 {{ template "inc_header" . -}}
 
-<div id="image">{{ if ne .Record.Attributes.uri "" }}<img src="{{ .Record.Attributes.uri }}" />{{ end }}</div>
+<div class="container">
+    
+<div class="record-grid">
+    <div class="record-image">{{ if ne .Record.Attributes.uri "" }}<img src="{{ .Record.Attributes.uri }}" />{{ end }}</div>
 
-<table class="table" id="record">
-    <tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
-    <tr><th>Depiction ID</th><td>{{ .Record.DepictionId }}</td></tr>
-    <tr><th>Subject ID</th><td>{{ .Record.SubjectId }}</td></tr>
-    <tr><th>Model</th><td>{{ .Record.Model }}</td></tr>        
-    <tr>
-	<th>Attributes</th>
-	<td>
-	    <table class="table">
-		{{ range $k, $v := .Record.Attributes -}}
-		<tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
-	        {{ end -}}
-	    </table>
-	</td>
-    </tr>
-    <tr><th>Embeddings</th><td>...</td></tr>
-    <tr><th>Created</th><td>{{ .Record.Created }}</td></tr>
-</table>
-	
-<table class="table" id="similar">
-    <tr>
-	<th>&#160;</th>
-	<th>Distance</th>
-	<th>Provider</th>
-	<th>Depiction ID</th>
-	<th>Subject ID</th>
-	<th>Attributes</th>
-    </tr>
-    {{ range $i, $s := .Similar -}}
-    <tr>
-	    <td class="similar-image">{{ if ne $s.Attributes.uri ""}}<img src="{{ $s.Attributes.uri }}" />{{ end }}</td>
-	    <td><a href="/record/{{ $s.Provider }}/{{ $.Record.Model }}/{{ $s.DepictionId }}">{{ $s.Distance }}</a></td>
+    <table class="table record-table">
+	<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
+	<tr><th>Depiction ID</th><td>{{ .Record.DepictionId }}</td></tr>
+	<tr><th>Subject ID</th><td>{{ .Record.SubjectId }}</td></tr>
+	<tr><th>Model</th><td>{{ .Record.Model }}</td></tr>        
+	<tr>
+	    <th>Attributes</th>
+	    <td>
+		<table class="table attributes">
+		    {{ range $k, $v := .Record.Attributes -}}
+		    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+			{{ end -}}
+		</table>
+	    </td>
+	</tr>
+	<tr><th>Embeddings</th><td>...</td></tr>
+	<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>
+    </table>
+    
+</div>
+
+<div class="similar-grid">
+    {{ range $i, $s := .Similar -}}    
+    <div class="similar-image">{{ if ne $s.Attributes.uri ""}}<img src="{{ $s.Attributes.uri }}" />{{ end }}</div>
+    <table class="table similar-table">
+	<tr>
+	    <th>Distance</th>
+	    <th>Provider</th>
+	    <th>Depiction ID</th>
+	    <th>Subject ID</th>
+	    <th>Attributes</th>
+	</tr>
+	<tr>
+	    <td><a href="/record/{{ $s.Provider }}/{{ URLQueryEscape $.Record.Model }}/{{ $s.DepictionId }}">{{ $s.Distance }}</a></td>
 	    <td>{{ $s.Provider }}</td>
 	    <td>{{ $s.DepictionId }}</td>
 	    <td>{{ $s.SubjectId }}</td>	    	    
 	    <td>
-		<table class="table">
+		<table class="table attributes">
 		    {{ range $k, $v := $s.Attributes }}
 		    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
-		    {{ end }}
+			{{ end }}
 	        </table>
 	    </td>
 	</tr>    
-	{{ end -}}
     </table>
-    
+    {{ end -}}
+</div>
+
+</div>
+
 {{ template "inc_footer" . -}}
 {{ end -}}

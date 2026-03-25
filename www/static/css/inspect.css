@@ -2,3 +2,21 @@
 	max-height: 200px;
 	max-width: 200px;
 }
+
+.record-grid {
+	display: grid;
+	grid-template-columns:500px 1fr;
+	gap: 50px 10px;
+	margin-bottom: 1.5rem;
+}
+
+.similar-grid {
+	display: grid;
+	grid-template-columns: 200px 1fr;
+	gap: 50px 10px;
+}
+
+.attributes {
+	font-size:small;
+	font-family:monospace;
+}
