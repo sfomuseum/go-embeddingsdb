@@ -10,7 +10,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/http/api"
 	"github.com/sfomuseum/go-embeddingsdb/http/www"
-	"github.com/sfomuseum/go-embeddingsdb/templates/html"
+	"github.com/sfomuseum/go-embeddingsdb/www/templates/html"
+	"github.com/sfomuseum/go-embeddingsdb/www/static"	
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -52,6 +53,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	static_handler := http.FileServerFS(static.FS)
+
+	mux.Handle("/css/", static_handler)
+	mux.Handle("/javascript/", static_handler)	
+	
 	record_opts := &www.RecordHandlerOptions{
 		Database:  db,
 		Templates: t,
