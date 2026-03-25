@@ -1,6 +1,49 @@
 {{ define "record" -}}
 {{ template "inc_header" . -}}
-RECORD
 
+<table class="table" id="record">
+    <tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
+    <tr><th>Depiction ID</th><td>{{ .Record.DepictionId }}</td></tr>
+    <tr><th>Subject ID</th><td>{{ .Record.SubjectId }}</td></tr>
+    <tr><th>Model</th><td>{{ .Record.Model }}</td></tr>        
+    <tr>
+	<th>Attributes</th>
+	<td>
+	    <table class="table">
+		{{ range $k, $v := .Record.Attributes -}}
+		<tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+	        {{ end -}}
+	    </table>
+	</td>
+    </tr>
+    <tr><th>Embeddings</th><td>...</td></tr>
+    <tr><th>Created</th><td>{{ .Record.Created }}</td></tr>
+</table>
+	
+<table class="table" id="similar">
+    <tr>
+	<th>Distance</th>
+	<th>Provider</th>
+	<th>Depiction ID</th>
+	<th>Subject ID</th>
+	<th>Attributes</th>
+    </tr>
+    {{ range $i, $s := .Similar -}}
+    <tr>
+	    <td>{{ $s.Distance }}</td>
+	    <td>{{ $s.Provider }}</td>
+	    <td>{{ $s.DepictionId }}</td>
+	    <td>{{ $s.SubjectId }}</td>	    	    
+	    <td>
+		<table class="table">
+		    {{ range $k, $v := $s.Attributes }}
+		    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+		    {{ end }}
+	        </table>
+	    </td>
+	</tr>    
+	{{ end -}}
+    </table>
+    
 {{ template "inc_footer" . -}}
 {{ end -}}

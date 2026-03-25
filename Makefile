@@ -20,6 +20,7 @@ cli:
 inspect:
 	go run -tags=$(TAGS) -mod $(GOMOD) \
 		cmd/inspect/main.go \
+		-verbose \
 		-database-uri $(DATABASE)
 
 server-bundle:

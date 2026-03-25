@@ -31,6 +31,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
+		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
 		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
@@ -41,21 +42,24 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		/*
-			similar_req := &embeddingsdb.SimilarRecordsRequest{}
+ 		model := req.PathValue("model")
+		
+		similar_req := &embeddingsdb.SimilarRecordsRequest{
+			Embeddings: record.Embeddings,
+			Model:      model,
+		}
 
-			similar, err := opts.Database.SimilarRecords(ctx, similar_req)
-
-			if err != nil {
-				logger.Error("Failed to get similar records", "error", err)
-				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-		*/
+		similar, err := opts.Database.SimilarRecords(ctx, similar_req)
+		
+		if err != nil {
+			logger.Error("Failed to retrieve similar records", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 
 		vars := RecordHandlerVars{
 			Record: record,
-			// Similar: similar,
+			Similar: similar,
 		}
 
 		err = t.Execute(rsp, vars)
