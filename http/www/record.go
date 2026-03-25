@@ -8,6 +8,7 @@ import (
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
+	embeddingsdb_http "github.com/sfomuseum/go-embeddingsdb/http"
 )
 
 type RecordHandlerOptions struct {
@@ -30,12 +31,9 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
-		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		record_req := &embeddingsdb.GetRecordRequest{}
-
-		record, err := opts.Database.GetRecord(ctx, record_req)
+		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
 
 		if err != nil {
 			logger.Error("Failed to get database record", "error", err)
@@ -43,19 +41,21 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		similar_req := &embeddingsdb.SimilarRecordsRequest{}
+		/*
+			similar_req := &embeddingsdb.SimilarRecordsRequest{}
 
-		similar, err := opts.Database.SimilarRecords(ctx, similar_req)
+			similar, err := opts.Database.SimilarRecords(ctx, similar_req)
 
-		if err != nil {
-			logger.Error("Failed to get similar records", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+			if err != nil {
+				logger.Error("Failed to get similar records", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+		*/
 
 		vars := RecordHandlerVars{
-			Record:  record,
-			Similar: similar,
+			Record: record,
+			// Similar: similar,
 		}
 
 		err = t.Execute(rsp, vars)

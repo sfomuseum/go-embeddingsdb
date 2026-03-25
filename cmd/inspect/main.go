@@ -8,6 +8,7 @@ import (
 
 	"github.com/aaronland/go-http/v4/server"
 	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/http/api"
 	"github.com/sfomuseum/go-embeddingsdb/http/www"
 	"github.com/sfomuseum/go-embeddingsdb/templates/html"
 	"github.com/sfomuseum/go-flags/flagset"
@@ -62,7 +63,31 @@ func main() {
 		log.Fatalf("Failed to create new record handler, %v", err)
 	}
 
-	mux.Handle("/record/", record_handler)
+	mux.Handle("/record/{provider}/{model}/{depiction_id}/", record_handler)
+
+	api_record_opts := &api.RecordHandlerOptions{
+		Database: db,
+	}
+
+	api_record_handler, err := api.RecordHandler(api_record_opts)
+
+	if err != nil {
+		log.Fatalf("Failed to create new API record handler, %v", err)
+	}
+
+	mux.Handle("/api/record/{provider}/{model}/{depiction_id}/", api_record_handler)
+
+	api_similar_opts := &api.SimilarHandlerOptions{
+		Database: db,
+	}
+
+	api_similar_handler, err := api.SimilarHandler(api_similar_opts)
+
+	if err != nil {
+		log.Fatalf("Failed to create new API similar handler, %v", err)
+	}
+
+	mux.Handle("/api/similar/{provider}/{model}/{depiction_id}/", api_similar_handler)
 
 	s, err := server.NewServer(ctx, server_uri)
 
