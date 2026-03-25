@@ -452,7 +452,7 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
-		q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r. attributes FROM %s r, %s v WHERE r.id=v.id ORDER BY r.created ASC", db.records_table.Name(), db.vec_table.Name())
+		q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r. attributes FROM %s r, %s v WHERE r.id=v.rowid ORDER BY r.created ASC", db.records_table.Name(), db.vec_table.Name())
 
 		rows, err := db.vec_db.QueryContext(ctx, q)
 
@@ -490,7 +490,7 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 			logger = logger.With("depiction_id", depiction_id)
 
 			var attributes map[string]string
-			var embeddings []float32
+			// var embeddings []float32
 
 			err = json.Unmarshal([]byte(str_attrs), &attributes)
 
@@ -505,13 +505,22 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 				continue
 			}
 
-			logger.Debug("E", "e", str_embeddings)
-			// Get actual embeddings here
-			
+			embeddings, err := DeserializeFloat32([]byte(str_embeddings))
+
+			if err != nil {
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
 			r := &embeddingsdb.Record{
 				Provider:    provider,
 				SubjectId:   subject_id,
 				DepictionId: depiction_id,
+				Embeddings:  embeddings,
 				Model:       model,
 				Attributes:  attributes,
 				Created:     created,
@@ -532,7 +541,7 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 		if err != nil && !yield(nil, err) {
 			return
-		}		
+		}
 	}
 }
 
