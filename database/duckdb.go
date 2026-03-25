@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"log/slog"
 	"net/url"
 	"os"
@@ -369,6 +370,107 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
+func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+
+	return func(yield func(*embeddingsdb.Record, error) bool) {
+
+		q := "SELECT provider, depiction_id, subject_id, model, TO_JSON(vec)::TEXT, created, attributes FROM embeddings ORDER BY created ASC"
+
+		rows, err := db.vec_db.QueryContext(ctx, q)
+
+		if err != nil {
+			yield(nil, fmt.Errorf("Failed to execute query (%s), %w", q, err))
+			return
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+
+			var provider string
+			var depiction_id string
+			var subject_id string
+			var model string
+			var str_embeddings string
+			var created int64
+			var str_attrs string
+
+			err = rows.Scan(&provider, &depiction_id, &subject_id, &model, &str_embeddings, &created, &str_attrs)
+
+			if err != nil {
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
+			logger := slog.Default()
+			logger = logger.With("provider", provider)
+			logger = logger.With("subject_id", subject_id)
+			logger = logger.With("depiction_id", depiction_id)
+
+			var attributes map[string]string
+			var embeddings []float32
+
+			err = json.Unmarshal([]byte(str_attrs), &attributes)
+
+			if err != nil {
+
+				logger.Warn("Failed to unmarshal attributes", "error", err)
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
+			err = json.Unmarshal([]byte(str_embeddings), &embeddings)
+
+			if err != nil {
+
+				logger.Warn("Failed to unmarshal embeddings", "error", err)
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
+			r := &embeddingsdb.Record{
+				Provider:    provider,
+				SubjectId:   subject_id,
+				DepictionId: depiction_id,
+				Model:       model,
+				Embeddings:  embeddings,
+				Attributes:  attributes,
+				Created:     created,
+			}
+
+			if !yield(r, nil) {
+				return
+			}
+		}
+
+		err = rows.Close()
+
+		if err != nil && !yield(nil, err) {
+			return
+		}
+
+		err = rows.Err()
+
+		if err != nil && !yield(nil, err) {
+			return
+		}
+
+	}
+
+}
+
 func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
 
 	count_providers := len(providers)
@@ -395,6 +497,8 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 		return nil, fmt.Errorf("Failed to query models, %w", err)
 	}
 
+	defer rows.Close()
+
 	models := make([]string, 0)
 
 	for rows.Next() {
@@ -407,6 +511,18 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 		}
 
 		models = append(models, model)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = rows.Err()
+
+	if err != nil {
+		return nil, err
 	}
 
 	return models, nil
@@ -422,6 +538,8 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("Failed to query providers, %w", err)
 	}
 
+	defer rows.Close()
+
 	providers := make([]string, 0)
 
 	for rows.Next() {
@@ -434,6 +552,18 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 		}
 
 		providers = append(providers, provider)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = rows.Err()
+
+	if err != nil {
+		return nil, err
 	}
 
 	return providers, nil

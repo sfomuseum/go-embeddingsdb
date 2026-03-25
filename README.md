@@ -230,6 +230,8 @@ The easiest way to build the included tools is to run the handy `cli` Makefile t
 $> make cli
 go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
+go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
 ```
 
 ### Build tags
@@ -448,6 +450,98 @@ $> ./bin/embeddingsdb-client providers -client-uri 'grpc://localhost:8081' | jq
   "sfomuseum-data-media-collection"
 ]
 ```
+
+### parquet-import
+
+Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.
+
+```
+$> ./bin/parquet-import -h
+Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.
+Usage:
+	./bin/parquet-import [options] parquet_file(N) parquet_file(N)
+Valid options are:
+  -client-uri string
+    	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/parquet-import -client-uri grpc://localhost:8081 -verbose ./test.parquet 
+2026/03/24 11:10:11 DEBUG Verbose logging enabled
+2026/03/24 11:10:11 DEBUG Allow insecure connections
+2026/03/24 11:11:11 DEBUG Records imported count=9958
+...and so on
+```
+
+And then:
+
+```
+$> duckdb
+DuckDB v1.4.2 (Andium) 68d7555f68
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+D SELECT COUNT(depiction_id) FROM read_parquet('test.parquet');
+┌─────────────────────┐
+│ count(depiction_id) │
+│        int64        │
+├─────────────────────┤
+│       216774        │
+└─────────────────────┘
+```
+
+### parquet-export
+
+Export embeddingsdb records as Parquet-encoded data.
+
+```
+$> ./bin/parquet-export -h
+Export embeddingsdb records as Parquet-encoded data.
+Usage:
+	./bin/parquet-export [options]Valid options are:
+  -database-uri string
+    	A registered sfomuseum/go-embeddingsdb/database.Database URI.
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/parquet-export -database-uri 'duckdb:///usr/local/data/embeddings3' -verbose -output test2.parquet
+2026/03/24 11:49:24 DEBUG Verbose logging enabled
+2026/03/24 11:49:24 DEBUG Load database from path path=/usr/local/data/embeddings3
+2026/03/24 11:49:24 DEBUG INSTALL VSS
+2026/03/24 11:49:24 DEBUG LOAD VSS
+2026/03/24 11:49:24 DEBUG IMPORT DATABASE '/usr/local/data/embeddings3'
+2026/03/24 11:50:02 DEBUG Finished setting up database time=38.278648291s
+2026/03/24 11:50:41 DEBUG Records exported count=210000
+```
+
+And then:
+
+```
+$> duckdb
+DuckDB v1.4.2 (Andium) 68d7555f68
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+D SELECT COUNT(depiction_id) FROM read_parquet('test2.parquet');
+┌─────────────────────┐
+│ count(depiction_id) │
+│        int64        │
+├─────────────────────┤
+│       210000        │
+└─────────────────────┘
+```
+
+_Note: There is currently no way to export, or iterate through, all the records in an `embeddingsdb` instance using the `client.Client` interface. Maybe there will be in the future but today there is no so this tool will need un-mediated access (aka a "client") to the database itself._
 
 ## DuckDB
 

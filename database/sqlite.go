@@ -8,6 +8,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"log/slog"
 	"net/url"
 	"strconv"
@@ -445,6 +446,103 @@ func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
 // Return the URI string used to instantiate the SQLite database.
 func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
+}
+
+func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+
+	return func(yield func(*embeddingsdb.Record, error) bool) {
+
+		q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r. attributes FROM %s r, %s v WHERE r.id=v.rowid ORDER BY r.created ASC", db.records_table.Name(), db.vec_table.Name())
+
+		rows, err := db.vec_db.QueryContext(ctx, q)
+
+		if err != nil {
+			yield(nil, fmt.Errorf("Failed to execute query (%s), %w", q, err))
+			return
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+
+			var str_embeddings string
+			var provider string
+			var depiction_id string
+			var subject_id string
+			var model string
+			var created int64
+			var str_attrs string
+
+			err = rows.Scan(&str_embeddings, &provider, &depiction_id, &subject_id, &model, &created, &str_attrs)
+
+			if err != nil {
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
+			logger := slog.Default()
+			logger = logger.With("provider", provider)
+			logger = logger.With("subject_id", subject_id)
+			logger = logger.With("depiction_id", depiction_id)
+
+			var attributes map[string]string
+			// var embeddings []float32
+
+			err = json.Unmarshal([]byte(str_attrs), &attributes)
+
+			if err != nil {
+
+				logger.Warn("Failed to unmarshal attributes", "error", err)
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
+			embeddings, err := DeserializeFloat32([]byte(str_embeddings))
+
+			if err != nil {
+
+				if !yield(nil, err) {
+					return
+				}
+
+				continue
+			}
+
+			r := &embeddingsdb.Record{
+				Provider:    provider,
+				SubjectId:   subject_id,
+				DepictionId: depiction_id,
+				Embeddings:  embeddings,
+				Model:       model,
+				Attributes:  attributes,
+				Created:     created,
+			}
+
+			if !yield(r, nil) {
+				return
+			}
+		}
+
+		err = rows.Close()
+
+		if err != nil && !yield(nil, err) {
+			return
+		}
+
+		err = rows.Err()
+
+		if err != nil && !yield(nil, err) {
+			return
+		}
+	}
 }
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
