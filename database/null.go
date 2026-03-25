@@ -44,7 +44,7 @@ func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.Si
 	return results, nil
 }
 
-func (db *NullDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *NullDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
 	return func(yield func(*embeddingsdb.Record, error) bool) {}
 }
 

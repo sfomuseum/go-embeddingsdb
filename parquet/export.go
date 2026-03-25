@@ -41,7 +41,7 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) (int64, err
 		}
 	}()
 
-	for row, err := range db.Iterate(ctx) {
+	for row, err := range db.IterateRecords(ctx) {
 
 		if err != nil {
 			return count, fmt.Errorf("Iterator yielded an error, %w", err)

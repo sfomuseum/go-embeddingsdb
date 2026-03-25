@@ -370,7 +370,7 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *DuckDBDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
@@ -408,9 +408,9 @@ func (db *DuckDBDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.R
 
 			logger := slog.Default()
 			logger = logger.With("provider", provider)
-			logger = logger.With("subject_id", subject_id)			
+			logger = logger.With("subject_id", subject_id)
 			logger = logger.With("depiction_id", depiction_id)
-			
+
 			var attributes map[string]string
 			var embeddings []float32
 
@@ -419,7 +419,7 @@ func (db *DuckDBDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.R
 			if err != nil {
 
 				logger.Warn("Failed to unmarshal attributes", "error", err)
-				
+
 				if !yield(nil, err) {
 					return
 				}
@@ -432,7 +432,7 @@ func (db *DuckDBDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.R
 			if err != nil {
 
 				logger.Warn("Failed to unmarshal embeddings", "error", err)
-				
+
 				if !yield(nil, err) {
 					return
 				}

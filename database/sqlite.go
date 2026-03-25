@@ -448,7 +448,7 @@ func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *SQLiteDatabase) Iterate(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 		yield(nil, fmt.Errorf("Not implemented"))
