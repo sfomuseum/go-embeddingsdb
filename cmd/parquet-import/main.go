@@ -36,6 +36,7 @@ func main() {
 		slog.Debug("Verbose logging enabled")
 	}
 
+	logger := slog.Default()
 	ctx := context.Background()
 
 	cl, err := client.NewClient(ctx, client_uri)
@@ -54,6 +55,7 @@ func main() {
 
 		defer r.Close()
 
+		logger.Debug("Import data", "path", path)
 		_, err = parquet.Import(ctx, cl, r)
 
 		if err != nil {

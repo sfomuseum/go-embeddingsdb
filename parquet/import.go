@@ -18,7 +18,7 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) (int64, error)
 	logger := slog.Default()
 	parquet_r := parquet_go.NewGenericReader[*embeddingsdb.Record](r)
 
-	rows := make([]*embeddingsdb.Record, 0, 10000)
+	rows := make([]*embeddingsdb.Record, 0, 1000)
 
 	ticker := time.NewTicker(60 * time.Second)
 	done_ch := make(chan bool)
@@ -67,6 +67,7 @@ func Import(ctx context.Context, cl client.Client, r io.ReaderAt) (int64, error)
 			}
 
 			count += 1
+			logger.Debug("Add record", "key", row.Key(), "total", count)			
 		}
 	}
 
