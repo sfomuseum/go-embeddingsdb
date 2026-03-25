@@ -83,6 +83,18 @@ func main() {
 
 	mux.Handle("/api/record/{provider}/{model}/{depiction_id}/", api_record_handler)
 
+	api_embeddings_opts := &api.EmbeddingsHandlerOptions{
+		Database: db,
+	}
+
+	api_embeddings_handler, err := api.EmbeddingsHandler(api_embeddings_opts)
+
+	if err != nil {
+		log.Fatalf("Failed to create new API embeddings handler, %v", err)
+	}
+
+	mux.Handle("/api/embeddings/{provider}/{model}/{depiction_id}/", api_embeddings_handler)
+	
 	api_similar_opts := &api.SimilarHandlerOptions{
 		Database: db,
 	}

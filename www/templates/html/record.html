@@ -21,7 +21,7 @@
 		</table>
 	    </td>
 	</tr>
-	<tr><th>Embeddings</th><td>...</td></tr>
+	<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ $s.Provider }}/{{ URLQueryEscape $.Record.Model }}/{{ $s.DepictionId }}" target="embeddings">link</a></td></tr>
 	<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>
     </table>
     
