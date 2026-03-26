@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aaronland/go-roster"
 	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 

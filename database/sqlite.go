@@ -17,7 +17,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"	
+	"github.com/aaronland/go-pagination/countable"
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
@@ -459,7 +459,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, opts pagination.Optio
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	return records, pg, nil
 }
 

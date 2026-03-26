@@ -6,7 +6,7 @@ import (
 	"iter"
 
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"		
+	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -55,7 +55,7 @@ func (db *NullDatabase) ListRecords(ctx context.Context, opts pagination.Options
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	return records, pg, nil
 }
 

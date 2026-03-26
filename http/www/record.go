@@ -5,24 +5,24 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
-	"github.com/aaronland/go-http/v4/sanitize"	
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	embeddingsdb_http "github.com/sfomuseum/go-embeddingsdb/http"
 )
 
 type RecordHandlerOptions struct {
-	Database  database.Database
-	Templates *template.Template
-	MaxResults int32	
+	Database   database.Database
+	Templates  *template.Template
+	MaxResults int32
 }
 
 type RecordHandlerVars struct {
-	Record  *embeddingsdb.Record
-	Similar []*embeddingsdb.SimilarRecord
-	Models []string
-	Providers []string
+	Record          *embeddingsdb.Record
+	Similar         []*embeddingsdb.SimilarRecord
+	Models          []string
+	Providers       []string
 	SimilarProvider string
 }
 
@@ -47,8 +47,8 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		model, _ := sanitize.GetString(req, "model")		
-		
+		model, _ := sanitize.GetString(req, "model")
+
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
 			Embeddings: record.Embeddings,
 			Model:      model,
@@ -66,9 +66,9 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		if similar_provider != "" {
 			similar_req.SimilarProvider = &similar_provider
 		}
-		
+
 		similar, err := opts.Database.SimilarRecords(ctx, similar_req)
-		
+
 		if err != nil {
 			logger.Error("Failed to retrieve similar records", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
@@ -90,12 +90,12 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		
+
 		vars := RecordHandlerVars{
-			Record: record,
-			Similar: similar,
-			Models: models,
-			Providers: providers,
+			Record:          record,
+			Similar:         similar,
+			Models:          models,
+			Providers:       providers,
 			SimilarProvider: similar_provider,
 		}
 

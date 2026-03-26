@@ -20,7 +20,7 @@ func GetSimilarRecordsFromRequest(req *net_http.Request, db database.Database) (
 	}
 
 	model, _ := sanitize.GetString(req, "model")
-	
+
 	similar_req := &embeddingsdb.SimilarRecordsRequest{
 		Embeddings: record.Embeddings,
 		Model:      model,

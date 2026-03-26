@@ -10,8 +10,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/http/api"
 	"github.com/sfomuseum/go-embeddingsdb/http/www"
+	"github.com/sfomuseum/go-embeddingsdb/www/static"
 	"github.com/sfomuseum/go-embeddingsdb/www/templates/html"
-	"github.com/sfomuseum/go-embeddingsdb/www/static"	
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -21,7 +21,7 @@ func main() {
 	var database_uri string
 
 	var max_results int
-	
+
 	var verbose bool
 
 	fs := flagset.NewFlagSet("inspect")
@@ -61,11 +61,11 @@ func main() {
 	static_handler := http.FileServerFS(static.FS)
 
 	mux.Handle("/css/", static_handler)
-	mux.Handle("/javascript/", static_handler)	
-	
+	mux.Handle("/javascript/", static_handler)
+
 	record_opts := &www.RecordHandlerOptions{
-		Database:  db,
-		Templates: t,
+		Database:   db,
+		Templates:  t,
 		MaxResults: int32(max_results),
 	}
 
@@ -88,7 +88,7 @@ func main() {
 	}
 
 	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
-	
+
 	s, err := server.NewServer(ctx, server_uri)
 
 	if err != nil {

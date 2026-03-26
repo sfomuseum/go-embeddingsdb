@@ -4,8 +4,8 @@ import (
 	"fmt"
 	net_http "net/http"
 
+	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
-	"github.com/aaronland/go-http/v4/sanitize"	
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
@@ -16,7 +16,7 @@ func GetRecordFromRequest(req *net_http.Request, db database.Database) (*embeddi
 
 	provider := req.PathValue("provider")
 	logger := slog.LoggerWithRequest(req, nil)
-	
+
 	if provider == "" {
 		return nil, fmt.Errorf("Missing or invalid provider")
 	}
@@ -36,9 +36,9 @@ func GetRecordFromRequest(req *net_http.Request, db database.Database) (*embeddi
 	if model == "" {
 		return nil, fmt.Errorf("Missing or invalid model")
 	}
-	
+
 	logger.Debug("Fetch record", "provider", provider, "model", model, "depiction_id", depiction_id)
-	
+
 	record_req := &embeddingsdb.GetRecordRequest{
 		Provider:    provider,
 		Model:       model,
