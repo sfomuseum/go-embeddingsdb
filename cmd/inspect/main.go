@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/aaronland/go-http/v4/server"
+	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/http/api"
 	"github.com/sfomuseum/go-embeddingsdb/http/www"
@@ -20,6 +21,10 @@ func main() {
 	var server_uri string
 	var database_uri string
 
+	var enable_uploads bool
+	var embeddings_client_uri string
+	var max_upload_size int64
+
 	var max_results int
 
 	var verbose bool
@@ -28,8 +33,13 @@ func main() {
 
 	fs.StringVar(&server_uri, "server-uri", "http://localhost:8080", "...")
 	fs.StringVar(&database_uri, "database-uri", "", "...")
-
 	fs.IntVar(&max_results, "max-results", 20, "...")
+
+	fs.BoolVar(&enable_uploads, "enable-uploads", false, "...")
+	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "...")
+
+	// https://github.com/gangleri/humanbytes/blob/master/humanbytes.go
+	fs.Int64Var(&max_upload_size, "max-upload-size", 10*1024*1024, "...")
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
 
 	flagset.Parse(fs)
@@ -89,14 +99,20 @@ func main() {
 
 	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
 
-	allow_uploads := true
+	if enable_uploads {
 
-	if allow_uploads {
+		emb_cl, err := embeddings.NewEmbedder32(ctx, embeddings_client_uri)
+
+		if err != nil {
+			log.Fatalf("Failed to create new embeddings client, %v", err)
+		}
 
 		upload_opts := &www.UploadHandlerOptions{
-			Database:   db,
-			Templates:  t,
-			MaxResults: int32(max_results),
+			Database:         db,
+			Templates:        t,
+			EmbeddingsClient: emb_cl,
+			MaxResults:       int32(max_results),
+			MaxUploadSize:    max_upload_size,
 		}
 
 		upload_handler, err := www.UploadHandler(upload_opts)

@@ -23,10 +23,10 @@
     
 </div>
 	    
-<div class="row similar-grid">
+<div class="row upload-similar-grid">
     {{ range $i, $s := .Similar -}}    
-    <div class="similar-image">{{ if ne $s.Attributes.uri ""}}<img src="{{ $s.Attributes.uri }}" />{{ end }}</div>
-    <table class="table similar-table">
+    <div class="upload-similar-image">{{ if ne $s.Attributes.uri ""}}<img src="{{ $s.Attributes.uri }}" />{{ end }}</div>
+    <table class="table upload-similar-table">
 	<tr>
 	    <th>Distance</th>
 	    <th>Provider</th>
@@ -53,7 +53,7 @@
 
 </div>
 
-<script type="text/javascript" src="/javascript/record.init.js"></script>
+<script type="text/javascript" src="/javascript/upload_results.init.js"></script>
     
 {{ template "inc_footer" . -}}
 {{ end -}}

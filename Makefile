@@ -21,7 +21,10 @@ inspect:
 	go run -tags=$(TAGS) -mod $(GOMOD) \
 		cmd/inspect/main.go \
 		-verbose \
-		-database-uri $(DATABASE)
+		-database-uri $(DATABASE) \
+		-enable-uploads \
+		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-server-uri http://localhost:8082
 
 server-bundle:
 	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go

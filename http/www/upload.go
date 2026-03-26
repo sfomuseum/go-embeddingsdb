@@ -1,23 +1,30 @@
 package www
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
-	sfom_embeddings "github.com/sfomuseum/go-embeddings"
+	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
 
 type UploadHandlerOptions struct {
 	Database         database.Database
-	EmbeddingsClient sfom_embeddings.Embedder[float32]
+	EmbeddingsClient embeddings.Embedder[float32]
 	Templates        *template.Template
+	MaxUploadSize    int64
 	MaxResults       int32
 }
 
@@ -88,9 +95,9 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 
 		case http.MethodPost:
 
-			req.Body = http.MaxBytesReader(rsp, req.Body, 10<<20) // 10 * 1024 * 1024
+			req.Body = http.MaxBytesReader(rsp, req.Body, opts.MaxUploadSize)
 
-			err := req.ParseMultipartForm(10 << 20)
+			err := req.ParseMultipartForm(opts.MaxUploadSize)
 
 			if err != nil {
 				logger.Error("Failed to parse form", "error", err)
@@ -112,6 +119,9 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 				return
 			}
 
+			// Hack...
+			model = strings.Replace(model, "apple/mobileclip_", "", 1)
+
 			// Now the file
 
 			r, _, err := req.FormFile("upload")
@@ -132,7 +142,17 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			emb_req := &sfom_embeddings.EmbeddingsRequest{
+			im_r := bytes.NewReader(im_body)
+
+			_, _, err = image.Decode(im_r)
+
+			if err != nil {
+				logger.Error("Failed to parse upload as image", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			emb_req := &embeddings.EmbeddingsRequest{
 				Body:  im_body,
 				Model: model,
 			}
@@ -179,6 +199,8 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 				return
 			}
+
+			logger.Debug("Similar results", "count", len(similar))
 
 			vars := UploadHandlerResultsVars{
 				Similar:         similar,
