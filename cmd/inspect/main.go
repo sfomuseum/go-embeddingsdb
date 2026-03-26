@@ -89,6 +89,19 @@ func main() {
 
 	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
 
+	list_opts := &www.ListHandlerOptions{
+		Database:   db,
+		Templates:  t,
+	}
+
+	list_handler, err := www.ListHandler(list_opts)
+
+	if err != nil {
+		log.Fatalf("Failed to create new list handler, %v", err)
+	}
+
+	mux.Handle("/", list_handler)
+	
 	s, err := server.NewServer(ctx, server_uri)
 
 	if err != nil {

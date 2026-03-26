@@ -1,0 +1,46 @@
+{{ define "list" -}}
+{{ template "inc_header" . -}}
+
+<div class="container">
+
+    <div id="list-controls">
+	
+	<select class="form-select" id="model-select">
+	    {{ range $i, $m := .Models -}}
+	    <option value="{{ $m }}">{{ $m }}</option>
+	    {{ end -}}
+	</select>
+    </div>
+    
+    {{ range $i, $r := .Records -}}
+    <div class="row record-grid">
+	<div class="record-image">{{ if ne $r.Attributes.uri "" }}<img src="{{ $r.Attributes.uri }}" />{{ end }}</div>
+	
+	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
+	    <tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
+	    <tr><th>Depiction ID</th><td><a href="/record/{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
+		<tr><th>Subject ID</th><td>{{ $r.SubjectId }}</td></tr>
+		<tr><th>Model</th><td>{{ $r.Model }}</td></tr>
+		<tr><th>Created</th><td>{{ FormatUnixTime $r.Created "2006-01-02" }}</td></tr>	
+		<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
+		<tr>
+		    <th>Attributes</th>
+		    <td>
+			<table class="table attributes">
+			    {{ range $k, $v := $r.Attributes -}}
+			    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+				{{ end -}}
+			</table>
+		    </td>
+		</tr>
+	</table>
+	
+    </div>
+    {{ end -}}
+
+</div>
+
+<script type="text/javascript" src="/javascript/list.init.js"></script>
+    
+{{ template "inc_footer" . -}}
+{{ end -}}

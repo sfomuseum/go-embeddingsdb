@@ -24,7 +24,7 @@ import (
 	_ "github.com/duckdb/duckdb-go/v2"
 
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"
+	pagination_sql "github.com/aaronland/go-pagination-sql"	
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -334,12 +334,42 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *DuckDBDatabase) ListRecords(ctx context.Context, opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings ORDER BY subject_id ASC, depiction_id ASC, model ASC"
+
+	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pg := rsp.Results()
+
+	rows := rsp.Rows()
+	defer rows.Close()
 
 	records := make([]*embeddingsdb.Record, 0)
+	
+	for rows.Next() {
+		
+		r, err := db.inflateRecord(ctx, rows)
+		
+		if err != nil {
+			return nil, nil, err
+		}
 
-	pg, err := countable.NewResultsFromCountWithOptions(opts, 0)
-
+		records = append(records, r)
+	}
+	
+	err = rows.Close()
+	
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	err = rows.Err()
+	
 	if err != nil {
 		return nil, nil, err
 	}

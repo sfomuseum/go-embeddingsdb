@@ -26,6 +26,10 @@
 	margin-bottom: 1.5rem;
 }
 
+#list-controls {
+	margin-bottom: 2rem;
+}
+
 #model-select {
 	display:none;
 }
