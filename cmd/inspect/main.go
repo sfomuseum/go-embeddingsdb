@@ -89,6 +89,25 @@ func main() {
 
 	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
 
+	allow_uploads := true
+
+	if allow_uploads {
+
+		upload_opts := &www.UploadHandlerOptions{
+			Database:   db,
+			Templates:  t,
+			MaxResults: int32(max_results),
+		}
+
+		upload_handler, err := www.UploadHandler(upload_opts)
+
+		if err != nil {
+			log.Fatalf("Failed to create new list handler, %v", err)
+		}
+
+		mux.Handle("/upload/", upload_handler)
+	}
+
 	list_opts := &www.ListHandlerOptions{
 		Database:  db,
 		Templates: t,

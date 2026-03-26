@@ -1,0 +1,35 @@
+{{ define "upload_form" -}}
+{{ template "inc_header" . -}}
+
+<div class="container">
+
+    <form class="form" method="POST">
+	<div class="mb-3">
+	    <label for="upload" class="form-label">Choose a file to find similar records for</label>
+	    <input type="file" class="form-control" id="upload" name="upload">
+	</div>	
+	<div class="mb-3">
+	    <label for="upload-model-select" class="form-label">Choose the model to create (image) embeddings with</label>	
+	    <select class="form-select" id="upload-model-select" name="model">
+		{{ range $i, $m := .Models -}}
+		<option value="{{ $m }}">{{ $m }}</option>
+		{{ end -}}
+	    </select>	    
+	</div>
+	<div class="mb-3">
+	    <label for="upload-provider-select" class="form-label">Filter results by provider (optional)</label>	
+	    <select class="form-select" id="upload-provider-select" name="similar-provider">
+		<option value="">Any providers</option>
+		{{ range $i, $p := .Providers -}}
+		<option value="{{ $p }}">{{ $p }}</option>
+		{{ end -}}
+	    </select>	    
+	</div>	
+	<button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+
+<script type="text/javascript" src="/javascript/upload_form.init.js"></script>
+</div>
+
+{{ template "inc_footer" . -}}
+{{ end -}}

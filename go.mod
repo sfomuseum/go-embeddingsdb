@@ -1,6 +1,6 @@
 module github.com/sfomuseum/go-embeddingsdb
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/aaronland/go-http/v4 v4.0.2
@@ -14,6 +14,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-database v0.0.18
+	github.com/sfomuseum/go-embeddings v0.1.3
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-template v1.11.0
 	golang.org/x/oauth2 v0.36.0
@@ -73,6 +74,8 @@ require (
 	github.com/parquet-go/bitpack v1.0.0 // indirect
 	github.com/parquet-go/jsonlite v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/sfomuseum/go-encoderfile v0.0.1 // indirect
+	github.com/sfomuseum/go-mobileclip v0.1.1 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
