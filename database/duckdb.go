@@ -511,11 +511,11 @@ func (db *DuckDBDatabase) inflateRecord(ctx context.Context, rows any) (*embeddi
 
 	switch rows.(type) {
 	case *sql.Row:
-		err = r.(*sql.Row).Scan(&provider, &depiction_id, &subject_id, &model, &placeholder_embeddings, &created, &str_attrs)
+		err = rows.(*sql.Row).Scan(&provider, &depiction_id, &subject_id, &model, &placeholder_embeddings, &created, &str_attrs)
 	case *sql.Rows:
-		err = r.(*sql.Rows).Scan(&provider, &depiction_id, &subject_id, &model, &placeholder_embeddings, &created, &str_attrs)
+		err = rows.(*sql.Rows).Scan(&provider, &depiction_id, &subject_id, &model, &placeholder_embeddings, &created, &str_attrs)
 	default:
-		return nil, fmt.Error("Invalid type")
+		return nil, fmt.Errorf("Invalid type")
 	}
 
 	if err != nil {
@@ -528,13 +528,12 @@ func (db *DuckDBDatabase) inflateRecord(ctx context.Context, rows any) (*embeddi
 	logger = logger.With("depiction_id", depiction_id)
 
 	var attributes map[string]string
-	var embeddings []float32
 
 	err = json.Unmarshal([]byte(str_attrs), &attributes)
 
 	if err != nil {
 
-		return nil, fmt.Error("Failed to unmarshal attributes, %w", err)
+		return nil, fmt.Errorf("Failed to unmarshal attributes, %w", err)
 	}
 
 	// Thanks for making things weird, DuckDB...
@@ -555,7 +554,7 @@ func (db *DuckDBDatabase) inflateRecord(ctx context.Context, rows any) (*embeddi
 		Created:     created,
 	}
 
-	return nil, r
+	return r, nil
 }
 
 type setupDuckDBDatabaseOptions struct {
