@@ -46,7 +46,7 @@ func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.Si
 	return results, nil
 }
 
-func (db *NullDatabase) ListRecords(ctx context.Context, opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *NullDatabase) ListRecords(ctx context.Context, opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	records := make([]*embeddingsdb.Record, 0)
 

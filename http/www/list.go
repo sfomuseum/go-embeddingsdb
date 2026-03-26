@@ -4,26 +4,26 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	
+
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
+	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
-	"github.com/aaronland/go-pagination"	
-	"github.com/aaronland/go-pagination/countable"
 )
 
 type ListHandlerOptions struct {
-	Database   database.Database
-	Templates  *template.Template
+	Database  database.Database
+	Templates *template.Template
 }
 
 type ListHandlerVars struct {
 	Records         []*embeddingsdb.Record
-	Pagination pagination.Results
+	Pagination      pagination.Results
 	Models          []string
 	Providers       []string
-	CurrentModel string
+	CurrentModel    string
 	CurrentProvider string
 }
 
@@ -55,13 +55,13 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		
+
 		pg_opts, err := countable.NewCountableOptions()
 
 		if err != nil {
 			logger.Error("Failed to create pagination options", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return			
+			return
 		}
 
 		pg_opts.Pointer(int64(1))
@@ -71,26 +71,26 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		if err != nil {
 			logger.Error("Failed to derive page query parameter", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return						
+			return
 		}
 
 		if page != 0 {
 			pg_opts.Pointer(page)
 		}
-		
+
 		records, pg_rsp, err := opts.Database.ListRecords(ctx, pg_opts)
 
 		if err != nil {
 			logger.Error("Failed to list records", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return			
+			return
 		}
-		
+
 		vars := ListHandlerVars{
-			Records:          records,
+			Records:    records,
 			Pagination: pg_rsp,
-			Models:          models,
-			Providers:       providers,
+			Models:     models,
+			Providers:  providers,
 		}
 
 		err = t.Execute(rsp, vars)

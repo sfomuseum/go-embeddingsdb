@@ -450,7 +450,7 @@ func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *SQLiteDatabase) ListRecords(ctx context.Context, opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *SQLiteDatabase) ListRecords(ctx context.Context, opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	records := make([]*embeddingsdb.Record, 0)
 

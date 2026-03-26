@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"slices"
-	
+
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -55,7 +55,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		
+
 		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
 
 		if err != nil {
@@ -66,12 +66,12 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 		model, _ := sanitize.GetString(req, "model")
 
-		if !slices.Contains(models, model){
+		if !slices.Contains(models, model) {
 			logger.Error("Unsupported model parameter", "model", model, "error", err)
 			http.Error(rsp, "Bad request", http.StatusBadRequest)
 			return
 		}
-		
+
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
 			Embeddings: record.Embeddings,
 			Model:      model,
@@ -88,12 +88,12 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 		if similar_provider != "" {
 
-			if !slices.Contains(providers, similar_provider){
+			if !slices.Contains(providers, similar_provider) {
 				logger.Error("Unsupported similar-provider parameter", "provider", similar_provider, "error", err)
 				http.Error(rsp, "Bad request", http.StatusBadRequest)
 				return
 			}
-			
+
 			similar_req.SimilarProvider = &similar_provider
 		}
 

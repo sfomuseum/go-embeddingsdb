@@ -90,8 +90,8 @@ func main() {
 	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
 
 	list_opts := &www.ListHandlerOptions{
-		Database:   db,
-		Templates:  t,
+		Database:  db,
+		Templates: t,
 	}
 
 	list_handler, err := www.ListHandler(list_opts)
@@ -101,7 +101,7 @@ func main() {
 	}
 
 	mux.Handle("/", list_handler)
-	
+
 	s, err := server.NewServer(ctx, server_uri)
 
 	if err != nil {

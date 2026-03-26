@@ -24,7 +24,7 @@ import (
 	_ "github.com/duckdb/duckdb-go/v2"
 
 	"github.com/aaronland/go-pagination"
-	pagination_sql "github.com/aaronland/go-pagination-sql"	
+	pagination_sql "github.com/aaronland/go-pagination-sql"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -334,11 +334,26 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings ORDER BY subject_id ASC, depiction_id ASC, model ASC"
+	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings"
+	args := make([]any, len(filters))
 
-	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q)
+	if len(filters) > 0 {
+
+		where := make([]string, len(filters))
+
+		for i, f := range filters {
+			where[i] = fmt.Sprintf("%s = ?", f.Column)
+			args[i] = f.Value
+		}
+
+		q = fmt.Sprintf("%s WHERE %s", strings.Join(where, " AND "))
+	}
+
+	q = fmt.Sprintf("%s ORDER BY subject_id ASC, depiction_id ASC, model ASC", q)
+
+	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q, args...)
 
 	if err != nil {
 		return nil, nil, err
@@ -350,26 +365,26 @@ func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	defer rows.Close()
 
 	records := make([]*embeddingsdb.Record, 0)
-	
+
 	for rows.Next() {
-		
+
 		r, err := db.inflateRecord(ctx, rows)
-		
+
 		if err != nil {
 			return nil, nil, err
 		}
 
 		records = append(records, r)
 	}
-	
+
 	err = rows.Close()
-	
+
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	err = rows.Err()
-	
+
 	if err != nil {
 		return nil, nil, err
 	}

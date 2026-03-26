@@ -15,6 +15,12 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
+type ListRecordsFilter struct {
+	Column string
+	Value  any
+	// Operator
+}
+
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation.
@@ -22,7 +28,7 @@ type Database interface {
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
 	// ListRecords returns a pagination list of record stored in the database.
-	ListRecords(context.Context, pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error)
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
 	// Find similar records for a given model and record instance.
