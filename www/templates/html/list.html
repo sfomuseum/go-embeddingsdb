@@ -5,23 +5,28 @@
 
     <div id="list-controls">
 
-	<div id="list-controls-model">
-	    <label for="list-model-select" class="form-label">Filter list by model</label>	
-	    <select class="form-select" id="list-model-select">
-		{{ range $i, $m := .Models -}}
-		<option value="{{ $m }}">{{ $m }}</option>
-		{{ end -}}
-	    </select>
-	</div>
-
-	<div id="list-controls-provider">
-	    <label for="list-provider-select" class="form-label">Filter list by provider</label>	
-	    <select class="form-select" id="list-provider-select">
-		{{ range $i, $m := .Providers -}}
-		<option value="{{ $m }}">{{ $m }}</option>
-		{{ end -}}
-	    </select>
-	</div>
+	<details>
+	    <summary>Filters</summary>
+	    <div id="list-controls-models">
+		<label for="list-model-select" class="form-label">Filter list by model</label>	
+		<select class="form-select" id="list-model-select">
+		    <option value="">All models</option>		
+		    {{ range $i, $m := .Models -}}
+		    <option value="{{ $m }}" {{if eq $m $.CurrentModel }}selected="selected"{{ end }}>{{ $m }}</option>
+		    {{ end -}}
+		</select>
+	    </div>
+	    
+	    <div id="list-controls-providers">
+		<label for="list-provider-select" class="form-label">Filter list by provider</label>	
+		<select class="form-select" id="list-provider-select">
+		    <option value="">All providers</option>
+		    {{ range $i, $p := .Providers -}}
+		    <option value="{{ $p }}" {{if eq $p $.CurrentProvider }}selected="selected"{{ end }}>{{ $p }}</option>
+		    {{ end -}}
+		</select>
+	    </div>
+	</details>
 	
     </div>
     

@@ -348,7 +348,7 @@ func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 			args[i] = f.Value
 		}
 
-		q = fmt.Sprintf("%s WHERE %s", strings.Join(where, " AND "))
+		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
 	}
 
 	q = fmt.Sprintf("%s ORDER BY subject_id ASC, depiction_id ASC, model ASC", q)

@@ -78,7 +78,45 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			pg_opts.Pointer(page)
 		}
 
-		records, pg_rsp, err := opts.Database.ListRecords(ctx, pg_opts)
+		filters := make([]*database.ListRecordsFilter, 0)
+
+		model, err := sanitize.GetString(req, "model")
+
+		if err != nil {
+			logger.Error("Failed to derive model parameter", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if model != "" {
+
+			f := &database.ListRecordsFilter{
+				Column: "model",
+				Value:  model,
+			}
+
+			filters = append(filters, f)
+		}
+
+		provider, err := sanitize.GetString(req, "provider")
+
+		if err != nil {
+			logger.Error("Failed to derive provider parameter", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if provider != "" {
+
+			f := &database.ListRecordsFilter{
+				Column: "provider",
+				Value:  provider,
+			}
+
+			filters = append(filters, f)
+		}
+
+		records, pg_rsp, err := opts.Database.ListRecords(ctx, pg_opts, filters...)
 
 		if err != nil {
 			logger.Error("Failed to list records", "error", err)
@@ -87,10 +125,12 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		}
 
 		vars := ListHandlerVars{
-			Records:    records,
-			Pagination: pg_rsp,
-			Models:     models,
-			Providers:  providers,
+			Records:         records,
+			Pagination:      pg_rsp,
+			Models:          models,
+			CurrentModel:    model,
+			CurrentProvider: provider,
+			Providers:       providers,
 		}
 
 		err = t.Execute(rsp, vars)

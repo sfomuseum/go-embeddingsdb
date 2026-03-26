@@ -28,6 +28,7 @@
 
 #list-controls {
 	margin-bottom: 2rem;
+	display:none;
 }
 
 #model-select {
