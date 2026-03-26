@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-
+	"slices"
+	
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -39,6 +40,22 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
+		models, err := opts.Database.Models(ctx)
+
+		if err != nil {
+			logger.Error("Failed to retrieve models", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		providers, err := opts.Database.Providers(ctx)
+
+		if err != nil {
+			logger.Error("Failed to retrieve providers", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		
 		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
 
 		if err != nil {
@@ -49,6 +66,12 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 		model, _ := sanitize.GetString(req, "model")
 
+		if !slices.Contains(models, model){
+			logger.Error("Unsupported model parameter", "model", model, "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+		
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
 			Embeddings: record.Embeddings,
 			Model:      model,
@@ -64,6 +87,13 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		}
 
 		if similar_provider != "" {
+
+			if !slices.Contains(providers, similar_provider){
+				logger.Error("Unsupported similar-provider parameter", "provider", similar_provider, "error", err)
+				http.Error(rsp, "Bad request", http.StatusBadRequest)
+				return
+			}
+			
 			similar_req.SimilarProvider = &similar_provider
 		}
 
@@ -71,22 +101,6 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 		if err != nil {
 			logger.Error("Failed to retrieve similar records", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		models, err := opts.Database.Models(ctx)
-
-		if err != nil {
-			logger.Error("Failed to retrieve models", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		providers, err := opts.Database.Providers(ctx)
-
-		if err != nil {
-			logger.Error("Failed to retrieve providers", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}

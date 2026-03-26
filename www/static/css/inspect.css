@@ -33,3 +33,30 @@
 #model-select {
 	display:none;
 }
+
+.hey-look {
+	font-weight: 700;
+}
+
+.pagination {
+	justify-content: center;
+}
+
+.pagination-el {
+	padding: .5rem;
+	padding-left: 1rem;
+	padding-right: 1rem;	
+	border: 1px solid #ccc;
+	margin-left: .5rem;
+	margin-right: .5rem;
+}
+
+.pagination-el a {
+	text-decoration: none;
+}
+
+.pagination-rollup {
+	text-align:center;
+	font-style:italic;
+	margin-top:1rem;
+}

@@ -23,6 +23,8 @@ type ListHandlerVars struct {
 	Pagination pagination.Results
 	Models          []string
 	Providers       []string
+	CurrentModel string
+	CurrentProvider string
 }
 
 func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
@@ -38,6 +40,22 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
+		models, err := opts.Database.Models(ctx)
+
+		if err != nil {
+			logger.Error("Failed to retrieve models", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		providers, err := opts.Database.Providers(ctx)
+
+		if err != nil {
+			logger.Error("Failed to retrieve providers", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		
 		pg_opts, err := countable.NewCountableOptions()
 
 		if err != nil {
@@ -68,22 +86,6 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return			
 		}
 		
-		models, err := opts.Database.Models(ctx)
-
-		if err != nil {
-			logger.Error("Failed to retrieve models", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		providers, err := opts.Database.Providers(ctx)
-
-		if err != nil {
-			logger.Error("Failed to retrieve providers", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
 		vars := ListHandlerVars{
 			Records:          records,
 			Pagination: pg_rsp,

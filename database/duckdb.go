@@ -429,7 +429,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	count_providers := len(providers)
 
-	q := "SELECT DISTINCT(model) AS model FROM embeddings"
+	q := "SELECT DISTINCT(model) AS model FROM embeddings ORDER by model ASC"
 	args := make([]any, 0)
 
 	if count_providers > 0 {
@@ -484,7 +484,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 
-	q := "SELECT DISTINCT(provider) AS provider FROM embeddings"
+	q := "SELECT DISTINCT(provider) AS provider FROM embeddings ORDER BY provider ASC"
 
 	rows, err := db.vec_db.QueryContext(ctx, q)
 

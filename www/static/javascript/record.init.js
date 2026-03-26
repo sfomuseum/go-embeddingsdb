@@ -37,23 +37,6 @@ window.addEventListener('load', function(e){
 	log.warn("Missing data-model");
 	return;
     }
-    
-    model_select.onchange = function(e){
-	const el = e.target;
-	const m = el.value;
-
-	if (m == current_model){
-	    return false;
-	}
-	
-	location.href="/record/" + current_provider + "/" + current_depiction_id + "?model=" + m;
-	return false;
-    };
-    
-    model_current.style.display = "none";
-    model_select.style.display = "block";    
-
-    //
 
     const similar_controls = document.querySelector("#similar-controls");
 
@@ -68,6 +51,33 @@ window.addEventListener('load', function(e){
 	log.warn("Missing model provider");
 	return;
     }
+
+    //
+    
+    model_select.onchange = function(e){
+	const el = e.target;
+	const m = el.value;
+
+	if (m == current_model){
+	    return false;
+	}
+
+	var href= "/record/" + current_provider + "/" + current_depiction_id + "?model=" + m;
+
+	if (model_provider.value != ""){
+	    href = href + "&similar-provider=" + model_provider.value;
+	}
+	
+	console.log(href);
+	
+	location.href= href;
+	return false;
+    };
+    
+    model_current.style.display = "none";
+    model_select.style.display = "block";    
+
+    //
 
     model_provider.onchange = function(e){
 
