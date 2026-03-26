@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/aaronland/go-http/v4 v4.0.2
+	github.com/aaronland/go-pagination v0.3.0
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/gocloud v1.0.4
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
@@ -65,6 +66,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.7.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
+	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/parquet-go/bitpack v1.0.0 // indirect

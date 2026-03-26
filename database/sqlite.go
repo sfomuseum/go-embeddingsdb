@@ -16,6 +16,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/countable"	
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
@@ -446,6 +448,19 @@ func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
 // Return the URI string used to instantiate the SQLite database.
 func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
+}
+
+func (db *SQLiteDatabase) ListRecords(ctx context.Context, opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	records := make([]*embeddingsdb.Record, 0)
+
+	pg, err := countable.NewResultsFromCountWithOptions(opts, 0)
+
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	return records, pg, nil
 }
 
 func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {

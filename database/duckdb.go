@@ -23,6 +23,8 @@ import (
 
 	_ "github.com/duckdb/duckdb-go/v2"
 
+	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/countable"		
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -368,6 +370,19 @@ func (db *DuckDBDatabase) LastUpdate(ctx context.Context) (int64, error) {
 
 func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
+}
+
+func (db *DuckDBDatabase) ListRecords(ctx context.Context, opts pagination.Options) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	records := make([]*embeddingsdb.Record, 0)
+
+	pg, err := countable.NewResultsFromCountWithOptions(opts, 0)
+
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	return records, pg, nil
 }
 
 func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
