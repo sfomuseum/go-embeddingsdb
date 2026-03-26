@@ -6,6 +6,7 @@ cloud.google.com/go/compute/metadata
 github.com/aaronland/go-aws/v3/auth
 # github.com/aaronland/go-http/v4 v4.0.2
 ## explicit; go 1.25.0
+github.com/aaronland/go-http/v4/sanitize
 github.com/aaronland/go-http/v4/server
 github.com/aaronland/go-http/v4/slog
 # github.com/aaronland/go-roster v1.0.0
@@ -378,6 +379,9 @@ github.com/twpayne/go-geom/encoding/wkbcommon
 # github.com/whosonfirst/go-ioutil v1.0.2
 ## explicit; go 1.16
 github.com/whosonfirst/go-ioutil
+# github.com/whosonfirst/go-sanitize v0.1.0
+## explicit; go 1.12
+github.com/whosonfirst/go-sanitize
 # github.com/zeebo/xxh3 v1.1.0
 ## explicit; go 1.22
 github.com/zeebo/xxh3

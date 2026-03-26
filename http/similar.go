@@ -4,6 +4,7 @@ import (
 	"fmt"
 	net_http "net/http"
 
+	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
@@ -18,8 +19,8 @@ func GetSimilarRecordsFromRequest(req *net_http.Request, db database.Database) (
 		return nil, fmt.Errorf("Failed to retrieve record, %w", err)
 	}
 
-	model := req.PathValue("model")
-
+	model, _ := sanitize.GetString(req, "model")
+	
 	similar_req := &embeddingsdb.SimilarRecordsRequest{
 		Embeddings: record.Embeddings,
 		Model:      model,

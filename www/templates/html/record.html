@@ -3,14 +3,25 @@
 
 <div class="container">
     
-<div class="record-grid">
+<div class="row record-grid">
     <div class="record-image">{{ if ne .Record.Attributes.uri "" }}<img src="{{ .Record.Attributes.uri }}" />{{ end }}</div>
 
-    <table class="table record-table">
+    <table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
 	<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
 	<tr><th>Depiction ID</th><td>{{ .Record.DepictionId }}</td></tr>
 	<tr><th>Subject ID</th><td>{{ .Record.SubjectId }}</td></tr>
-	<tr><th>Model</th><td>{{ .Record.Model }}</td></tr>        
+	<tr><th>Model</th>
+	    <td>
+		<span id="model-current">{{ .Record.Model }}</span>
+		<select class="form-select" id="model-select">
+		    {{ range $i, $m := .Models -}}
+		    <option value="{{ $m }}" {{ if eq $m $.Record.Model }}selected="selected"{{ end }}>{{ $m }}</option>
+		    {{ end -}}
+		</select>
+	    </td>
+	</tr>
+	<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
+	<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
 	<tr>
 	    <th>Attributes</th>
 	    <td>
@@ -21,13 +32,28 @@
 		</table>
 	    </td>
 	</tr>
-	<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ $s.Provider }}/{{ URLQueryEscape $.Record.Model }}/{{ $s.DepictionId }}" target="embeddings">link</a></td></tr>
-	<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>
     </table>
     
 </div>
 
-<div class="similar-grid">
+<div class="row" id="similar-controls">
+
+    <label for="model-provider" class="form-label">Filter similar records by provider</label>
+    <select class="form-select" id="model-provider">
+	<option value="">All providers</option>
+	{{ range $i, $p := .Providers -}}
+	<option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
+	{{ end -}}
+    </select>
+
+    <!--
+    <label for="max-distance" class="form-label">Max Distance</label>
+    <input type="range" class="form-range" min="0" max="5.0" id="max-distance">
+    -->
+    
+</div>
+	    
+<div class="row similar-grid">
     {{ range $i, $s := .Similar -}}    
     <div class="similar-image">{{ if ne $s.Attributes.uri ""}}<img src="{{ $s.Attributes.uri }}" />{{ end }}</div>
     <table class="table similar-table">
@@ -39,9 +65,9 @@
 	    <th>Attributes</th>
 	</tr>
 	<tr>
-	    <td><a href="/record/{{ $s.Provider }}/{{ URLQueryEscape $.Record.Model }}/{{ $s.DepictionId }}">{{ $s.Distance }}</a></td>
+	    <td>{{ $s.Distance }}</td>
 	    <td>{{ $s.Provider }}</td>
-	    <td>{{ $s.DepictionId }}</td>
+	    <td><a href="/record/{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
 	    <td>{{ $s.SubjectId }}</td>	    	    
 	    <td>
 		<table class="table attributes">
@@ -57,5 +83,7 @@
 
 </div>
 
+<script type="text/javascript" src="/javascript/record.init.js"></script>
+    
 {{ template "inc_footer" . -}}
 {{ end -}}

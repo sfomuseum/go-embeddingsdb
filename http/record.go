@@ -5,6 +5,7 @@ import (
 	net_http "net/http"
 
 	"github.com/aaronland/go-http/v4/slog"
+	"github.com/aaronland/go-http/v4/sanitize"	
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 )
@@ -20,18 +21,22 @@ func GetRecordFromRequest(req *net_http.Request, db database.Database) (*embeddi
 		return nil, fmt.Errorf("Missing or invalid provider")
 	}
 
-	model := req.PathValue("model")
-
-	if model == "" {
-		return nil, fmt.Errorf("Missing or invalid model")
-	}
-
 	depiction_id := req.PathValue("depiction_id")
 
 	if depiction_id == "" {
 		return nil, fmt.Errorf("Missing or invalid depiction ID")
 	}
 
+	model, err := sanitize.GetString(req, "model")
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to derive model, %w", err)
+	}
+
+	if model == "" {
+		return nil, fmt.Errorf("Missing or invalid model")
+	}
+	
 	logger.Debug("Fetch record", "provider", provider, "model", model, "depiction_id", depiction_id)
 	
 	record_req := &embeddingsdb.GetRecordRequest{

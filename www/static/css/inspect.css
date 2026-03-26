@@ -5,18 +5,27 @@
 
 .record-grid {
 	display: grid;
-	grid-template-columns:500px 1fr;
+	grid-template-columns:520px 1fr;
 	gap: 50px 10px;
 	margin-bottom: 1.5rem;
 }
 
 .similar-grid {
 	display: grid;
-	grid-template-columns: 200px 1fr;
+	grid-template-columns: 220px 1fr;
 	gap: 50px 10px;
 }
 
 .attributes {
 	font-size:small;
 	font-family:monospace;
+}
+
+#similar-controls {
+	display:none;
+	margin-bottom: 1.5rem;
+}
+
+#model-select {
+	display:none;
 }
