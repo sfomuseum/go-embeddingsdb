@@ -38,17 +38,17 @@ window.addEventListener('load', function(e){
 	const v = el.value;
 
 	const u = new URL("/", location);
-	const p = new URLSearchParams();
+	const s = new URLSearchParams();
 
 	if (v != ""){
-	    p.set("model", v);
+	    s.set("model", v);
 	}
 
 	if (list_provider_select.value != ""){
-	    p.set("provider", list_provider_select.value);
+	    s.set("provider", list_provider_select.value);
 	}
 
-	u.search = p;
+	u.search = s;
 	location.href = u.toString();
 	return false;
     };
@@ -59,17 +59,18 @@ window.addEventListener('load', function(e){
 	const v = el.value;
 
 	const u = new URL("/", location);
-	const p = new URLSearchParams();
+	const s = new URLSearchParams();
 
 	if (v != ""){
-	    p.set("provider", v);
+	    s.set("provider", v);
 	}
 
 	if (list_model_select.value != ""){
-	    p.set("model", list_model_select.value);
+	    s.set("model", list_model_select.value);
 	}
 
-	u.search = p;
+	u.search = s;
+	
 	location.href = u.toString();
 	return false;	
     };

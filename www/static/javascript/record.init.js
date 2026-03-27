@@ -56,19 +56,24 @@ window.addEventListener('load', function(e){
     
     model_select.onchange = function(e){
 	const el = e.target;
-	const m = el.value;
+	const v = el.value;
 
-	if (m == current_model){
+	if (v == current_model){
 	    return false;
 	}
 
-	var href= "/record/" + current_provider + "/" + current_depiction_id + "?model=" + m;
+	const u = new URL("/", location);
+	const s = new URLSearchParams();
+	
+	u.pathname = "/record/" + current_provider + "/" + current_depiction_id;
+	s.set("model",  v);
 
 	if (model_provider.value != ""){
-	    href = href + "&similar-provider=" + model_provider.value;
+	    s.set("similar-provider", model_provider.value);
 	}
-	
-	console.log(href);
+
+	u.search = s;
+	const href = u.toString();
 	
 	location.href= href;
 	return false;
@@ -82,19 +87,27 @@ window.addEventListener('load', function(e){
     model_provider.onchange = function(e){
 
 	const el = e.target;
-	const p = el.value;
+	const v = el.value;
 
-	if (p == current_provider){
+	if (v == current_provider){
 	    return false;
 	}
 
+	const u = new URL("/", location);
+	const s = new URLSearchParams();
+	
 	const m = model_select.value;
 
-	var href = "/record/" + current_provider + "/" + current_depiction_id + "?model=" + m;
+	u.pathname = "/record/" + current_provider + "/" + current_depiction_id;
 
-	if (p != "") {
-	    href = href + "&similar-provider=" + p;
+	s.set("model", model_select.value);
+
+	if (v != "") {
+	    s.set("similar-provider",v);
 	}
+
+	u.search = s
+	const href = u.toString();
 	
 	location.href= href
 	return false;
