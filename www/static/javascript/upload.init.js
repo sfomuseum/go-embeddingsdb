@@ -32,9 +32,24 @@ window.addEventListener('load', function(e){
 		console.error('Upload failed', xhr.status, xhr.statusText);
 		return;
 	    }
+
+	    var data;
 	    
-	    console.log('Upload succeeded', xhr.responseText);
-	    // Do stuff here...
+	    try {
+		data = JSON.parse(xhr.responseText);
+	    } catch (err) {
+		console.error("Failed to parse response", err);
+		return;
+	    }
+	    
+	    const count = data.length;
+
+	    for (var i=0; i < count; i++){
+
+		const similar = data[i];
+		console.log("similar", similar);
+	    }
+	    
 	});
 
 	progress.style.display = "block";

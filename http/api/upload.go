@@ -54,7 +54,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		//
+		// Process form parameters
 
 		req.Body = http.MaxBytesReader(rsp, req.Body, opts.MaxUploadSize)
 
@@ -80,10 +80,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		// Hack...
-		model = strings.Replace(model, "apple/mobileclip_", "", 1)
-
-		// Now the file
+		logger.Debug("Process upload", "model", model)
 
 		r, _, err := req.FormFile("upload")
 
@@ -103,6 +100,10 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		logger.Debug("Handle image body", "length", len(im_body))
+
+		// Make sure this is an image
+
 		im_r := bytes.NewReader(im_body)
 
 		_, _, err = image.Decode(im_r)
@@ -113,9 +114,16 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		// Generate embeddings for image body
+
+		// Hack...
+		emb_model := strings.Replace(model, "apple/mobileclip_", "", 1)
+
+		logger.Debug("Generate embeddings", "model", emb_model, "body", len(im_body))
+
 		emb_req := &embeddings.EmbeddingsRequest{
 			Body:  im_body,
-			Model: model,
+			Model: emb_model,
 		}
 
 		emb_rsp, err := opts.EmbeddingsClient.ImageEmbeddings(ctx, emb_req)
@@ -152,6 +160,8 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 
 			similar_req.SimilarProvider = &similar_provider
 		}
+
+		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(emb_rsp.Embeddings()))
 
 		similar, err := opts.Database.SimilarRecords(ctx, similar_req)
 
