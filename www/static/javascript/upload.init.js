@@ -1,40 +1,45 @@
 window.addEventListener('load', function(e){
 
-    const upload = document.querySelector("#upload");
-    const file = document.querySelector("#model");
-    const similar_provider = document.querySelector("#similar-provider");
+    const progress = document.querySelector("#progress");    
     const submit = document.querySelector("#submit");
 
     submit.onclick = function(e){
 
-	const url = new URL("/upload", location);
+	const u = new URL("/api/upload/", location);
+	const url = u.toString();
 	
-	const form = e.target;
+	const form = document.querySelector("#upload-form");
 	const data = new FormData(form);
 
 	const xhr = new XMLHttpRequest();
-	xhr.open('POST', u.toString());
+	xhr.open('POST', url);
 
 	xhr.upload.addEventListener('progress', function (ev) {
 	    
 	    if (ev.lengthComputable) {
 		const percent = Math.round((ev.loaded / ev.total) * 100);
-		// progressBar.value = percent;
-		console.log(`Upload progress: ${percent}%`);
+		progress.value = percent;
+		console.debug(`Upload progress: ${percent}%`);
 	    }
 	});
 
 	xhr.addEventListener('load', function () {
-	    progressBar.style.display = 'none';
-	    if (xhr.status >= 200 && xhr.status < 300) {
-		console.log('Upload succeeded', xhr.responseText);
-	    } else {
+	    
+	    progress.style.display = 'none';
+	    progress.value = 0;
+	    
+	    if (xhr.status != 200){
 		console.error('Upload failed', xhr.status, xhr.statusText);
+		return;
 	    }
+	    
+	    console.log('Upload succeeded', xhr.responseText);
+	    // Do stuff here...
 	});
 
-	xhr.send(form);
-	console.log("Upload");
+	progress.style.display = "block";
+
+	xhr.send(data);
 	return false;
     };
 

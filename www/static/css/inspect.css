@@ -61,3 +61,7 @@
 	font-style:italic;
 	margin-top:1rem;
 }
+
+#progress {
+	display: none;
+}

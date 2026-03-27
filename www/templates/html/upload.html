@@ -3,7 +3,7 @@
 
 <div class="container">
 
-    <form class="form" method="POST" enctype="multipart/form-data">
+    <form class="form" method="POST" enctype="multipart/form-data" id="upload-form">
 	<div class="mb-3">
 	    <label for="upload" class="form-label">Choose a file to find similar records for</label>
 	    <input type="file" class="form-control" id="upload" name="upload">
@@ -24,7 +24,8 @@
 		<option value="{{ $p }}">{{ $p }}</option>
 		{{ end -}}
 	    </select>	    
-	</div>	
+	</div>
+	<progress id="progress" max="100" value="0"></progress>
 	<button type="submit" class="btn btn-primary" id="submit" disabled="disbled">Upload</button>
     </form>
 
