@@ -14,8 +14,9 @@ import (
 )
 
 type ListHandlerOptions struct {
-	Database  database.Database
-	Templates *template.Template
+	Database      database.Database
+	Templates     *template.Template
+	EnableUploads bool
 }
 
 type ListHandlerVars struct {
@@ -25,6 +26,7 @@ type ListHandlerVars struct {
 	Providers       []string
 	CurrentModel    string
 	CurrentProvider string
+	EnableUploads   bool
 }
 
 func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
@@ -131,6 +133,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			CurrentModel:    model,
 			CurrentProvider: provider,
 			Providers:       providers,
+			EnableUploads:   opts.EnableUploads,
 		}
 
 		err = t.Execute(rsp, vars)

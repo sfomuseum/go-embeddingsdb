@@ -10,13 +10,15 @@ import (
 )
 
 type UploadHandlerOptions struct {
-	Database  database.Database
-	Templates *template.Template
+	Database      database.Database
+	Templates     *template.Template
+	EnableUploads bool
 }
 
 type UploadHandlerFormVars struct {
-	Models    []string
-	Providers []string
+	Models        []string
+	Providers     []string
+	EnableUploads bool
 }
 
 func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
@@ -49,8 +51,9 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 		}
 
 		vars := UploadHandlerFormVars{
-			Models:    models,
-			Providers: providers,
+			Models:        models,
+			Providers:     providers,
+			EnableUploads: opts.EnableUploads,
 		}
 
 		err = t.Execute(rsp, vars)

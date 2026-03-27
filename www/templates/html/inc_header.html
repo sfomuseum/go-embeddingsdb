@@ -13,9 +13,12 @@
 		<li class="nav-item">
 		    <a class="nav-link" href="/">List all records</a>
 		</li>
+		{{ if (IsAvailable "EnableUploads" . ) }}
+		{{ if .EnableUploads }}
 		<li class="nav-item">
 		    <a class="nav-link" href="/upload">Search by upload</a>
 		</li>
+		{{ end }}{{ end }}
 		<!--
 		<li class="nav-item dropdown">
 		    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Dropdown</a>

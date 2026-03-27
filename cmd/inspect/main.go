@@ -74,9 +74,10 @@ func main() {
 	mux.Handle("/javascript/", static_handler)
 
 	record_opts := &www.RecordHandlerOptions{
-		Database:   db,
-		Templates:  t,
-		MaxResults: int32(max_results),
+		Database:      db,
+		Templates:     t,
+		MaxResults:    int32(max_results),
+		EnableUploads: enable_uploads,
 	}
 
 	record_handler, err := www.RecordHandler(record_opts)
@@ -108,8 +109,9 @@ func main() {
 		}
 
 		upload_opts := &www.UploadHandlerOptions{
-			Database:  db,
-			Templates: t,
+			Database:      db,
+			Templates:     t,
+			EnableUploads: enable_uploads,
 		}
 
 		upload_handler, err := www.UploadHandler(upload_opts)
@@ -137,8 +139,9 @@ func main() {
 	}
 
 	list_opts := &www.ListHandlerOptions{
-		Database:  db,
-		Templates: t,
+		Database:      db,
+		Templates:     t,
+		EnableUploads: enable_uploads,
 	}
 
 	list_handler, err := www.ListHandler(list_opts)

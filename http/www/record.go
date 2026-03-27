@@ -14,9 +14,10 @@ import (
 )
 
 type RecordHandlerOptions struct {
-	Database   database.Database
-	Templates  *template.Template
-	MaxResults int32
+	Database      database.Database
+	Templates     *template.Template
+	MaxResults    int32
+	EnableUploads bool
 }
 
 type RecordHandlerVars struct {
@@ -25,6 +26,7 @@ type RecordHandlerVars struct {
 	Models          []string
 	Providers       []string
 	SimilarProvider string
+	EnableUploads   bool
 }
 
 func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
@@ -111,6 +113,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			Models:          models,
 			Providers:       providers,
 			SimilarProvider: similar_provider,
+			EnableUploads:   opts.EnableUploads,
 		}
 
 		err = t.Execute(rsp, vars)
