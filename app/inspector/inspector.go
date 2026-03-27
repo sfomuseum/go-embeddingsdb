@@ -1,8 +1,9 @@
-package main
+package inspector
 
 import (
 	"context"
-	"log"
+	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -16,31 +17,12 @@ import (
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
-func main() {
+func Run(ctx context.Context) error {
+	fs := DefaultFlagSet()
+	return RunWithFlagSet(ctx, fs)
+}
 
-	var server_uri string
-	var database_uri string
-
-	var enable_uploads bool
-	var embeddings_client_uri string
-	var max_upload_size int64
-
-	var max_results int
-
-	var verbose bool
-
-	fs := flagset.NewFlagSet("inspect")
-
-	fs.StringVar(&server_uri, "server-uri", "http://localhost:8080", "...")
-	fs.StringVar(&database_uri, "database-uri", "", "...")
-	fs.IntVar(&max_results, "max-results", 20, "...")
-
-	fs.BoolVar(&enable_uploads, "enable-uploads", false, "...")
-	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "...")
-
-	// https://github.com/gangleri/humanbytes/blob/master/humanbytes.go
-	fs.Int64Var(&max_upload_size, "max-upload-size", 10*1024*1024, "...")
-	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
+func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	flagset.Parse(fs)
 
@@ -50,12 +32,11 @@ func main() {
 	}
 
 	logger := slog.Default()
-	ctx := context.Background()
 
 	db, err := database.NewDatabase(ctx, database_uri)
 
 	if err != nil {
-		log.Fatalf("Failed to create new database, %v", err)
+		return fmt.Errorf("Failed to create new database, %w", err)
 	}
 
 	defer db.Close(ctx)
@@ -63,7 +44,7 @@ func main() {
 	t, err := html.LoadTemplates(ctx)
 
 	if err != nil {
-		log.Fatalf("Failed to load HTML templates, %v", err)
+		return fmt.Errorf("Failed to load HTML templates, %w", err)
 	}
 
 	mux := http.NewServeMux()
@@ -72,6 +53,20 @@ func main() {
 
 	mux.Handle("/css/", static_handler)
 	mux.Handle("/javascript/", static_handler)
+
+	list_opts := &www.ListHandlerOptions{
+		Database:      db,
+		Templates:     t,
+		EnableUploads: enable_uploads,
+	}
+
+	list_handler, err := www.ListHandler(list_opts)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create new list handler, %w", err)
+	}
+
+	mux.Handle("/", list_handler)
 
 	record_opts := &www.RecordHandlerOptions{
 		Database:      db,
@@ -83,7 +78,7 @@ func main() {
 	record_handler, err := www.RecordHandler(record_opts)
 
 	if err != nil {
-		log.Fatalf("Failed to create new record handler, %v", err)
+		return fmt.Errorf("Failed to create new record handler, %w", err)
 	}
 
 	mux.Handle("/record/{provider}/{depiction_id}/", record_handler)
@@ -95,7 +90,7 @@ func main() {
 	api_embeddings_handler, err := api.EmbeddingsHandler(api_embeddings_opts)
 
 	if err != nil {
-		log.Fatalf("Failed to create new API embeddings handler, %v", err)
+		return fmt.Errorf("Failed to create new API embeddings handler, %w", err)
 	}
 
 	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
@@ -105,7 +100,7 @@ func main() {
 		emb_cl, err := embeddings.NewEmbedder32(ctx, embeddings_client_uri)
 
 		if err != nil {
-			log.Fatalf("Failed to create new embeddings client, %v", err)
+			return fmt.Errorf("Failed to create new embeddings client, %w", err)
 		}
 
 		upload_opts := &www.UploadHandlerOptions{
@@ -117,7 +112,7 @@ func main() {
 		upload_handler, err := www.UploadHandler(upload_opts)
 
 		if err != nil {
-			log.Fatalf("Failed to create upload handler, %v", err)
+			return fmt.Errorf("Failed to create upload handler, %w", err)
 		}
 
 		mux.Handle("/upload/", upload_handler)
@@ -132,30 +127,16 @@ func main() {
 		api_upload_handler, err := api.UploadHandler(api_upload_opts)
 
 		if err != nil {
-			log.Fatalf("Failed to create API upload handler, %v", err)
+			return fmt.Errorf("Failed to create API upload handler, %w", err)
 		}
 
 		mux.Handle("/api/upload/", api_upload_handler)
 	}
 
-	list_opts := &www.ListHandlerOptions{
-		Database:      db,
-		Templates:     t,
-		EnableUploads: enable_uploads,
-	}
-
-	list_handler, err := www.ListHandler(list_opts)
-
-	if err != nil {
-		log.Fatalf("Failed to create new list handler, %v", err)
-	}
-
-	mux.Handle("/", list_handler)
-
 	s, err := server.NewServer(ctx, server_uri)
 
 	if err != nil {
-		log.Fatalf("Failed to create new server, %v", err)
+		return fmt.Errorf("Failed to create new server, %w", err)
 	}
 
 	logger.Info("Listen for requests", "address", s.Address())
@@ -163,6 +144,8 @@ func main() {
 	err = s.ListenAndServe(ctx, mux)
 
 	if err != nil {
-		log.Fatalf("Failed to start server, %v", err)
+		return fmt.Errorf("Failed to start server, %w", err)
 	}
+
+	return nil
 }

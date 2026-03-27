@@ -14,12 +14,13 @@ fix:
 cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
 
-inspect:
+inspector:
 	go run -tags=$(TAGS) -mod $(GOMOD) \
-		cmd/inspect/main.go \
+		cmd/inspector/main.go \
 		-verbose \
 		-database-uri $(DATABASE) \
 		-enable-uploads \
