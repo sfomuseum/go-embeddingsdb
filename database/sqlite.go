@@ -273,7 +273,7 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 		return nil, err
 	}
 
-	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.createf, r.attributes FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
+	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r.attributes FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
 
 	row := db.vec_db.QueryRowContext(ctx, records_q, id)
 
