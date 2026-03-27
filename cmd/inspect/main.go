@@ -108,20 +108,32 @@ func main() {
 		}
 
 		upload_opts := &www.UploadHandlerOptions{
-			Database:         db,
-			Templates:        t,
-			EmbeddingsClient: emb_cl,
-			MaxResults:       int32(max_results),
-			MaxUploadSize:    max_upload_size,
+			Database:  db,
+			Templates: t,
 		}
 
 		upload_handler, err := www.UploadHandler(upload_opts)
 
 		if err != nil {
-			log.Fatalf("Failed to create new list handler, %v", err)
+			log.Fatalf("Failed to create upload handler, %v", err)
 		}
 
 		mux.Handle("/upload/", upload_handler)
+
+		api_upload_opts := &api.UploadHandlerOptions{
+			Database:         db,
+			EmbeddingsClient: emb_cl,
+			MaxResults:       int32(max_results),
+			MaxUploadSize:    max_upload_size,
+		}
+
+		api_upload_handler, err := api.UploadHandler(api_upload_opts)
+
+		if err != nil {
+			log.Fatalf("Failed to create API upload handler, %v", err)
+		}
+
+		mux.Handle("/api/upload/", api_upload_handler)
 	}
 
 	list_opts := &www.ListHandlerOptions{

@@ -1,4 +1,4 @@
-{{ define "upload_form" -}}
+{{ define "upload" -}}
 {{ template "inc_header" . -}}
 
 <div class="container">
@@ -25,10 +25,10 @@
 		{{ end -}}
 	    </select>	    
 	</div>	
-	<button type="submit" class="btn btn-primary">Upload</button>
+	<button type="submit" class="btn btn-primary" id="submit" disabled="disbled">Upload</button>
     </form>
 
-<script type="text/javascript" src="/javascript/upload_form.init.js"></script>
+<script type="text/javascript" src="/javascript/upload.init.js"></script>
 </div>
 
 {{ template "inc_footer" . -}}
