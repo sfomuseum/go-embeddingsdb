@@ -16,6 +16,39 @@
 	gap: 50px 10px;
 }
 
+#upload-grid {
+	display: grid;
+	grid-template-columns: 520px 1fr;
+	gap: 50px 10px;
+	margin-bottom: 1.5rem;
+}
+
+#upload-image {
+	border: 1px solid #000;
+	display:flex;
+	justify-content:center;
+	max-height:300px;
+	max-width:500px;
+}
+
+.similar-table td {
+	vertical-align: top !important;
+	padding: .5rem;
+	padding-left: 0;
+}
+
+.attributes td {
+	vertical-align: top !important;
+	padding: .5rem;
+	padding-top: 0;
+}
+
+.attributes th {
+	vertical-align: top !important;
+	padding: .5rem;
+	padding-top: 0;
+}
+
 .attributes {
 	font-size:small;
 	font-family:monospace;
@@ -64,4 +97,9 @@
 
 #progress {
 	display: none;
+}
+
+#summary {
+	margin-bottom: 1rem;
+	font-style: italic;
 }
