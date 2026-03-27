@@ -1,0 +1,81 @@
+{{ define "list" -}}
+{{ template "inc_header" . -}}
+
+<div class="container">
+
+    <div id="list-controls">
+
+	<details>
+	    <summary>Filters</summary>
+	    <div id="list-controls-models">
+		<label for="list-model-select" class="form-label">Filter list by model</label>	
+		<select class="form-select" id="list-model-select">
+		    <option value="">All models</option>		
+		    {{ range $i, $m := .Models -}}
+		    <option value="{{ $m }}" {{if eq $m $.CurrentModel }}selected="selected"{{ end }}>{{ $m }}</option>
+		    {{ end -}}
+		</select>
+	    </div>
+	    
+	    <div id="list-controls-providers">
+		<label for="list-provider-select" class="form-label">Filter list by provider</label>	
+		<select class="form-select" id="list-provider-select">
+		    <option value="">All providers</option>
+		    {{ range $i, $p := .Providers -}}
+		    <option value="{{ $p }}" {{if eq $p $.CurrentProvider }}selected="selected"{{ end }}>{{ $p }}</option>
+		    {{ end -}}
+		</select>
+	    </div>
+	</details>
+	
+    </div>
+    
+    {{ range $i, $r := .Records -}}
+    <div class="row record-grid">
+	<div class="record-image">{{ if ne $r.Attributes.uri "" }}<img src="{{ $r.Attributes.uri }}" />{{ end }}</div>
+	
+	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
+	    <tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
+	    <tr><th>Depiction ID</th><td><a href="/record/{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
+		<tr><th>Subject ID</th><td>{{ $r.SubjectId }}</td></tr>
+		<tr><th>Model</th><td><span class="hey-look">{{ $r.Model }}</span></td></tr>
+		<tr><th>Created</th><td>{{ FormatUnixTime $r.Created "2006-01-02" }}</td></tr>	
+		<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
+		<tr>
+		    <th>Attributes</th>
+		    <td>
+			<table class="table attributes">
+			    {{ range $k, $v := $r.Attributes -}}
+			    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+				{{ end -}}
+			</table>
+		    </td>
+		</tr>
+	</table>
+	
+    </div>
+    {{ end -}}
+
+    <div class="pagination">
+	<div class="pagination-el pagination-previous">
+	    {{ if ne .Pagination.Previous 0 }}<a href="/?page={{ .Pagination.Previous }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
+	</div>
+	<div class="pagination-el pagination-next">
+	    {{ if ne .Pagination.Next 0 }}<a href="/?page={{ .Pagination.Next }}">page {{ .Pagination.Next }}</a>{{ else }}&#8212;{{ end }}
+	</div>
+    </div>
+
+    <div class="pagination-rollup">
+	{{ if gt 1 .Pagination.Total -}}
+	There is one result
+	{{ else -}}
+	There are <span class="hey-look">{{ .Pagination.Total }}</span> results{{ if gt .Pagination.Pages 1 }} and this is <span class="hey-look">page {{ .Pagination.Page }}</span> of <span class="hey-look">{{ .Pagination.Pages }}</span>{{ end }}.
+	{{ end -}}
+    </div>
+    
+</div>
+
+<script type="text/javascript" src="/javascript/list.init.js"></script>
+    
+{{ template "inc_footer" . -}}
+{{ end -}}

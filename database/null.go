@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"iter"
 
+	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -42,6 +44,19 @@ func (db *NullDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetReco
 func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil
+}
+
+func (db *NullDatabase) ListRecords(ctx context.Context, opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	records := make([]*embeddingsdb.Record, 0)
+
+	pg, err := countable.NewResultsFromCountWithOptions(opts, 0)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return records, pg, nil
 }
 
 func (db *NullDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {

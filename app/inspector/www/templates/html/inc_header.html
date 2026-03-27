@@ -1,0 +1,36 @@
+{{ define "inc_header" -}}
+<html>
+    <head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="/css/bootstrap-5.3.8.min.css" />
+	<link rel="stylesheet" type="text/css" href="/css/inspect.css" />	
+    </head>
+    <body>
+
+	<nav id="navbar-example2" class="navbar bg-body-tertiary px-3 mb-3">
+	    <a class="navbar-brand" href="#">Inspect</a>
+	    <ul class="nav nav-pills">
+		<li class="nav-item">
+		    <a class="nav-link" href="/">List all records</a>
+		</li>
+		{{ if (IsAvailable "EnableUploads" . ) }}
+		{{ if .EnableUploads }}
+		<li class="nav-item">
+		    <a class="nav-link" href="/upload">Search by upload</a>
+		</li>
+		{{ end }}{{ end }}
+		<!--
+		<li class="nav-item dropdown">
+		    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Dropdown</a>
+		    <ul class="dropdown-menu">
+			<li><a class="dropdown-item" href="#scrollspyHeading3">Third</a></li>
+			<li><a class="dropdown-item" href="#scrollspyHeading4">Fourth</a></li>
+			<li><hr class="dropdown-divider"></li>
+			<li><a class="dropdown-item" href="#scrollspyHeading5">Fifth</a></li>
+		    </ul>
+		</li>
+		-->
+	    </ul>
+	</nav>
+	
+{{ end -}}

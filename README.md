@@ -51,6 +51,10 @@ type Database interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// ListRecords returns a pagination list of record stored in the database.
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
+	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
 	// Find similar records for a given model and record instance.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
@@ -62,7 +66,7 @@ type Database interface {
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)	
+	Providers(context.Context) ([]string, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
@@ -450,6 +454,73 @@ $> ./bin/embeddingsdb-client providers -client-uri 'grpc://localhost:8081' | jq
   "sfomuseum-data-media-collection"
 ]
 ```
+
+### embeddingsdb-inspector
+
+A minimalist web-interface for inspecting documents stored in a `embeddingsdb-server` instance.
+
+```
+$> ./bin/embeddingsdb-inspector -h
+A minimalist web-interface for inspecting documents stored in a `embeddingsdb-server` instance.
+Usage:
+	./bin/embeddingsdb-inspector [options]
+Valid options are:
+  -database-uri string
+    	A registered sfomuseum/go-embeddingsdb/database.Database URI.
+  -embeddings-client-uri string
+    	A registered go-embeddings.Client URI. This is required if the -enable-uploads flag is true.
+  -enable-uploads
+    	Enable search by upload functionality.
+  -max-results int
+    	The maximum number of similar results to return. (default 20)
+  -max-upload-size int
+    	The maximum size (in bytes) for uploads. (default 10485760)
+  -server-uri string
+    	A registered aaronland/go-http/v4/server.Server URI. (default "http://localhost:8080")
+  -verbose
+    	Enable verbose (debug) logging.
+```
+
+For example:
+
+```
+$> bin/embeddingsdb-inspector \
+	-verbose \
+	-database-uri duckdb:///usr/local/sfomuseum/go-embeddingsdb/work/db \
+	-enable-uploads \
+	-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+	-server-uri http://localhost:8082
+	
+2026/03/27 14:55:55 DEBUG Verbose logging enabled
+2026/03/27 14:55:55 DEBUG Load database from path path=/usr/local/sfomuseum/go-embeddingsdb/work/db
+2026/03/27 14:55:55 DEBUG INSTALL VSS
+2026/03/27 14:55:55 DEBUG LOAD VSS
+2026/03/27 14:55:55 DEBUG IMPORT DATABASE '/usr/local/sfomuseum/go-embeddingsdb/work/db'
+2026/03/27 14:56:33 DEBUG Finished setting up database time=37.117980625s
+2026/03/27 14:56:33 INFO Listen for requests address=http://localhost:8082
+```
+
+Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
+
+![](docs/images/embeddingsdb-list.png)
+
+You can filter the list view by model and by provider (the source of embeddings). Individual record pages look like this:
+
+![](docs/images/embeddingsdb-record.png)
+
+By default record pages will show similar records for a single model across all providers. Both of these facets may be updated.
+
+If enabled (with the `-enable-upload` flag) there is also an endpoint where you can upload an image of your choosing, generate embeddings on the fly for that image and then use those data to search for similar images in the `embeddingsdb` database. For example:
+
+![](docs/images/embeddingsdb-search.png)
+
+#### Note and caveats
+
+The `embeddingsdb-inspector` is still a work in progress. Currently it requires direct access to the underlying database instance used to store embeddings through an implementation of the `Database` interface (discussed above). Eventually the methods necessary for the `embeddingsdb-inspector` will be added to both the `Client` and `Server` interfaces (also discussed above) which will allow inspector-like functionality but without needing direct access to the database.
+
+In order for the "search by upload" functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
+
+The `embeddingsdb-inspector` does not handle _importing_ records in to an `embeddingsdb` database. This is handled by separate processes like the `parquet-import` tool described below.
 
 ### parquet-import
 

@@ -1,8 +1,11 @@
 module github.com/sfomuseum/go-embeddingsdb
 
-go 1.25.0
+go 1.26.0
 
 require (
+	github.com/aaronland/go-http/v4 v4.0.2
+	github.com/aaronland/go-pagination v0.3.0
+	github.com/aaronland/go-pagination-sql v0.2.0
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/gocloud v1.0.4
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
@@ -11,7 +14,9 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-database v0.0.18
+	github.com/sfomuseum/go-embeddings v0.1.3
 	github.com/sfomuseum/go-flags v0.12.1
+	github.com/sfomuseum/go-template v1.11.0
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
@@ -20,8 +25,10 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/aaronland/go-aws/v3 v3.5.0 // indirect
+	github.com/akrylysov/algnhsa v1.1.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apache/arrow-go/v18 v18.5.1 // indirect
+	github.com/aws/aws-lambda-go v1.53.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.9 // indirect
@@ -61,13 +68,21 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.7.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
+	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/parquet-go/bitpack v1.0.0 // indirect
 	github.com/parquet-go/jsonlite v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/sfomuseum/go-encoderfile v0.0.1 // indirect
+	github.com/sfomuseum/go-mobileclip v0.1.1 // indirect
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/twpayne/go-geom v1.6.1 // indirect
 	github.com/whosonfirst/go-ioutil v1.0.2 // indirect
+	github.com/whosonfirst/go-sanitize v0.1.0 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.40.0 // indirect
@@ -77,13 +92,13 @@ require (
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	gocloud.dev v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260116145544-c6413dc483f5 // indirect
-	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
+	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.256.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect

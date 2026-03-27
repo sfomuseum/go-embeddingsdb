@@ -23,6 +23,8 @@ import (
 
 	_ "github.com/duckdb/duckdb-go/v2"
 
+	"github.com/aaronland/go-pagination"
+	pagination_sql "github.com/aaronland/go-pagination-sql"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -203,48 +205,10 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 
 func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
 
-	q := "SELECT subject_id, attributes, vec, created FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
+	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
 	row := db.vec_db.QueryRowContext(ctx, q, req.Provider, req.DepictionId, req.Model)
-
-	var subject_id string
-	var placeholder_attributes string
-	var placeholder_embeddings []interface{}
-	var created int64
-
-	err := row.Scan(&subject_id, &placeholder_attributes, &placeholder_embeddings, &created)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var attributes map[string]string
-
-	err = json.Unmarshal([]byte(placeholder_attributes), &attributes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Thanks for making things weird, DuckDB...
-
-	embeddings := make([]float32, len(placeholder_embeddings))
-
-	for idx, v := range placeholder_embeddings {
-		embeddings[idx] = v.(float32)
-	}
-
-	record := &embeddingsdb.Record{
-		Provider:    req.Provider,
-		DepictionId: req.DepictionId,
-		Model:       req.Model,
-		SubjectId:   subject_id,
-		Attributes:  attributes,
-		Embeddings:  embeddings,
-		Created:     created,
-	}
-
-	return record, nil
+	return db.inflateRecord(ctx, row)
 }
 
 func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
@@ -370,11 +334,69 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
+func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings"
+	args := make([]any, len(filters))
+
+	if len(filters) > 0 {
+
+		where := make([]string, len(filters))
+
+		for i, f := range filters {
+			where[i] = fmt.Sprintf("%s = ?", f.Column)
+			args[i] = f.Value
+		}
+
+		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
+	}
+
+	q = fmt.Sprintf("%s ORDER BY subject_id ASC, depiction_id ASC, model ASC", q)
+
+	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q, args...)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pg := rsp.Results()
+
+	rows := rsp.Rows()
+	defer rows.Close()
+
+	records := make([]*embeddingsdb.Record, 0)
+
+	for rows.Next() {
+
+		r, err := db.inflateRecord(ctx, rows)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		records = append(records, r)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = rows.Err()
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return records, pg, nil
+}
+
 func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
-		q := "SELECT provider, depiction_id, subject_id, model, TO_JSON(vec)::TEXT, created, attributes FROM embeddings ORDER BY created ASC"
+		q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings ORDER BY created ASC"
 
 		rows, err := db.vec_db.QueryContext(ctx, q)
 
@@ -387,67 +409,14 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 		for rows.Next() {
 
-			var provider string
-			var depiction_id string
-			var subject_id string
-			var model string
-			var str_embeddings string
-			var created int64
-			var str_attrs string
-
-			err = rows.Scan(&provider, &depiction_id, &subject_id, &model, &str_embeddings, &created, &str_attrs)
+			r, err := db.inflateRecord(ctx, rows)
 
 			if err != nil {
-
 				if !yield(nil, err) {
 					return
 				}
 
 				continue
-			}
-
-			logger := slog.Default()
-			logger = logger.With("provider", provider)
-			logger = logger.With("subject_id", subject_id)
-			logger = logger.With("depiction_id", depiction_id)
-
-			var attributes map[string]string
-			var embeddings []float32
-
-			err = json.Unmarshal([]byte(str_attrs), &attributes)
-
-			if err != nil {
-
-				logger.Warn("Failed to unmarshal attributes", "error", err)
-
-				if !yield(nil, err) {
-					return
-				}
-
-				continue
-			}
-
-			err = json.Unmarshal([]byte(str_embeddings), &embeddings)
-
-			if err != nil {
-
-				logger.Warn("Failed to unmarshal embeddings", "error", err)
-
-				if !yield(nil, err) {
-					return
-				}
-
-				continue
-			}
-
-			r := &embeddingsdb.Record{
-				Provider:    provider,
-				SubjectId:   subject_id,
-				DepictionId: depiction_id,
-				Model:       model,
-				Embeddings:  embeddings,
-				Attributes:  attributes,
-				Created:     created,
 			}
 
 			if !yield(r, nil) {
@@ -475,7 +444,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	count_providers := len(providers)
 
-	q := "SELECT DISTINCT(model) AS model FROM embeddings"
+	q := "SELECT DISTINCT(model) AS model FROM embeddings ORDER by model ASC"
 	args := make([]any, 0)
 
 	if count_providers > 0 {
@@ -530,7 +499,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 
-	q := "SELECT DISTINCT(provider) AS provider FROM embeddings"
+	q := "SELECT DISTINCT(provider) AS provider FROM embeddings ORDER BY provider ASC"
 
 	rows, err := db.vec_db.QueryContext(ctx, q)
 
@@ -571,6 +540,66 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
+}
+
+func (db *DuckDBDatabase) inflateRecord(ctx context.Context, rows any) (*embeddingsdb.Record, error) {
+
+	var provider string
+	var depiction_id string
+	var subject_id string
+	var model string
+	var placeholder_embeddings []interface{}
+	var created int64
+	var str_attrs string
+
+	var err error
+
+	switch rows.(type) {
+	case *sql.Row:
+		err = rows.(*sql.Row).Scan(&provider, &depiction_id, &subject_id, &model, &placeholder_embeddings, &created, &str_attrs)
+	case *sql.Rows:
+		err = rows.(*sql.Rows).Scan(&provider, &depiction_id, &subject_id, &model, &placeholder_embeddings, &created, &str_attrs)
+	default:
+		return nil, fmt.Errorf("Invalid type")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	logger := slog.Default()
+	logger = logger.With("provider", provider)
+	logger = logger.With("subject_id", subject_id)
+	logger = logger.With("depiction_id", depiction_id)
+
+	var attributes map[string]string
+
+	err = json.Unmarshal([]byte(str_attrs), &attributes)
+
+	if err != nil {
+
+		return nil, fmt.Errorf("Failed to unmarshal attributes, %w", err)
+	}
+
+	// Thanks for making things weird, DuckDB...
+
+	embeddings := make([]float32, len(placeholder_embeddings))
+
+	for idx, v := range placeholder_embeddings {
+		embeddings[idx] = v.(float32)
+	}
+
+	r := &embeddingsdb.Record{
+		Provider:    provider,
+		SubjectId:   subject_id,
+		DepictionId: depiction_id,
+		Model:       model,
+		Embeddings:  embeddings,
+		Attributes:  attributes,
+		Created:     created,
+	}
+
+	return r, nil
 }
 
 type setupDuckDBDatabaseOptions struct {

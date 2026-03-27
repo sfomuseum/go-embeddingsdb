@@ -1,0 +1,65 @@
+{{ define "upload" -}}
+{{ template "inc_header" . -}}
+
+<div class="container">
+
+    <div id="upload-grid">
+	<div id="upload-image">
+	</div>
+
+	<form class="form" method="POST" enctype="multipart/form-data" id="upload-form">
+	    <div class="mb-3">
+		<label for="upload" class="form-label">Choose a file to find similar records for</label>
+		<input type="file" class="form-control" id="upload" name="upload" accept="image/png,image/jpeg,image/gif" />
+	    </div>	
+	    <div class="mb-3">
+		<label for="upload-model-select" class="form-label">Choose the model to create (image) embeddings with</label>	
+		<select class="form-select" id="upload-model-select" name="model">
+		    {{ range $i, $m := .Models -}}
+		    <option value="{{ $m }}">{{ $m }}</option>
+		    {{ end -}}
+		</select>	    
+	    </div>
+	    <div class="mb-3">
+		<label for="upload-provider-select" class="form-label">Filter results by provider (optional)</label>	
+		<select class="form-select" id="upload-provider-select" name="similar-provider">
+		    <option value="">Any providers</option>
+		    {{ range $i, $p := .Providers -}}
+		    <option value="{{ $p }}">{{ $p }}</option>
+		    {{ end -}}
+		</select>	    
+	    </div>
+	    <button type="submit" class="btn btn-primary" id="submit" disabled="disbled">Upload</button>
+	    <progress id="progress" max="100" value="0"></progress>	    
+	</form>
+	
+    </div>
+
+    <div id="upload-similar">
+    </div>
+</div>
+
+<script type="text/javascript" src="/javascript/upload.init.js"></script>
+
+<template id="similar-results">
+    <div class="row similar-grid">
+    </div>
+</template>
+
+<template id="similar-result-single">
+    <div class="similar-image"></div>
+    <table class="table similar-table">
+	<tr>
+	    <th>Distance</th>
+	    <th>Provider</th>
+	    <th>Depiction ID</th>
+	    <th>Subject ID</th>
+	    <th>Attributes</th>
+	</tr>
+	<tr id="similar-item">
+	</tr>    
+    </table>
+</template>
+
+{{ template "inc_footer" . -}}
+{{ end -}}
