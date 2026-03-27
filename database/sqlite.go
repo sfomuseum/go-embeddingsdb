@@ -12,12 +12,13 @@ import (
 	"log/slog"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"
+	pagination_sql "github.com/aaronland/go-pagination-sql"
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
@@ -272,52 +273,14 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 		return nil, err
 	}
 
-	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.attributes, r.created FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
+	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.createf, r.attributes FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
 
 	row := db.vec_db.QueryRowContext(ctx, records_q, id)
 
-	var enc_embeddings []byte
-	var provider string
-	var depiction_id string
-	var subject_id string
-	var model string
-	var str_attrs string
-	var created int64
-
-	err = row.Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &str_attrs, &created)
+	rec, err := db.inflateRecord(ctx, row)
 
 	if err != nil {
 		return nil, err
-	}
-
-	var attrs map[string]string
-
-	err = json.Unmarshal([]byte(str_attrs), &attrs)
-
-	if err != nil {
-		return nil, err
-	}
-
-	rec := &embeddingsdb.Record{
-		Provider:    provider,
-		DepictionId: depiction_id,
-		SubjectId:   subject_id,
-		Model:       model,
-		Attributes:  attrs,
-		Created:     created,
-	}
-
-	switch db.compression {
-	case sqlite_vec_quantize_compression:
-		rec.Embeddings = DeserializeQuantizedBinary(enc_embeddings)
-	default:
-		e32, err := DeserializeFloat32(enc_embeddings)
-
-		if err != nil {
-			return nil, err
-		}
-
-		rec.Embeddings = e32
 	}
 
 	return rec, nil
@@ -450,11 +413,57 @@ func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *SQLiteDatabase) ListRecords(ctx context.Context, opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	args := make([]any, len(filters))
+
+	q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r. attributes FROM %s r, %s v WHERE r.id=v.rowid", db.records_table.Name(), db.vec_table.Name())
+
+	if len(filters) > 0 {
+
+		where := make([]string, len(filters))
+
+		for i, f := range filters {
+			where[i] = fmt.Sprintf("r.%s = ?", f.Column)
+			args[i] = f.Value
+		}
+
+		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
+	}
+
+	q = fmt.Sprintf("%s ORDER BY r.subject_id, r.depiction_id, r.model ASC", q)
+
+	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q, args...)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pg := rsp.Results()
+
+	rows := rsp.Rows()
+	defer rows.Close()
 
 	records := make([]*embeddingsdb.Record, 0)
 
-	pg, err := countable.NewResultsFromCountWithOptions(opts, 0)
+	for rows.Next() {
+
+		r, err := db.inflateRecord(ctx, rows)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		records = append(records, r)
+	}
+
+	err = rows.Close()
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = rows.Err()
 
 	if err != nil {
 		return nil, nil, err
@@ -480,15 +489,7 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 		for rows.Next() {
 
-			var str_embeddings string
-			var provider string
-			var depiction_id string
-			var subject_id string
-			var model string
-			var created int64
-			var str_attrs string
-
-			err = rows.Scan(&str_embeddings, &provider, &depiction_id, &subject_id, &model, &created, &str_attrs)
+			r, err := db.inflateRecord(ctx, rows)
 
 			if err != nil {
 
@@ -497,48 +498,6 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 				}
 
 				continue
-			}
-
-			logger := slog.Default()
-			logger = logger.With("provider", provider)
-			logger = logger.With("subject_id", subject_id)
-			logger = logger.With("depiction_id", depiction_id)
-
-			var attributes map[string]string
-			// var embeddings []float32
-
-			err = json.Unmarshal([]byte(str_attrs), &attributes)
-
-			if err != nil {
-
-				logger.Warn("Failed to unmarshal attributes", "error", err)
-
-				if !yield(nil, err) {
-					return
-				}
-
-				continue
-			}
-
-			embeddings, err := DeserializeFloat32([]byte(str_embeddings))
-
-			if err != nil {
-
-				if !yield(nil, err) {
-					return
-				}
-
-				continue
-			}
-
-			r := &embeddingsdb.Record{
-				Provider:    provider,
-				SubjectId:   subject_id,
-				DepictionId: depiction_id,
-				Embeddings:  embeddings,
-				Model:       model,
-				Attributes:  attributes,
-				Created:     created,
 			}
 
 			if !yield(r, nil) {
@@ -565,7 +524,7 @@ func (db *SQLiteDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	models := make([]string, 0)
 
-	q := fmt.Sprintf("SELECT DISTINCT(model) FROM %s", db.records_table.Name())
+	q := fmt.Sprintf("SELECT DISTINCT(model) FROM %s ORDER BY model ASC", db.records_table.Name())
 	rows, err := db.vec_db.QueryContext(ctx, q)
 
 	if err != nil {
@@ -607,7 +566,7 @@ func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
 
 	providers := make([]string, 0)
 
-	q := fmt.Sprintf("SELECT DISTINCT(provider) FROM %s", db.records_table.Name())
+	q := fmt.Sprintf("SELECT DISTINCT(provider) FROM %s ORDER BY provider ASC", db.records_table.Name())
 	rows, err := db.vec_db.QueryContext(ctx, q)
 
 	if err != nil {
@@ -647,6 +606,68 @@ func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
 // Close performs and terminating functions required by the SQLite database.
 func (db *SQLiteDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
+}
+
+func (db *SQLiteDatabase) inflateRecord(ctx context.Context, rows any) (*embeddingsdb.Record, error) {
+
+	var enc_embeddings []byte
+	var provider string
+	var depiction_id string
+	var subject_id string
+	var model string
+	var created int64
+	var str_attrs string
+
+	var err error
+
+	switch rows.(type) {
+	case *sql.Row:
+		err = rows.(*sql.Row).Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &created, &str_attrs)
+	case *sql.Rows:
+		err = rows.(*sql.Rows).Scan(&enc_embeddings, &provider, &depiction_id, &subject_id, &model, &created, &str_attrs)
+	default:
+		return nil, fmt.Errorf("Invalid row type")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	logger := slog.Default()
+	logger = logger.With("provider", provider)
+	logger = logger.With("subject_id", subject_id)
+	logger = logger.With("depiction_id", depiction_id)
+
+	var attributes map[string]string
+	err = json.Unmarshal([]byte(str_attrs), &attributes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	r := &embeddingsdb.Record{
+		Provider:    provider,
+		SubjectId:   subject_id,
+		DepictionId: depiction_id,
+		Model:       model,
+		Attributes:  attributes,
+		Created:     created,
+	}
+
+	switch db.compression {
+	case sqlite_vec_quantize_compression:
+		r.Embeddings = DeserializeQuantizedBinary(enc_embeddings)
+	default:
+		e32, err := DeserializeFloat32(enc_embeddings)
+
+		if err != nil {
+			return nil, err
+		}
+
+		r.Embeddings = e32
+	}
+
+	return r, nil
 }
 
 func (db *SQLiteDatabase) uidForRecord(ctx context.Context, provider string, depiction_id string, model string) (int64, error) {
