@@ -89,10 +89,6 @@ window.addEventListener('load', function(e){
 	const el = e.target;
 	const v = el.value;
 
-	if (v == current_provider){
-	    return false;
-	}
-
 	const u = new URL("/", location);
 	const s = new URLSearchParams();
 	

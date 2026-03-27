@@ -10,10 +10,10 @@ import (
 	"github.com/aaronland/go-http/v4/server"
 	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb/database"
-	"github.com/sfomuseum/go-embeddingsdb/http/api"
-	"github.com/sfomuseum/go-embeddingsdb/http/www"
-	"github.com/sfomuseum/go-embeddingsdb/www/static"
-	"github.com/sfomuseum/go-embeddingsdb/www/templates/html"
+	"github.com/sfomuseum/go-embeddingsdb/app/inspector/http/api"
+	"github.com/sfomuseum/go-embeddingsdb/app/inspector/http/www"
+	"github.com/sfomuseum/go-embeddingsdb/app/inspector/www/static"
+	"github.com/sfomuseum/go-embeddingsdb/app/inspector/www/templates/html"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 

@@ -10,7 +10,7 @@ import (
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
-	embeddingsdb_http "github.com/sfomuseum/go-embeddingsdb/http"
+	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 )
 
 type RecordHandlerOptions struct {
@@ -58,7 +58,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
+		record, err := inspector_http.GetRecordFromRequest(req, opts.Database)
 
 		if err != nil {
 			logger.Error("Failed to get database record", "error", err)

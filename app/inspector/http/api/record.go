@@ -6,20 +6,20 @@ import (
 
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb/database"
-	embeddingsdb_http "github.com/sfomuseum/go-embeddingsdb/http"
+	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 )
 
-type EmbeddingsHandlerOptions struct {
+type RecordHandlerOptions struct {
 	Database database.Database
 }
 
-func EmbeddingsHandler(opts *EmbeddingsHandlerOptions) (http.Handler, error) {
+func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		logger := slog.LoggerWithRequest(req, nil)
 
-		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
+		record, err := inspector_http.GetRecordFromRequest(req, opts.Database)
 
 		if err != nil {
 			logger.Error("Failed to get database record", "error", err)
@@ -30,7 +30,7 @@ func EmbeddingsHandler(opts *EmbeddingsHandlerOptions) (http.Handler, error) {
 		rsp.Header().Set("Content-type", "application/json")
 
 		enc := json.NewEncoder(rsp)
-		err = enc.Encode(record.Embeddings)
+		err = enc.Encode(record)
 
 		if err != nil {
 			logger.Error("Failed to encode record", "error", err)

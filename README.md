@@ -516,6 +516,8 @@ The `embeddingsdb-inspector` is still a work in progress. Currently it requires 
 
 In order for the "search by upload" functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
 
+The `embeddingsdb-inspector` does not handle _importing_ records in to an `embeddingsdb` database. This is handled by separate processes like the `parquet-import` tool described below.
+
 ### parquet-import
 
 Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.

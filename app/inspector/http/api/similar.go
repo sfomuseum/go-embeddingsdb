@@ -6,34 +6,34 @@ import (
 
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb/database"
-	embeddingsdb_http "github.com/sfomuseum/go-embeddingsdb/http"
+	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 )
 
-type RecordHandlerOptions struct {
+type SimilarHandlerOptions struct {
 	Database database.Database
 }
 
-func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
+func SimilarHandler(opts *SimilarHandlerOptions) (http.Handler, error) {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
 		logger := slog.LoggerWithRequest(req, nil)
 
-		record, err := embeddingsdb_http.GetRecordFromRequest(req, opts.Database)
+		similar, err := inspector_http.GetSimilarRecordsFromRequest(req, opts.Database)
 
 		if err != nil {
-			logger.Error("Failed to get database record", "error", err)
-			http.Error(rsp, "Not found", http.StatusNotFound)
+			logger.Error("Failed to get similar records", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
 		rsp.Header().Set("Content-type", "application/json")
 
 		enc := json.NewEncoder(rsp)
-		err = enc.Encode(record)
+		err = enc.Encode(similar)
 
 		if err != nil {
-			logger.Error("Failed to encode record", "error", err)
+			logger.Error("Failed to encode results", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
