@@ -51,6 +51,10 @@ type Database interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// ListRecords returns a pagination list of record stored in the database.
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
+	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
 	// Find similar records for a given model and record instance.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
@@ -62,7 +66,7 @@ type Database interface {
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)	
+	Providers(context.Context) ([]string, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
