@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/aaronland/go-http/v4/slog"
-	"github.com/sfomuseum/go-embeddingsdb/database"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
+	"github.com/sfomuseum/go-embeddingsdb/database"
 )
 
 type EmbeddingsHandlerOptions struct {

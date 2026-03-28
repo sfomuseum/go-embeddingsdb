@@ -9,8 +9,8 @@ import (
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/database"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
+	"github.com/sfomuseum/go-embeddingsdb/database"
 )
 
 type RecordHandlerOptions struct {

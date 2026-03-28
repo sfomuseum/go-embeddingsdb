@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
@@ -69,6 +70,56 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 
 	rsp := &grpc.GetRecordResponse{
 		Record: grpc_record,
+	}
+
+	return rsp, nil
+}
+
+func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequest) (*grpc.ListRecordsResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+
+	defer func() {
+		logger.Debug("Time to list records", "time", time.Since(t1))
+	}()
+
+	pg_opts, err := countable.NewCountableOptions()
+
+	if err != nil {
+		logger.Error("Failed to create new countable options", "error", err)
+		return nil, err
+	}
+
+	pg_opts.PerPage(req.Pagination.PerPage)
+	pg_opts.Pointer(req.Pagination.Page)
+
+	filters := make([]*database.ListRecordsFilter, len(req.Filters))
+
+	// Set filters here...
+
+	db_records, pg_rsp, err := s.db.ListRecords(ctx, pg_opts, filters...)
+
+	if err != nil {
+		logger.Error("Failed to list records", "error", err)
+		return nil, err
+	}
+
+	grpc_records := make([]*grpc.EmbeddingsDBRecord, len(db_records))
+
+	for i, r := range db_records {
+		grpc_records[i] = embeddingsdb.EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(r)
+	}
+
+	rsp := &grpc.ListRecordsResponse{
+		Pagination: &grpc.PaginationResults{
+			Total:   pg_rsp.Total(),
+			Page:    pg_rsp.Page(),
+			Pages:   pg_rsp.Pages(),
+			PerPage: pg_rsp.PerPage(),
+		},
+		Records: grpc_records,
 	}
 
 	return rsp, nil
