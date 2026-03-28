@@ -97,7 +97,13 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 
 	filters := make([]*database.ListRecordsFilter, len(req.Filters))
 
-	// Set filters here...
+	for i, f := range req.Filters {
+
+		filters[i] = &database.ListRecordsFilter{
+			Column: f.Column,
+			Value:  f.Value,
+		}
+	}
 
 	db_records, pg_rsp, err := s.db.ListRecords(ctx, pg_opts, filters...)
 
