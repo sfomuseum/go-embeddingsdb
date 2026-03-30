@@ -134,9 +134,12 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
 
 	logger := s.Logger(ctx)
-	logger = logger.With("provider", *req.SimilarProvider)
 	logger = logger.With("model", req.Model)
 
+	if req.SimilarProvider != nil {
+		logger = logger.With("provider", *req.SimilarProvider)
+	}
+	
 	t1 := time.Now()
 
 	defer func() {
