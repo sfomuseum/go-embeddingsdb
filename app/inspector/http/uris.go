@@ -1,8 +1,8 @@
 package http
 
 import (
-	"fmt"
 	"net/url"
+	"strings"
 )
 
 type URIs struct {
@@ -33,27 +33,33 @@ func DefaultURIs(prefix string) (*URIs, error) {
 
 	if prefix != "" {
 
-		fields := map[string]*string{
-			"CSS":                   &u.CSS,
-			"JavaScript":            &u.JavaScript,
-			"List":                  &u.List,
-			"Record":                &u.Record,
-			"RecordWithVars":        &u.RecordWithVars,
-			"Upload":                &u.Upload,
-			"APIEmbeddings":         &u.APIEmbeddings,
-			"APIEmbeddingsWithVars": &u.APIEmbeddingsWithVars,
-			"APIUpload":             &u.APIUpload,
+		// The following hoop-jumping is necessary because
+		// url.JoinPath will happily (and correctly) escape the
+		// {foo} wilcard variables in URIs...
+
+		prefix = strings.TrimLeft(prefix, "/")
+		prefix, err := url.JoinPath("/", prefix)
+
+		if err != nil {
+			return nil, err
 		}
 
-		for name, ptr := range fields {
+		prefix = strings.TrimRight(prefix, "/")
 
-			new_uri, err := url.JoinPath(prefix, *ptr)
+		fields := []*string{
+			&u.CSS,
+			&u.JavaScript,
+			&u.List,
+			&u.Record,
+			&u.RecordWithVars,
+			&u.Upload,
+			&u.APIEmbeddings,
+			&u.APIEmbeddingsWithVars,
+			&u.APIUpload,
+		}
 
-			if err != nil {
-				return nil, fmt.Errorf("failed to append prefix to %s (%s): %w", *ptr, name, err)
-			}
-
-			*ptr = new_uri
+		for _, ptr := range fields {
+			*ptr = prefix + *ptr
 		}
 	}
 

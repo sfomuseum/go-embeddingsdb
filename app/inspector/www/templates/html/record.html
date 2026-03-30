@@ -1,5 +1,6 @@
 {{ define "record" -}}
 {{ template "inc_header" . -}}
+{{ $root := . }}
 
 <div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
     
@@ -67,7 +68,7 @@
 	<tr>
 	    <td>{{ $s.Distance }}</td>
 	    <td>{{ $s.Provider }}</td>
-	    <td><a href="{{ .URIs.Record }}{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
+	    <td><a href="{{ $root.URIs.Record }}{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
 	    <td>{{ $s.SubjectId }}</td>	    	    
 	    <td>
 		<table class="table attributes">

@@ -76,6 +76,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to create new list handler, %w", err)
 	}
 
+	logger.Debug("Register list handler", "uri", uris.List)
 	mux.Handle(uris.List, list_handler)
 
 	record_opts := &www.RecordHandlerOptions{
@@ -92,6 +93,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to create new record handler, %w", err)
 	}
 
+	logger.Debug("Register record handler", "uri", uris.RecordWithVars)
 	mux.Handle(uris.RecordWithVars, record_handler)
 
 	api_embeddings_opts := &api.EmbeddingsHandlerOptions{
@@ -104,6 +106,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to create new API embeddings handler, %w", err)
 	}
 
+	logger.Debug("Register API embeddings handler", "uri", uris.APIEmbeddingsWithVars)
 	mux.Handle(uris.APIEmbeddingsWithVars, api_embeddings_handler)
 
 	if enable_uploads {
@@ -127,6 +130,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			return fmt.Errorf("Failed to create upload handler, %w", err)
 		}
 
+		logger.Debug("Register upload handler", "uri", uris.Upload)
 		mux.Handle(uris.Upload, upload_handler)
 
 		api_upload_opts := &api.UploadHandlerOptions{
@@ -142,6 +146,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			return fmt.Errorf("Failed to create API upload handler, %w", err)
 		}
 
+		logger.Debug("Register API upload handler", "uri", uris.APIUpload)
 		mux.Handle(uris.APIUpload, api_upload_handler)
 	}
 
