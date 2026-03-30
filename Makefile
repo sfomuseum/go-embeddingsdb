@@ -22,7 +22,7 @@ inspector:
 	go run -tags=$(TAGS) -mod $(GOMOD) \
 		cmd/inspector/main.go \
 		-verbose \
-		-database-uri $(DATABASE) \
+		-client-uri 'grpc://localhost:8081' \
 		-enable-uploads \
 		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
 		-server-uri http://localhost:8082

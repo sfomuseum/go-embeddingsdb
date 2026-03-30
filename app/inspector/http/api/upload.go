@@ -16,11 +16,11 @@ import (
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 type UploadHandlerOptions struct {
-	Database         database.Database
+	Client           client.Client
 	EmbeddingsClient embeddings.Embedder[float32]
 	MaxUploadSize    int64
 	MaxResults       int32
@@ -38,7 +38,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		models, err := opts.Database.Models(ctx)
+		models, err := opts.Client.Models(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -46,7 +46,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := opts.Database.Providers(ctx)
+		providers, err := opts.Client.Providers(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)
@@ -163,7 +163,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 
 		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(emb_rsp.Embeddings()))
 
-		similar, err := opts.Database.SimilarRecords(ctx, similar_req)
+		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
 
 		if err != nil {
 			logger.Error("Failed to retrieve similar records", "error", err)

@@ -9,12 +9,12 @@ import (
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/database"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 type RecordHandlerOptions struct {
-	Database      database.Database
+	Client        client.Client
 	Templates     *template.Template
 	MaxResults    int32
 	EnableUploads bool
@@ -42,7 +42,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		models, err := opts.Database.Models(ctx)
+		models, err := opts.Client.Models(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -50,7 +50,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := opts.Database.Providers(ctx)
+		providers, err := opts.Client.Providers(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)
@@ -58,7 +58,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		record, err := inspector_http.GetRecordFromRequest(req, opts.Database)
+		record, err := inspector_http.GetRecordFromRequest(req, opts.Client)
 
 		if err != nil {
 			logger.Error("Failed to get database record", "error", err)
@@ -99,7 +99,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			similar_req.SimilarProvider = &similar_provider
 		}
 
-		similar, err := opts.Database.SimilarRecords(ctx, similar_req)
+		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
 
 		if err != nil {
 			logger.Error("Failed to retrieve similar records", "error", err)

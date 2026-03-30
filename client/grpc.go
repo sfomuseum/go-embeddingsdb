@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/countable"
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
 	embeddingsdb_grpc "github.com/sfomuseum/go-embeddingsdb/grpc"
@@ -193,6 +195,49 @@ func (e *GrpcClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordR
 	record := embeddingsdb.GrpcEmbeddingsRecordToEmbeddingsDBRecord(rsp.Record)
 
 	return record, nil
+}
+
+func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	grpc_pg := &embeddingsdb_grpc.PaginationOptions{
+		Page:    countable.PageFromOptions(pg_opts),
+		PerPage: pg_opts.PerPage(),
+	}
+
+	grpc_filters := make([]*embeddingsdb_grpc.ListRecordsFilter, len(filters))
+
+	for i, f := range filters {
+
+		grpc_filters[i] = &embeddingsdb_grpc.ListRecordsFilter{
+			Column: f.Column,
+			Value:  fmt.Sprintf("%v", f.Value),
+		}
+	}
+
+	grpc_req := &embeddingsdb_grpc.ListRecordsRequest{
+		Filters:    grpc_filters,
+		Pagination: grpc_pg,
+	}
+
+	grpc_rsp, err := e.client.ListRecords(ctx, grpc_req)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	records := make([]*embeddingsdb.Record, len(grpc_rsp.Records))
+
+	for i, grpc_r := range grpc_rsp.Records {
+		records[i] = embeddingsdb.GrpcEmbeddingsRecordToEmbeddingsDBRecord(grpc_r)
+	}
+
+	pg_rsp, err := countable.NewResultsFromCountWithOptions(pg_opts, grpc_rsp.Pagination.Total)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return records, pg_rsp, nil
 }
 
 // SimilarRecords retrieves records with embeddings similar to those defined in 'req' from a gRPC-backed embeddings database.

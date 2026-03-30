@@ -7,10 +7,10 @@ import (
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
-func GetRecordFromRequest(req *net_http.Request, db database.Database) (*embeddingsdb.Record, error) {
+func GetRecordFromRequest(req *net_http.Request, cl client.Client) (*embeddingsdb.Record, error) {
 
 	ctx := req.Context()
 
@@ -45,7 +45,7 @@ func GetRecordFromRequest(req *net_http.Request, db database.Database) (*embeddi
 		DepictionId: depiction_id,
 	}
 
-	record, err := db.GetRecord(ctx, record_req)
+	record, err := cl.GetRecord(ctx, record_req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get record, %w", err)

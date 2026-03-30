@@ -400,6 +400,49 @@ $> ./bin/embeddingsdb-client similar-by-id -provider sfomuseum-data-media-collec
 1964039457
 ```
 
+#### embeddingsdb-client list
+
+Paginated list of all the records in an embeddingsdb database emitted to STDOUT as line-separated JSON.Usage:
+
+```
+$> ./bin/embeddingsdb-client list -h
+Paginated list of all the records in an embeddingsdb database emitted to STDOUT as line-separated JSON.Usage:
+	list [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -end-page int
+    	The maximum page number of results to emit. If -1 then this flag will be ignored and all the results (remaining after -start-page * -per-page) will be returned. (default -1)
+  -per-page int
+    	The number of records to include in each paginated result set. (default 10)
+  -start-page int
+    	The initial page of results to emit. (default 1)
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+> ./bin/embeddingsdb-client list -verbose -per-page 1000 > test.jsonl
+2026/03/30 12:04:30 DEBUG Verbose logging enabled
+2026/03/30 12:04:30 DEBUG Allow insecure connections
+2026/03/30 12:04:30 DEBUG Start pagination "start page"=1 "end page"=-1 "per page"=1000
+2026/03/30 12:04:30 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=1 "total page count"=0
+2026/03/30 12:04:33 DEBUG Assign total pages "start page"=1 "end page"=-1 "per page"=1000 pages=0
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=2 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=3 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=4 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=5 "total page count"=236
+... time passes, pagination happens
+2026/03/30 12:05:20 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=235 "total page count"=236
+2026/03/30 12:05:21 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=236 "total page count"=236
+
+$> wc -l test.jsonl
+  235200 test.jsonl
+```
+
 #### embeddingsdb-client models
 
 Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
@@ -466,8 +509,8 @@ A minimalist web-interface for inspecting documents stored in a `embeddingsdb-se
 Usage:
 	./bin/embeddingsdb-inspector [options]
 Valid options are:
-  -database-uri string
-    	A registered sfomuseum/go-embeddingsdb/database.Database URI.
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -embeddings-client-uri string
     	A registered go-embeddings.Client URI. This is required if the -enable-uploads flag is true.
   -enable-uploads
@@ -485,20 +528,17 @@ Valid options are:
 For example:
 
 ```
-$> bin/embeddingsdb-inspector \
-	-verbose \
-	-database-uri duckdb:///usr/local/sfomuseum/go-embeddingsdb/work/db \
-	-enable-uploads \
-	-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
-	-server-uri http://localhost:8082
-	
-2026/03/27 14:55:55 DEBUG Verbose logging enabled
-2026/03/27 14:55:55 DEBUG Load database from path path=/usr/local/sfomuseum/go-embeddingsdb/work/db
-2026/03/27 14:55:55 DEBUG INSTALL VSS
-2026/03/27 14:55:55 DEBUG LOAD VSS
-2026/03/27 14:55:55 DEBUG IMPORT DATABASE '/usr/local/sfomuseum/go-embeddingsdb/work/db'
-2026/03/27 14:56:33 DEBUG Finished setting up database time=37.117980625s
-2026/03/27 14:56:33 INFO Listen for requests address=http://localhost:8082
+$> make inspector
+go run -tags=duckdb,sqlite -mod vendor \
+		cmd/inspector/main.go \
+		-verbose \
+		-client-uri 'grpc://localhost:8081' \
+		-enable-uploads \
+		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-server-uri http://localhost:8082
+2026/03/30 12:42:01 DEBUG Verbose logging enabled
+2026/03/30 12:42:01 DEBUG Allow insecure connections
+2026/03/30 12:42:01 INFO Listen for requests address=http://localhost:8082
 ```
 
 Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
@@ -517,9 +557,18 @@ If enabled (with the `-enable-upload` flag) there is also an endpoint where you 
 
 #### Note and caveats
 
-The `embeddingsdb-inspector` is still a work in progress. Currently it requires direct access to the underlying database instance used to store embeddings through an implementation of the `Database` interface (discussed above). Eventually the methods necessary for the `embeddingsdb-inspector` will be added to both the `Client` and `Server` interfaces (also discussed above) which will allow inspector-like functionality but without needing direct access to the database.
+##### embeddingsdb-inspector is a client
+
+Conceptually, the `embeddingsdb-inspector` is a _client_ (as described above) of an `embeddingsdb` database instance. That means one of two things:
+
+1. You will need to have an `embeddingsdb` server instance running somewhere which will broker communications with the underlying database; for example the `grpc://localhost:8081` URI above.
+2. You will need to specify a `database://` client URI appropriate to your setup; for example, to interact directly with a local DuckDB database your client URI would be something like `database://?database-uri=duckdb:///usr/local/data/embeddings`.
+
+##### search by upload
 
 In order for the "search by upload" functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
+
+##### importing records
 
 The `embeddingsdb-inspector` does not handle _importing_ records in to an `embeddingsdb` database. This is handled by separate processes like the `parquet-import` tool described below.
 
@@ -575,8 +624,8 @@ $> ./bin/parquet-export -h
 Export embeddingsdb records as Parquet-encoded data.
 Usage:
 	./bin/parquet-export [options]Valid options are:
-  -database-uri string
-    	A registered sfomuseum/go-embeddingsdb/database.Database URI.
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -output string
     	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
   -verbose
@@ -586,14 +635,16 @@ Usage:
 For example:
 
 ```
-$> ./bin/parquet-export -database-uri 'duckdb:///usr/local/data/embeddings3' -verbose -output test2.parquet
-2026/03/24 11:49:24 DEBUG Verbose logging enabled
-2026/03/24 11:49:24 DEBUG Load database from path path=/usr/local/data/embeddings3
-2026/03/24 11:49:24 DEBUG INSTALL VSS
-2026/03/24 11:49:24 DEBUG LOAD VSS
-2026/03/24 11:49:24 DEBUG IMPORT DATABASE '/usr/local/data/embeddings3'
-2026/03/24 11:50:02 DEBUG Finished setting up database time=38.278648291s
-2026/03/24 11:50:41 DEBUG Records exported count=210000
+$> ./bin/parquet-export -output export.parquet -verbose
+2026/03/30 12:15:31 DEBUG Verbose logging enabled
+2026/03/30 12:15:31 DEBUG Allow insecure connections
+2026/03/30 12:15:31 DEBUG Start pagination "start page"=1 "end page"=-1 "per page"=1000
+2026/03/30 12:15:31 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=1 "total page count"=0
+2026/03/30 12:15:34 DEBUG Assign total pages "start page"=1 "end page"=-1 "per page"=1000 pages=0
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=2 "total page count"=236
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=3 "total page count"=236
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=4 "total page count"=236
+...time passes
 ```
 
 And then:
@@ -604,16 +655,14 @@ DuckDB v1.4.2 (Andium) 68d7555f68
 Enter ".help" for usage hints.
 Connected to a transient in-memory database.
 Use ".open FILENAME" to reopen on a persistent database.
-D SELECT COUNT(depiction_id) FROM read_parquet('test2.parquet');
+D SELECT COUNT(depiction_id) FROM read_parquet('export.parquet');
 ┌─────────────────────┐
 │ count(depiction_id) │
 │        int64        │
 ├─────────────────────┤
-│       210000        │
+│       235200        │
 └─────────────────────┘
 ```
-
-_Note: There is currently no way to export, or iterate through, all the records in an `embeddingsdb` instance using the `client.Client` interface. Maybe there will be in the future but today there is no so this tool will need un-mediated access (aka a "client") to the database itself._
 
 ## DuckDB
 

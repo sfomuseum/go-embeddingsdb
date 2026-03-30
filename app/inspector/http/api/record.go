@@ -5,12 +5,12 @@ import (
 	"net/http"
 
 	"github.com/aaronland/go-http/v4/slog"
-	"github.com/sfomuseum/go-embeddingsdb/database"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 type RecordHandlerOptions struct {
-	Database database.Database
+	Client client.Client
 }
 
 func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
@@ -19,7 +19,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 
 		logger := slog.LoggerWithRequest(req, nil)
 
-		record, err := inspector_http.GetRecordFromRequest(req, opts.Database)
+		record, err := inspector_http.GetRecordFromRequest(req, opts.Client)
 
 		if err != nil {
 			logger.Error("Failed to get database record", "error", err)

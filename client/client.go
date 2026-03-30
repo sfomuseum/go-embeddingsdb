@@ -7,9 +7,16 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
+
+type ListRecordsFilter struct {
+	Column string
+	Value  any
+	// Operator
+}
 
 // Client defines an interface for clients to interact with an embeddings database.
 type Client interface {
@@ -17,6 +24,8 @@ type Client interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// ListRecords returns a pagination list of records stored in the database.
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// Retrieve records with similar embeddings from an embeddings database.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.

@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	
+
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
 var server_uri string
-var database_uri string
+var client_uri string
 
 var enable_uploads bool
 var embeddings_client_uri string
@@ -24,7 +24,7 @@ func DefaultFlagSet() *flag.FlagSet {
 	fs := flagset.NewFlagSet("inspect")
 
 	fs.StringVar(&server_uri, "server-uri", "http://localhost:8080", "A registered aaronland/go-http/v4/server.Server URI.")
-	fs.StringVar(&database_uri, "database-uri", "", "A registered sfomuseum/go-embeddingsdb/database.Database URI.")
+	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
 	fs.IntVar(&max_results, "max-results", 20, "The maximum number of similar results to return.")
 
 	fs.BoolVar(&enable_uploads, "enable-uploads", false, "Enable search by upload functionality.")
@@ -40,6 +40,6 @@ func DefaultFlagSet() *flag.FlagSet {
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	return fs
 }
