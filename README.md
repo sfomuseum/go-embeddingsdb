@@ -509,8 +509,8 @@ A minimalist web-interface for inspecting documents stored in a `embeddingsdb-se
 Usage:
 	./bin/embeddingsdb-inspector [options]
 Valid options are:
-  -database-uri string
-    	A registered sfomuseum/go-embeddingsdb/database.Database URI.
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -embeddings-client-uri string
     	A registered go-embeddings.Client URI. This is required if the -enable-uploads flag is true.
   -enable-uploads
@@ -528,20 +528,17 @@ Valid options are:
 For example:
 
 ```
-$> bin/embeddingsdb-inspector \
-	-verbose \
-	-database-uri duckdb:///usr/local/sfomuseum/go-embeddingsdb/work/db \
-	-enable-uploads \
-	-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
-	-server-uri http://localhost:8082
-	
-2026/03/27 14:55:55 DEBUG Verbose logging enabled
-2026/03/27 14:55:55 DEBUG Load database from path path=/usr/local/sfomuseum/go-embeddingsdb/work/db
-2026/03/27 14:55:55 DEBUG INSTALL VSS
-2026/03/27 14:55:55 DEBUG LOAD VSS
-2026/03/27 14:55:55 DEBUG IMPORT DATABASE '/usr/local/sfomuseum/go-embeddingsdb/work/db'
-2026/03/27 14:56:33 DEBUG Finished setting up database time=37.117980625s
-2026/03/27 14:56:33 INFO Listen for requests address=http://localhost:8082
+$> make inspector
+go run -tags=duckdb,sqlite -mod vendor \
+		cmd/inspector/main.go \
+		-verbose \
+		-client-uri 'grpc://localhost:8081' \
+		-enable-uploads \
+		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-server-uri http://localhost:8082
+2026/03/30 12:42:01 DEBUG Verbose logging enabled
+2026/03/30 12:42:01 DEBUG Allow insecure connections
+2026/03/30 12:42:01 INFO Listen for requests address=http://localhost:8082
 ```
 
 Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
@@ -560,7 +557,7 @@ If enabled (with the `-enable-upload` flag) there is also an endpoint where you 
 
 #### Note and caveats
 
-The `embeddingsdb-inspector` is still a work in progress. Currently it requires direct access to the underlying database instance used to store embeddings through an implementation of the `Database` interface (discussed above). Eventually the methods necessary for the `embeddingsdb-inspector` will be added to both the `Client` and `Server` interfaces (also discussed above) which will allow inspector-like functionality but without needing direct access to the database.
+Conceptually, the `embeddingsdb-inspector` is a _client_ (as described above) of an `embeddingsdb` database instance. That means one of two things: 1) You will need to have an `embeddingsdb` server instance running somewhere which will broker communications with the underlying database; for example the `grpc://localhost:8081` URI above. 2) You will need to specify a `database://` client URI appropriate to your setup; for example, to interact directly with a local DuckDB database your client URI would be something like `database://?database-uri=duckdb:///usr/local/data/embeddings`.
 
 In order for the "search by upload" functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
 
