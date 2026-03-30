@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"github.com/aaronland/go-http/v4/slog"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 type UploadHandlerOptions struct {
-	Database      database.Database
+	Client        client.Client
 	Templates     *template.Template
 	EnableUploads bool
 }
@@ -34,7 +34,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		models, err := opts.Database.Models(ctx)
+		models, err := opts.Client.Models(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -42,7 +42,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := opts.Database.Providers(ctx)
+		providers, err := opts.Client.Providers(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)

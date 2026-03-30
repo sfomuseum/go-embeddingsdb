@@ -13,7 +13,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/app/inspector/http/www"
 	"github.com/sfomuseum/go-embeddingsdb/app/inspector/www/static"
 	"github.com/sfomuseum/go-embeddingsdb/app/inspector/www/templates/html"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -33,13 +33,11 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	logger := slog.Default()
 
-	db, err := database.NewDatabase(ctx, database_uri)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
-		return fmt.Errorf("Failed to create new database, %w", err)
+		return fmt.Errorf("Failed to create new client, %w", err)
 	}
-
-	defer db.Close(ctx)
 
 	t, err := html.LoadTemplates(ctx)
 
@@ -55,7 +53,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	mux.Handle("/javascript/", static_handler)
 
 	list_opts := &www.ListHandlerOptions{
-		Database:      db,
+		Client:        cl,
 		Templates:     t,
 		EnableUploads: enable_uploads,
 	}
@@ -69,7 +67,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	mux.Handle("/", list_handler)
 
 	record_opts := &www.RecordHandlerOptions{
-		Database:      db,
+		Client:        cl,
 		Templates:     t,
 		MaxResults:    int32(max_results),
 		EnableUploads: enable_uploads,
@@ -84,7 +82,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	mux.Handle("/record/{provider}/{depiction_id}/", record_handler)
 
 	api_embeddings_opts := &api.EmbeddingsHandlerOptions{
-		Database: db,
+		Client: cl,
 	}
 
 	api_embeddings_handler, err := api.EmbeddingsHandler(api_embeddings_opts)
@@ -104,7 +102,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		}
 
 		upload_opts := &www.UploadHandlerOptions{
-			Database:      db,
+			Client:        cl,
 			Templates:     t,
 			EnableUploads: enable_uploads,
 		}
@@ -118,7 +116,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		mux.Handle("/upload/", upload_handler)
 
 		api_upload_opts := &api.UploadHandlerOptions{
-			Database:         db,
+			Client:           cl,
 			EmbeddingsClient: emb_cl,
 			MaxResults:       int32(max_results),
 			MaxUploadSize:    max_upload_size,

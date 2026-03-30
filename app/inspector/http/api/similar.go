@@ -6,11 +6,11 @@ import (
 
 	"github.com/aaronland/go-http/v4/slog"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 type SimilarHandlerOptions struct {
-	Database database.Database
+	Client client.Client
 }
 
 func SimilarHandler(opts *SimilarHandlerOptions) (http.Handler, error) {
@@ -19,7 +19,7 @@ func SimilarHandler(opts *SimilarHandlerOptions) (http.Handler, error) {
 
 		logger := slog.LoggerWithRequest(req, nil)
 
-		similar, err := inspector_http.GetSimilarRecordsFromRequest(req, opts.Database)
+		similar, err := inspector_http.GetSimilarRecordsFromRequest(req, opts.Client)
 
 		if err != nil {
 			logger.Error("Failed to get similar records", "error", err)

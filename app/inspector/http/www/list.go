@@ -10,11 +10,11 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 type ListHandlerOptions struct {
-	Database      database.Database
+	Client        client.Client
 	Templates     *template.Template
 	EnableUploads bool
 }
@@ -42,7 +42,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		models, err := opts.Database.Models(ctx)
+		models, err := opts.Client.Models(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -50,7 +50,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := opts.Database.Providers(ctx)
+		providers, err := opts.Client.Providers(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)
@@ -80,7 +80,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			pg_opts.Pointer(page)
 		}
 
-		filters := make([]*database.ListRecordsFilter, 0)
+		filters := make([]*client.ListRecordsFilter, 0)
 
 		model, err := sanitize.GetString(req, "model")
 
@@ -92,7 +92,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		if model != "" {
 
-			f := &database.ListRecordsFilter{
+			f := &client.ListRecordsFilter{
 				Column: "model",
 				Value:  model,
 			}
@@ -110,7 +110,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		if provider != "" {
 
-			f := &database.ListRecordsFilter{
+			f := &client.ListRecordsFilter{
 				Column: "provider",
 				Value:  provider,
 			}
@@ -118,7 +118,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			filters = append(filters, f)
 		}
 
-		records, pg_rsp, err := opts.Database.ListRecords(ctx, pg_opts, filters...)
+		records, pg_rsp, err := opts.Client.ListRecords(ctx, pg_opts, filters...)
 
 		if err != nil {
 			logger.Error("Failed to list records", "error", err)
