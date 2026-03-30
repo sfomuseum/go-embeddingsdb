@@ -1,7 +1,7 @@
 {{ define "record" -}}
 {{ template "inc_header" . -}}
 
-<div class="container">
+<div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
     
 <div class="row record-grid">
     <div class="record-image">{{ if ne .Record.Attributes.uri "" }}<img src="{{ .Record.Attributes.uri }}" />{{ end }}</div>

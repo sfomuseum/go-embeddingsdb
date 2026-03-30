@@ -52,6 +52,9 @@ window.addEventListener('load', function(e){
 	return;
     }
 
+    const main = document.querySelector("#main");
+    const record_uri = main.getAttribute("data-record-uri");
+    
     //
     
     model_select.onchange = function(e){
@@ -65,7 +68,7 @@ window.addEventListener('load', function(e){
 	const u = new URL("/", location);
 	const s = new URLSearchParams();
 	
-	u.pathname = "/record/" + current_provider + "/" + current_depiction_id;
+	u.pathname = record_uri + current_provider + "/" + current_depiction_id;
 	s.set("model",  v);
 
 	if (model_provider.value != ""){
@@ -94,7 +97,7 @@ window.addEventListener('load', function(e){
 	
 	const m = model_select.value;
 
-	u.pathname = "/record/" + current_provider + "/" + current_depiction_id;
+	u.pathname = record_uri + current_provider + "/" + current_depiction_id;
 
 	s.set("model", model_select.value);
 
