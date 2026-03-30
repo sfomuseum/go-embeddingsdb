@@ -36,11 +36,11 @@
 	
 	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
 	    <tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
-	    <tr><th>Depiction ID</th><td><a href="/record/{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
+	    <tr><th>Depiction ID</th><td><a href="{{ .URIs.Record }}{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
 		<tr><th>Subject ID</th><td>{{ $r.SubjectId }}</td></tr>
 		<tr><th>Model</th><td><span class="hey-look">{{ $r.Model }}</span></td></tr>
 		<tr><th>Created</th><td>{{ FormatUnixTime $r.Created "2006-01-02" }}</td></tr>	
-		<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
+		<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
 		<tr>
 		    <th>Attributes</th>
 		    <td>
@@ -58,10 +58,10 @@
 
     <div class="pagination">
 	<div class="pagination-el pagination-previous">
-	    {{ if ne .Pagination.Previous 0 }}<a href="/?page={{ .Pagination.Previous }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
+	    {{ if ne .Pagination.Previous 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Previous }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
 	</div>
 	<div class="pagination-el pagination-next">
-	    {{ if ne .Pagination.Next 0 }}<a href="/?page={{ .Pagination.Next }}">page {{ .Pagination.Next }}</a>{{ else }}&#8212;{{ end }}
+	    {{ if ne .Pagination.Next 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Next }}">page {{ .Pagination.Next }}</a>{{ else }}&#8212;{{ end }}
 	</div>
     </div>
 
@@ -75,7 +75,7 @@
     
 </div>
 
-<script type="text/javascript" src="/javascript/list.init.js"></script>
+<script type="text/javascript" src="{{ .URIs.List }}list.init.js"></script>
     
 {{ template "inc_footer" . -}}
 {{ end -}}

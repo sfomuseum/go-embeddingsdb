@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/aaronland/go-http/v4/slog"
+	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
@@ -13,12 +14,14 @@ type UploadHandlerOptions struct {
 	Client        client.Client
 	Templates     *template.Template
 	EnableUploads bool
+	URIs          *inspector_http.URIs
 }
 
 type UploadHandlerFormVars struct {
 	Models        []string
 	Providers     []string
 	EnableUploads bool
+	URIs          *inspector_http.URIs
 }
 
 func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {

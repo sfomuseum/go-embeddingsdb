@@ -9,6 +9,7 @@ import (
 
 	"github.com/aaronland/go-http/v4/server"
 	"github.com/sfomuseum/go-embeddings"
+	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 	"github.com/sfomuseum/go-embeddingsdb/app/inspector/http/api"
 	"github.com/sfomuseum/go-embeddingsdb/app/inspector/http/www"
 	"github.com/sfomuseum/go-embeddingsdb/app/inspector/www/static"
@@ -45,16 +46,27 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to load HTML templates, %w", err)
 	}
 
+	uris, err := inspector_http.DefaultURIs(uri_prefix)
+
+	if err != nil {
+		return fmt.Errorf("Failed to derive default URIs, %w", err)
+	}
+
 	mux := http.NewServeMux()
 
 	static_handler := http.FileServerFS(static.FS)
 
-	mux.Handle("/css/", static_handler)
-	mux.Handle("/javascript/", static_handler)
+	if uri_prefix != "" {
+		static_handler = http.StripPrefix(uri_prefix, static_handler)
+	}
+
+	mux.Handle(uris.CSS, static_handler)
+	mux.Handle(uris.JavaScript, static_handler)
 
 	list_opts := &www.ListHandlerOptions{
 		Client:        cl,
 		Templates:     t,
+		URIs:          uris,
 		EnableUploads: enable_uploads,
 	}
 
@@ -64,13 +76,14 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to create new list handler, %w", err)
 	}
 
-	mux.Handle("/", list_handler)
+	mux.Handle(uris.List, list_handler)
 
 	record_opts := &www.RecordHandlerOptions{
 		Client:        cl,
 		Templates:     t,
 		MaxResults:    int32(max_results),
 		EnableUploads: enable_uploads,
+		URIs:          uris,
 	}
 
 	record_handler, err := www.RecordHandler(record_opts)
@@ -79,7 +92,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to create new record handler, %w", err)
 	}
 
-	mux.Handle("/record/{provider}/{depiction_id}/", record_handler)
+	mux.Handle(uris.RecordWithVars, record_handler)
 
 	api_embeddings_opts := &api.EmbeddingsHandlerOptions{
 		Client: cl,
@@ -91,7 +104,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		return fmt.Errorf("Failed to create new API embeddings handler, %w", err)
 	}
 
-	mux.Handle("/api/embeddings/{provider}/{depiction_id}/", api_embeddings_handler)
+	mux.Handle(uris.APIEmbeddingsWithVars, api_embeddings_handler)
 
 	if enable_uploads {
 
@@ -105,6 +118,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			Client:        cl,
 			Templates:     t,
 			EnableUploads: enable_uploads,
+			URIs:          uris,
 		}
 
 		upload_handler, err := www.UploadHandler(upload_opts)
@@ -113,7 +127,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			return fmt.Errorf("Failed to create upload handler, %w", err)
 		}
 
-		mux.Handle("/upload/", upload_handler)
+		mux.Handle(uris.Upload, upload_handler)
 
 		api_upload_opts := &api.UploadHandlerOptions{
 			Client:           cl,
@@ -128,7 +142,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			return fmt.Errorf("Failed to create API upload handler, %w", err)
 		}
 
-		mux.Handle("/api/upload/", api_upload_handler)
+		mux.Handle(uris.APIUpload, api_upload_handler)
 	}
 
 	s, err := server.NewServer(ctx, server_uri)
