@@ -400,6 +400,49 @@ $> ./bin/embeddingsdb-client similar-by-id -provider sfomuseum-data-media-collec
 1964039457
 ```
 
+#### embeddingsdb-client list
+
+Paginated list of all the records in an embeddingsdb database emitted to STDOUT as line-separated JSON.Usage:
+
+```
+$> ./bin/embeddingsdb-client list -h
+Paginated list of all the records in an embeddingsdb database emitted to STDOUT as line-separated JSON.Usage:
+	list [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -end-page int
+    	The maximum page number of results to emit. If -1 then this flag will be ignored and all the results (remaining after -start-page * -per-page) will be returned. (default -1)
+  -per-page int
+    	The number of records to include in each paginated result set. (default 10)
+  -start-page int
+    	The initial page of results to emit. (default 1)
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+> ./bin/embeddingsdb-client list -verbose -per-page 1000 > test.jsonl
+2026/03/30 12:04:30 DEBUG Verbose logging enabled
+2026/03/30 12:04:30 DEBUG Allow insecure connections
+2026/03/30 12:04:30 DEBUG Start pagination "start page"=1 "end page"=-1 "per page"=1000
+2026/03/30 12:04:30 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=1 "total page count"=0
+2026/03/30 12:04:33 DEBUG Assign total pages "start page"=1 "end page"=-1 "per page"=1000 pages=0
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=2 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=3 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=4 "total page count"=236
+2026/03/30 12:04:33 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=5 "total page count"=236
+... time passes, pagination happens
+2026/03/30 12:05:20 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=235 "total page count"=236
+2026/03/30 12:05:21 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=236 "total page count"=236
+
+$> wc -l test.jsonl
+  235200 test.jsonl
+```
+
 #### embeddingsdb-client models
 
 Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
