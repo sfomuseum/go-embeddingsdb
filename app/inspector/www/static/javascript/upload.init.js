@@ -25,6 +25,9 @@ window.addEventListener('load', function(e){
 
 	    upload_image.innerHTML = "";
 	    upload_image.appendChild(im);
+
+	    // Result any existing similar results
+	    target.innerHTML = "";	    
 	};
 	
 	reader.readAsDataURL(file);
@@ -151,7 +154,6 @@ window.addEventListener('load', function(e){
 	    grid_el.appendChild(table_el);		
 	}
 	
-
 	target.innerHTML = "";
 
 	var summary;
