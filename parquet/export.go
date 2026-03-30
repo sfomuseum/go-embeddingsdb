@@ -9,11 +9,11 @@ import (
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
 // Export will export all the [*embeddingsdb.Record] records stored in 'db' as Parquet-encoded data to 'wr'.
-func Export(ctx context.Context, db database.Database, wr io.Writer) (int64, error) {
+func Export(ctx context.Context, cl client.Client, wr io.Writer) (int64, error) {
 
 	logger := slog.Default()
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Record](wr)
@@ -41,7 +41,9 @@ func Export(ctx context.Context, db database.Database, wr io.Writer) (int64, err
 		}
 	}()
 
-	for row, err := range db.IterateRecords(ctx) {
+	list_opts := client.DefaultListRecordsOptions()
+
+	for row, err := range client.ListRecords(ctx, cl, list_opts) {
 
 		if err != nil {
 			return count, fmt.Errorf("Iterator yielded an error, %w", err)

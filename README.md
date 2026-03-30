@@ -618,8 +618,8 @@ $> ./bin/parquet-export -h
 Export embeddingsdb records as Parquet-encoded data.
 Usage:
 	./bin/parquet-export [options]Valid options are:
-  -database-uri string
-    	A registered sfomuseum/go-embeddingsdb/database.Database URI.
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -output string
     	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
   -verbose
@@ -629,14 +629,16 @@ Usage:
 For example:
 
 ```
-$> ./bin/parquet-export -database-uri 'duckdb:///usr/local/data/embeddings3' -verbose -output test2.parquet
-2026/03/24 11:49:24 DEBUG Verbose logging enabled
-2026/03/24 11:49:24 DEBUG Load database from path path=/usr/local/data/embeddings3
-2026/03/24 11:49:24 DEBUG INSTALL VSS
-2026/03/24 11:49:24 DEBUG LOAD VSS
-2026/03/24 11:49:24 DEBUG IMPORT DATABASE '/usr/local/data/embeddings3'
-2026/03/24 11:50:02 DEBUG Finished setting up database time=38.278648291s
-2026/03/24 11:50:41 DEBUG Records exported count=210000
+$> ./bin/parquet-export -output export.parquet -verbose
+2026/03/30 12:15:31 DEBUG Verbose logging enabled
+2026/03/30 12:15:31 DEBUG Allow insecure connections
+2026/03/30 12:15:31 DEBUG Start pagination "start page"=1 "end page"=-1 "per page"=1000
+2026/03/30 12:15:31 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=1 "total page count"=0
+2026/03/30 12:15:34 DEBUG Assign total pages "start page"=1 "end page"=-1 "per page"=1000 pages=0
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=2 "total page count"=236
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=3 "total page count"=236
+2026/03/30 12:15:34 DEBUG Query records "start page"=1 "end page"=-1 "per page"=1000 page=4 "total page count"=236
+...time passes
 ```
 
 And then:
@@ -647,16 +649,14 @@ DuckDB v1.4.2 (Andium) 68d7555f68
 Enter ".help" for usage hints.
 Connected to a transient in-memory database.
 Use ".open FILENAME" to reopen on a persistent database.
-D SELECT COUNT(depiction_id) FROM read_parquet('test2.parquet');
+D SELECT COUNT(depiction_id) FROM read_parquet('export.parquet');
 ┌─────────────────────┐
 │ count(depiction_id) │
 │        int64        │
 ├─────────────────────┤
-│       210000        │
+│       235200        │
 └─────────────────────┘
 ```
-
-_Note: There is currently no way to export, or iterate through, all the records in an `embeddingsdb` instance using the `client.Client` interface. Maybe there will be in the future but today there is no so this tool will need un-mediated access (aka a "client") to the database itself._
 
 ## DuckDB
 

@@ -8,20 +8,21 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
 func main() {
 
-	var database_uri string
+	var client_uri string
 	var output string
 	var verbose bool
 
 	fs := flagset.NewFlagSet("export")
 
-	fs.StringVar(&database_uri, "database-uri", "", "A registered sfomuseum/go-embeddingsdb/database.Database URI.")
+	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
@@ -41,13 +42,11 @@ func main() {
 
 	ctx := context.Background()
 
-	db, err := database.NewDatabase(ctx, database_uri)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new database, %v", err)
 	}
-
-	defer db.Close(ctx)
 
 	var wr io.WriteCloser
 
@@ -65,7 +64,7 @@ func main() {
 		wr = w
 	}
 
-	_, err = parquet.Export(ctx, db, wr)
+	_, err = parquet.Export(ctx, cl, wr)
 
 	if err != nil {
 		log.Fatalf("Failed to create Parquet export, %v", err)
