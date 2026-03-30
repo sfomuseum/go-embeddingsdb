@@ -57,6 +57,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			Models:        models,
 			Providers:     providers,
 			EnableUploads: opts.EnableUploads,
+			URIs:          opts.URIs,
 		}
 
 		err = t.Execute(rsp, vars)

@@ -1,7 +1,7 @@
 {{ define "upload" -}}
 {{ template "inc_header" . -}}
 
-<div class="container">
+<div class="container" id="main" data-api-upload-uri="{{ .URIs.APIUpload }}" data-record-uri="{{ .URIs.Record }}">
 
     <div id="upload-grid">
 	<div id="upload-image">

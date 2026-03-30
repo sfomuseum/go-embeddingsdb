@@ -1,5 +1,6 @@
 {{ define "list" -}}
 {{ template "inc_header" . -}}
+{{ $root := . }}
 
 <div class="container">
 
@@ -36,11 +37,11 @@
 	
 	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
 	    <tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
-	    <tr><th>Depiction ID</th><td><a href="{{ .URIs.Record }}{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
+	    <tr><th>Depiction ID</th><td><a href="{{ $root.URIs.Record }}{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
 		<tr><th>Subject ID</th><td>{{ $r.SubjectId }}</td></tr>
 		<tr><th>Model</th><td><span class="hey-look">{{ $r.Model }}</span></td></tr>
 		<tr><th>Created</th><td>{{ FormatUnixTime $r.Created "2006-01-02" }}</td></tr>	
-		<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
+		<tr><th>Embeddings</th><td><a href="{{ $root.URIs.APIEmbeddings }}{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
 		<tr>
 		    <th>Attributes</th>
 		    <td>

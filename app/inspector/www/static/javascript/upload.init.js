@@ -1,5 +1,9 @@
 window.addEventListener('load', function(e){
 
+    const main = document.querySelector("#main");
+    const record_uri = main.getAttribute("data-record-uri");    
+    const api_upload_uri = main.getAttribute("data-api-upload-uri");
+    
     const target = document.querySelector("#upload-similar");
     const upload_image = document.querySelector("#upload-image");
     const upload_input = document.querySelector("#upload");
@@ -103,7 +107,7 @@ window.addEventListener('load', function(e){
 	    const depiction_url = new URL("/", location);
 	    const depiction_params = new URLSearchParams();
 
-	    depiction_url.pathname = "/record/" + similar.provider + "/" + similar.depiction_id;
+	    depiction_url.pathname = record_uri + similar.provider + "/" + similar.depiction_id;
 	    depiction_params.set("model", model_input.value);
 
 	    depiction_url.search = depiction_params;
@@ -180,8 +184,8 @@ window.addEventListener('load', function(e){
     
 
     submit.onclick = function(e){
-
-	const u = new URL("/api/upload/", location);
+	
+	const u = new URL(api_upload_uri, location);
 	const url = u.toString();
 	
 	const form = document.querySelector("#upload-form");
