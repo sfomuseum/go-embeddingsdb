@@ -41,6 +41,10 @@ func (db *NullDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetReco
 	return nil, fmt.Errorf("Not found")
 }
 
+func (db *NullDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+	return nil
+}
+
 func (db *NullDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil

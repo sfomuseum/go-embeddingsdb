@@ -6,6 +6,7 @@ option go_package = "github.com/sfomuseum/go-embeddingsdb/grpc";
 service EmbeddingsDBService {
     rpc AddRecord(AddRecordRequest) returns (AddRecordResponse) {}
     rpc GetRecord(GetRecordRequest) returns (GetRecordResponse) {}
+    rpc RemoveRecord(RemoveRecordRequest) returns (RemoveRecordResponse) {}    
     rpc SimilarRecords(SimilarRecordsRequest) returns (SimilarRecordsResponse) {}
     rpc SimilarRecordsById(SimilarRecordsByIdRequest) returns (SimilarRecordsResponse) {}
     rpc GetModels(GetModelsRequest) returns (GetModelsResponse) {}
@@ -37,6 +38,15 @@ message GetRecordRequest {
 
 message GetRecordResponse {
     EmbeddingsDBRecord record = 1;
+}
+
+message RemoveRecordRequest {
+    string provider = 1;
+    string depiction_id = 2;
+    string model = 3;
+}
+
+message RemoveRecordResponse {
 }
 
 message SimilarRecordsRequest {

@@ -286,6 +286,10 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return rec, nil
 }
 
+func (db *SQLiteDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+	return fmt.Errorf("Not implemented")
+}
+
 // Find similar records for a given model and record instance.
 func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 

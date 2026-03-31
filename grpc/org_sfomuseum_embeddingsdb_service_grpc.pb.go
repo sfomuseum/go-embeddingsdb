@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	EmbeddingsDBService_AddRecord_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/AddRecord"
 	EmbeddingsDBService_GetRecord_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetRecord"
+	EmbeddingsDBService_RemoveRecord_FullMethodName       = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/RemoveRecord"
 	EmbeddingsDBService_SimilarRecords_FullMethodName     = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/SimilarRecords"
 	EmbeddingsDBService_SimilarRecordsById_FullMethodName = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/SimilarRecordsById"
 	EmbeddingsDBService_GetModels_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetModels"
@@ -34,6 +35,7 @@ const (
 type EmbeddingsDBServiceClient interface {
 	AddRecord(ctx context.Context, in *AddRecordRequest, opts ...grpc.CallOption) (*AddRecordResponse, error)
 	GetRecord(ctx context.Context, in *GetRecordRequest, opts ...grpc.CallOption) (*GetRecordResponse, error)
+	RemoveRecord(ctx context.Context, in *RemoveRecordRequest, opts ...grpc.CallOption) (*RemoveRecordResponse, error)
 	SimilarRecords(ctx context.Context, in *SimilarRecordsRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error)
 	SimilarRecordsById(ctx context.Context, in *SimilarRecordsByIdRequest, opts ...grpc.CallOption) (*SimilarRecordsResponse, error)
 	GetModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error)
@@ -61,6 +63,15 @@ func (c *embeddingsDBServiceClient) AddRecord(ctx context.Context, in *AddRecord
 func (c *embeddingsDBServiceClient) GetRecord(ctx context.Context, in *GetRecordRequest, opts ...grpc.CallOption) (*GetRecordResponse, error) {
 	out := new(GetRecordResponse)
 	err := c.cc.Invoke(ctx, EmbeddingsDBService_GetRecord_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingsDBServiceClient) RemoveRecord(ctx context.Context, in *RemoveRecordRequest, opts ...grpc.CallOption) (*RemoveRecordResponse, error) {
+	out := new(RemoveRecordResponse)
+	err := c.cc.Invoke(ctx, EmbeddingsDBService_RemoveRecord_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +129,7 @@ func (c *embeddingsDBServiceClient) ListRecords(ctx context.Context, in *ListRec
 type EmbeddingsDBServiceServer interface {
 	AddRecord(context.Context, *AddRecordRequest) (*AddRecordResponse, error)
 	GetRecord(context.Context, *GetRecordRequest) (*GetRecordResponse, error)
+	RemoveRecord(context.Context, *RemoveRecordRequest) (*RemoveRecordResponse, error)
 	SimilarRecords(context.Context, *SimilarRecordsRequest) (*SimilarRecordsResponse, error)
 	SimilarRecordsById(context.Context, *SimilarRecordsByIdRequest) (*SimilarRecordsResponse, error)
 	GetModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error)
@@ -135,6 +147,9 @@ func (UnimplementedEmbeddingsDBServiceServer) AddRecord(context.Context, *AddRec
 }
 func (UnimplementedEmbeddingsDBServiceServer) GetRecord(context.Context, *GetRecordRequest) (*GetRecordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRecord not implemented")
+}
+func (UnimplementedEmbeddingsDBServiceServer) RemoveRecord(context.Context, *RemoveRecordRequest) (*RemoveRecordResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveRecord not implemented")
 }
 func (UnimplementedEmbeddingsDBServiceServer) SimilarRecords(context.Context, *SimilarRecordsRequest) (*SimilarRecordsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SimilarRecords not implemented")
@@ -196,6 +211,24 @@ func _EmbeddingsDBService_GetRecord_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EmbeddingsDBServiceServer).GetRecord(ctx, req.(*GetRecordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingsDBService_RemoveRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveRecordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingsDBServiceServer).RemoveRecord(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingsDBService_RemoveRecord_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingsDBServiceServer).RemoveRecord(ctx, req.(*RemoveRecordRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -304,6 +337,10 @@ var EmbeddingsDBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRecord",
 			Handler:    _EmbeddingsDBService_GetRecord_Handler,
+		},
+		{
+			MethodName: "RemoveRecord",
+			Handler:    _EmbeddingsDBService_RemoveRecord_Handler,
 		},
 		{
 			MethodName: "SimilarRecords",

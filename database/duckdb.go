@@ -211,6 +211,14 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return db.inflateRecord(ctx, row)
 }
 
+func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+
+	q := "DELETE FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
+
+	_, err := db.vec_db.ExecContext(ctx, q, req.Provider, req.DepictionId, req.Model)
+	return err
+}
+
 func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)

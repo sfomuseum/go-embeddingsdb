@@ -24,6 +24,8 @@ type Client interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
 	// ListRecords returns a pagination list of records stored in the database.
 	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// Retrieve records with similar embeddings from an embeddings database.

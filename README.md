@@ -51,7 +51,9 @@ type Database interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
-	// ListRecords returns a pagination list of record stored in the database.
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	// ListRecords returns a pagination list of records stored in the database.
 	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
@@ -95,6 +97,10 @@ type Client interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	// ListRecords returns a pagination list of records stored in the database.
+	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// Retrieve records with similar embeddings from an embeddings database.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
@@ -102,7 +108,7 @@ type Client interface {
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...string) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)	
+	Providers(context.Context) ([]string, error)
 }
 ```
 
@@ -308,7 +314,9 @@ Usage:
 
 Valid commands are:
 * record [options]
+* remove [options]
 * similar-by-id [options]
+* list [options]
 * models [options]
 * providers [options]
 ```
@@ -351,6 +359,35 @@ $> ./bin/embeddingsdb-client record -provider sfomuseum-data-media-collection -d
     -0.017242432,
     -0.021408081,
     ... and so on
+```
+
+#### embeddingsdb-client remove
+
+Command-line tool for removing a record from a gRPC EmbeddingsDB "service".
+
+```
+$> ./bin/embeddingsdb-client remove -h
+Command-line tool for removing a record from a gRPC EmbeddingsDB "service".
+Usage:
+	record [options]
+
+Valid options are:
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -depiction-id string
+    	The unique depiction ID associated with the record to retrieve.
+  -model string
+    	The name of the model associated with the record to retrieve. (default "apple/mobileclip_s0")
+  -provider string
+    	The name of the provider associated with the record to retrieve.
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/embeddingsdb-client remove -client-uri grpc://localhost:8081 -depiction-id 08_michael_ross_sfom.jpg -provider sfomuseum-dotorg-exhibition -model apple/mobileclip_s2
 ```
 
 #### embeddingsdb-client similar-by-id

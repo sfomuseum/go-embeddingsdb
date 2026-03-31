@@ -63,6 +63,10 @@ func (cl *DatabaseClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return cl.db.GetRecord(ctx, req)
 }
 
+func (cl *DatabaseClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+	return cl.db.RemoveRecord(ctx, req)
+}
+
 func (cl *DatabaseClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 	return cl.db.SimilarRecords(ctx, req)
 }
