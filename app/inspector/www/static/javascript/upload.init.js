@@ -9,7 +9,8 @@ window.addEventListener('load', function(e){
     const upload_input = document.querySelector("#upload");
     const model_input = document.querySelector("#upload-model-select");    
     
-    const progress = document.querySelector("#progress");    
+    const progress = document.querySelector("#progress");
+    const spinner = document.querySelector("#upload-spinner-svg");        
     const submit = document.querySelector("#submit");
 
     upload_input.addEventListener('change', function(){
@@ -200,15 +201,27 @@ window.addEventListener('load', function(e){
 		const percent = Math.round((ev.loaded / ev.total) * 100);
 		progress.value = percent;
 		console.debug(`Upload progress: ${percent}%`);
+
+		if (percent == 100){
+		    progress.style.display = "none";
+		    progress.value = 0;
+		}
 	    }
 	});
 
 	xhr.addEventListener('load', function () {
-	    
+
+	    spinner.style.display = "none";	    
 	    progress.style.display = 'none';
 	    progress.value = 0;
 	    
 	    if (xhr.status != 200){
+
+		const feedback_el = document.createElement("div");
+		feedback_el.setAttribute("class", "error");
+		feedback_el.appendChild(document.createTextNode("There was a problem processing your upload: " + xhr.statusText));
+		target.appendChild(feedback_el);
+		
 		console.error('Upload failed', xhr.status, xhr.statusText);
 		return;
 	    }
@@ -226,8 +239,9 @@ window.addEventListener('load', function(e){
 	});
 
 	target.innerHTML = "";
-	progress.style.display = "inline-block";
-
+	// progress.style.display = "inline-block";
+	spinner.style.display = "inline-block";
+	
 	xhr.send(data);
 	return false;
     };
