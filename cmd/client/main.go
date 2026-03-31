@@ -56,6 +56,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n\t%s [command] [options]\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "Valid commands are:\n")
 	fmt.Fprintf(os.Stderr, "* record [options]\n")
+	fmt.Fprintf(os.Stderr, "* remove [options]\n")	
 	fmt.Fprintf(os.Stderr, "* similar-by-id [options]\n")
 	fmt.Fprintf(os.Stderr, "* list [options]\n")
 	fmt.Fprintf(os.Stderr, "* models [options]\n")
