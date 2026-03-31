@@ -197,6 +197,23 @@ func (e *GrpcClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordR
 	return record, nil
 }
 
+func (e *GrpcClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+
+	grpc_req := &embeddingsdb_grpc.RemoveRecordRequest{
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
+	}
+
+	_, err := e.client.RemoveRecord(ctx, grpc_req)
+
+	if err != nil {
+		return fmt.Errorf("Failed to remove record, %w", err)
+	}
+
+	return nil
+}
+
 func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	grpc_pg := &embeddingsdb_grpc.PaginationOptions{

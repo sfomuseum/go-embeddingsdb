@@ -75,6 +75,33 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 	return rsp, nil
 }
 
+func (s *grpcService) RemoveRecord(ctx context.Context, req *grpc.RemoveRecordRequest) (*grpc.RemoveRecordResponse, error) {
+
+	logger := s.Logger(ctx)
+	logger = logger.With("provider", req.Provider)
+	logger = logger.With("depiction_id", req.DepictionId)
+	logger = logger.With("model", req.Model)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to remove record", "time", time.Since(t1))
+
+	db_req := &embeddingsdb.RemoveRecordRequest{
+		Provider:    req.Provider,
+		DepictionId: req.DepictionId,
+		Model:       req.Model,
+	}
+
+	err := s.db.RemoveRecord(ctx, db_req)
+
+	if err != nil {
+		logger.Error("Failed to record record", "error", err)
+		return nil, err
+	}
+
+	rsp := &grpc.RemoveRecordResponse{}
+	return rsp, nil
+}
+
 func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequest) (*grpc.ListRecordsResponse, error) {
 
 	logger := s.Logger(ctx)
