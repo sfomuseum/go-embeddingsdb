@@ -139,7 +139,7 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 	if req.SimilarProvider != nil {
 		logger = logger.With("provider", *req.SimilarProvider)
 	}
-	
+
 	t1 := time.Now()
 
 	defer func() {

@@ -2,8 +2,8 @@
 <html>
     <head>
 	<title></title>
-	<link rel="stylesheet" type="text/css" href="/css/bootstrap-5.3.8.min.css" />
-	<link rel="stylesheet" type="text/css" href="/css/inspect.css" />	
+	<link rel="stylesheet" type="text/css" href="{{ .URIs.CSS }}bootstrap-5.3.8.min.css" />
+	<link rel="stylesheet" type="text/css" href="{{ .URIs.CSS }}inspect.css" />	
     </head>
     <body>
 
@@ -11,12 +11,12 @@
 	    <a class="navbar-brand" href="#">Inspect</a>
 	    <ul class="nav nav-pills">
 		<li class="nav-item">
-		    <a class="nav-link" href="/">List all records</a>
+		    <a class="nav-link" href="{{ .URIs.List }}">List all records</a>
 		</li>
 		{{ if (IsAvailable "EnableUploads" . ) }}
 		{{ if .EnableUploads }}
 		<li class="nav-item">
-		    <a class="nav-link" href="/upload">Search by upload</a>
+		    <a class="nav-link" href="{{ .URIs.Upload }}">Search by upload</a>
 		</li>
 		{{ end }}{{ end }}
 		<!--

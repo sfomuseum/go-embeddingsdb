@@ -1,7 +1,8 @@
 {{ define "record" -}}
 {{ template "inc_header" . -}}
+{{ $root := . }}
 
-<div class="container">
+<div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
     
 <div class="row record-grid">
     <div class="record-image">{{ if ne .Record.Attributes.uri "" }}<img src="{{ .Record.Attributes.uri }}" />{{ end }}</div>
@@ -21,7 +22,7 @@
 	    </td>
 	</tr>
 	<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
-	<tr><th>Embeddings</th><td><a href="/api/embeddings/{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
+	<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
 	<tr>
 	    <th>Attributes</th>
 	    <td>
@@ -67,7 +68,7 @@
 	<tr>
 	    <td>{{ $s.Distance }}</td>
 	    <td>{{ $s.Provider }}</td>
-	    <td><a href="/record/{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
+	    <td><a href="{{ $root.URIs.Record }}{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
 	    <td>{{ $s.SubjectId }}</td>	    	    
 	    <td>
 		<table class="table attributes">
@@ -83,7 +84,7 @@
 
 </div>
 
-<script type="text/javascript" src="/javascript/record.init.js"></script>
+<script type="text/javascript" src="{{ .URIs.JavaScript }}record.init.js"></script>
     
 {{ template "inc_footer" . -}}
 {{ end -}}

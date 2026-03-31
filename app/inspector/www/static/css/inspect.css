@@ -1,3 +1,24 @@
+
+@keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+}
+
+@keyframes rotate-ccw {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(-360deg); }
+}
+
+#upload-spinner {
+        animation: rotate 5s linear infinite;
+        transform-origin: center;
+}
+
+#upload-spinner-svg {
+        display:none;
+        margin-left:.5rem;
+}
+
 .similar-image img {
 	max-height: 200px;
 	max-width: 200px;

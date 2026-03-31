@@ -18,6 +18,7 @@ type RecordHandlerOptions struct {
 	Templates     *template.Template
 	MaxResults    int32
 	EnableUploads bool
+	URIs          *inspector_http.URIs
 }
 
 type RecordHandlerVars struct {
@@ -27,6 +28,7 @@ type RecordHandlerVars struct {
 	Providers       []string
 	SimilarProvider string
 	EnableUploads   bool
+	URIs            *inspector_http.URIs
 }
 
 func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
@@ -114,6 +116,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			Providers:       providers,
 			SimilarProvider: similar_provider,
 			EnableUploads:   opts.EnableUploads,
+			URIs:            opts.URIs,
 		}
 
 		err = t.Execute(rsp, vars)

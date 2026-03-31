@@ -31,13 +31,16 @@ window.addEventListener('load', function(e){
 	console.warn("Missing list-provider-select");
 	return;
     }
+
+    const main = document.querySelector("#main");
+    const list_uri = main.getAttribute("data-list-uri");
     
     list_controls_models.onchange = function(e){
 
 	const el = e.target;
 	const v = el.value;
 
-	const u = new URL("/", location);
+	const u = new URL(list_uri, location);
 	const s = new URLSearchParams();
 
 	if (v != ""){
@@ -58,7 +61,7 @@ window.addEventListener('load', function(e){
 	const el = e.target;
 	const v = el.value;
 
-	const u = new URL("/", location);
+	const u = new URL(list_uri, location);
 	const s = new URLSearchParams();
 
 	if (v != ""){

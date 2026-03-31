@@ -10,6 +10,7 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
+	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
@@ -17,6 +18,7 @@ type ListHandlerOptions struct {
 	Client        client.Client
 	Templates     *template.Template
 	EnableUploads bool
+	URIs          *inspector_http.URIs
 }
 
 type ListHandlerVars struct {
@@ -27,6 +29,7 @@ type ListHandlerVars struct {
 	CurrentModel    string
 	CurrentProvider string
 	EnableUploads   bool
+	URIs            *inspector_http.URIs
 }
 
 func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
@@ -134,6 +137,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			CurrentProvider: provider,
 			Providers:       providers,
 			EnableUploads:   opts.EnableUploads,
+			URIs:            opts.URIs,
 		}
 
 		err = t.Execute(rsp, vars)
