@@ -24,6 +24,11 @@
 	max-width: 200px;
 }
 
+.record-image img {
+	max-height: 500px;
+	max-width: 500px;
+}
+
 .record-grid {
 	display: grid;
 	grid-template-columns:520px 1fr;
