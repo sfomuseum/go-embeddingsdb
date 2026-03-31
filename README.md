@@ -521,6 +521,8 @@ Valid options are:
     	The maximum size (in bytes) for uploads. (default 10485760)
   -server-uri string
     	A registered aaronland/go-http/v4/server.Server URI. (default "http://localhost:8080")
+  -uri-prefix string
+    	An optional prefix (location) to serve the application from.
   -verbose
     	Enable verbose (debug) logging.
 ```
