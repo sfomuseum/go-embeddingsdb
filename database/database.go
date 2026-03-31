@@ -27,6 +27,8 @@ type Database interface {
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
 	// ListRecords returns a pagination list of records stored in the database.
 	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
 	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
