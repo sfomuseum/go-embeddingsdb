@@ -211,7 +211,7 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return db.inflateRecord(ctx, row)
 }
 
-func (db *DuckDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
 
 	q := "DELETE FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
