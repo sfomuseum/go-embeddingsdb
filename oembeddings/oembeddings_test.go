@@ -12,6 +12,7 @@ func TestOEmbeddings(t *testing.T) {
 		"../fixtures/oembeddings_image.json",
 		"../fixtures/oembeddings_text.json",
 		"../fixtures/oembeddings_extra.json",
+		"../fixtures/oembeddings_no_depiction_url.json",
 	}
 
 	for _, path := range tests {

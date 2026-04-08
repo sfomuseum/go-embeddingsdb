@@ -45,7 +45,6 @@
   "required": [
     "type",
     "preview",
-    "depiction_url",
     "subject_url",
     "subject_title",
     "subject_creditline",

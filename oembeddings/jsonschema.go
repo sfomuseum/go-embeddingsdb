@@ -3,6 +3,7 @@ package oembeddings
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
 
@@ -19,46 +20,49 @@ var loadSchema = sync.OnceValues(func() (*jsonschema.Resolved, error) {
 	err := json.Unmarshal(OEmbeddingsJSONSchema, &s)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to load JSON schema, %w", err)
 	}
 
 	resolved, err := s.Resolve(nil)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to resolve JSON schema, %w", err)
 	}
 
 	return resolved, nil
 })
 
+// Validate returns a boolean value indicating whether or not the body of 'oe' is a valid OEmbeddings document, conforming to the OEmbeddings JSON schema.
 func ValidateWithOEmbeddings(oe *OEmbeddings) (bool, error) {
 
 	body, err := json.Marshal(oe)
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to marshal OEmbeddings record, %w", err)
 	}
 
 	return Validate(body)
 }
 
+// Validate returns a boolean value indicating whether or not the body of 'r' is a valid OEmbeddings document, conforming to the OEmbeddings JSON schema.
 func ValidateWithReader(r io.Reader) (bool, error) {
 
 	body, err := io.ReadAll(r)
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to read body, %w", err)
 	}
 
 	return Validate(body)
 }
 
+// Validate returns a boolean value indicating whether or not 'body' is a valid OEmbeddings document, conforming to the OEmbeddings JSON schema.
 func Validate(body []byte) (bool, error) {
 
 	schema, err := loadSchema()
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to instatiate JSON schema, %w", err)
 	}
 
 	var oe any
@@ -66,13 +70,13 @@ func Validate(body []byte) (bool, error) {
 	err = json.Unmarshal(body, &oe)
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to unmarshal record, %w", err)
 	}
 
 	err = schema.Validate(oe)
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to validate record, %w", err)
 	}
 
 	return true, nil
