@@ -119,7 +119,7 @@ _Note: "OEmbeddings" should still be considered work in progress and subject to 
 
 OEmbeddings defines a model for the _least_ amount of metadata to be associated with a vector embedding record in order to allow a preview of the content used to create the embeddings and to display provenance for that content with links back to the subject depicted in the content on a provider's website.
 
-As the name suggests it is modeled in spirit after the [OEmbed specification](#) which descibes itself as "a format for allowing an embedded representation of a URL on third party sites.". The `Oembeddings` structure (propeties) MAY be present in the free-form "attributes" dictionary of a `Record` instance but are not required.
+As the name suggests it is modeled in spirit after the [OEmbed specification](https://oembed.com/) which descibes itself as "a format for allowing an embedded representation of a URL on third party sites.". The `Oembeddings` structure (propeties) MAY be present in the free-form "attributes" dictionary of a `Record` instance but is not required.
 
 ```
 type OEmbeddings struct {
