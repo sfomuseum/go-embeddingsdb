@@ -11,6 +11,7 @@ require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/duckdb/duckdb-go/v2 v2.10501.0
+	github.com/google/jsonschema-go v0.4.2
 	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-database v0.0.18
