@@ -18,7 +18,8 @@ type Record struct {
 	Embeddings []float32 `json:"embeddings" parquet:"embeddings,list"`
 	// Created is the Unix timestamp when Embeddings were generated.
 	Created int64 `json:"created" parquet:"created"`
-	// Attributes is an arbitrary map of key-value properties associated with the embeddings.
+	// Attributes is an arbitrary map of key-value properties associated with the embeddings. Record attributes
+	// are encouraged to include the required [OEmbeddings] fields but this is not a requirement.
 	Attributes map[string]string `json:"attributes" parquet:"attributes"`
 }
 

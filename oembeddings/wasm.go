@@ -7,6 +7,7 @@ import (
 	"syscall/js"
 )
 
+// ValidateFunc returns a [js.Func] instance that accepts a string and validates it using the [Validate] function.
 func ValidateFunc() js.Func {
 
 	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
