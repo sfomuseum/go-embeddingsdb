@@ -4,12 +4,32 @@ import (
 	_ "embed"
 	"encoding/json"
 	"io"
+	"sync"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
 //go:embed oembeddings.json
 var OEmbeddingsJSONSchema []byte
+
+var loadSchema = sync.OnceValues(func() (*jsonschema.Resolved, error) {
+
+	var s jsonschema.Schema
+
+	err := json.Unmarshal(OEmbeddingsJSONSchema, &s)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resolved, err := s.Resolve(nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resolved, nil
+})
 
 func ValidateWithOEmbeddings(oe *OEmbeddings) (bool, error) {
 
@@ -35,15 +55,7 @@ func ValidateWithReader(r io.Reader) (bool, error) {
 
 func Validate(body []byte) (bool, error) {
 
-	var s jsonschema.Schema
-
-	err := json.Unmarshal(OEmbeddingsJSONSchema, &s)
-
-	if err != nil {
-		return false, err
-	}
-
-	resolved, err := s.Resolve(nil)
+	schema, err := loadSchema()
 
 	if err != nil {
 		return false, err
@@ -57,7 +69,7 @@ func Validate(body []byte) (bool, error) {
 		return false, err
 	}
 
-	err = resolved.Validate(oe)
+	err = schema.Validate(oe)
 
 	if err != nil {
 		return false, err
