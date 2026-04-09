@@ -44,6 +44,18 @@ func ValidateWithOEmbeddings(oe *OEmbeddings) (bool, error) {
 	return Validate(body)
 }
 
+// Validate returns a boolean value indicating whether or not a JSON-encoded version of 'attrs' is a valid OEmbeddings document, conforming to the OEmbeddings JSON schema.
+func ValidateWithAttributes(attrs map[string]string) (bool, error) {
+
+	enc, err := json.Marshal(attrs)
+
+	if err != nil {
+		return false, fmt.Errorf("Failed to marshal attributes, %v", err)
+	}
+
+	return Validate(enc)
+}
+
 // Validate returns a boolean value indicating whether or not the body of 'r' is a valid OEmbeddings document, conforming to the OEmbeddings JSON schema.
 func ValidateWithReader(r io.Reader) (bool, error) {
 

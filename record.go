@@ -2,6 +2,8 @@ package embeddingsdb
 
 import (
 	"fmt"
+
+	"github.com/sfomuseum/go-embeddingsdb/oembeddings"
 )
 
 // Record defines a struct containing properties associated with individual records stored in an embeddings database.
@@ -25,4 +27,8 @@ type Record struct {
 
 func (r *Record) Key() string {
 	return fmt.Sprintf("%s-%s-%s", r.Provider, r.DepictionId, r.Model)
+}
+
+func (r *Record) OEmbeddings() (*oembeddings.OEmbeddings, error) {
+	return oembeddings.FromAttributes(r.Attributes)
 }

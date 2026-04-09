@@ -1,5 +1,9 @@
 package oembeddings
 
+import (
+	"fmt"
+)
+
 // OEmbeddings defines a model for the _least_ amount of metadata to be associated with a vector embedding record
 // in order to allow a preview of the content used to create the embeddings and to display provenance for that content
 // with links back to the subject depicted in the content on a provider's website. As the name suggests it is modeled
@@ -42,4 +46,35 @@ func (o *OEmbeddings) AsMap() map[string]string {
 	}
 
 	return o_map
+}
+
+func FromAttributes(attrs map[string]string) (*OEmbeddings, error) {
+
+	valid, err := ValidateWithAttributes(attrs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !valid {
+		return nil, fmt.Errorf("Attributes does not conform to the OEmbeddings structure")
+	}
+
+	oe := &OEmbeddings{
+		Type:              attrs["type"],
+		Preview:           attrs["preview"],
+		SubjectURL:        attrs["subject_url"],
+		SubjectTitle:      attrs["subject_title"],
+		SubjectCreditline: attrs["subject_creditline"],
+		ProviderName:      attrs["provider_name"],
+		ProviderURL:       attrs["provider_url"],
+	}
+
+	v, exists := attrs["depiction_url"]
+
+	if exists {
+		oe.DepictionURL = v
+	}
+
+	return oe, nil
 }
