@@ -5,7 +5,12 @@
 <div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
     
 <div class="row record-grid">
-    <div class="record-image">{{ if ne .Record.Attributes.uri "" }}<img src="{{ .Record.Attributes.uri }}" />{{ end }}</div>
+    <div class="record-image">
+	{{ $oe, err := .Record.OEmbeddings }}
+	{{ if $oe -}}
+	<img src="{{ $oe.Preview }}" alt="{{ $oe.SubjectTitle }}" />
+	{{ end -}}	
+    </div>
 
     <table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
 	<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
@@ -55,8 +60,13 @@
 </div>
 	    
 <div class="row similar-grid">
-    {{ range $i, $s := .Similar -}}    
-    <div class="similar-image">{{ if ne $s.Attributes.uri ""}}<img src="{{ $s.Attributes.uri }}" />{{ end }}</div>
+    {{ range $i, $s := .Similar -}}
+    {{ $oe, err := $s.OEmbeddings -}}    
+    <div class="similar-image">
+	{{ if $oe -}}
+	<img src="{{ $oe.Preview }}" />
+	{{ end -}}
+    </div>
     <table class="table similar-table">
 	<tr>
 	    <th>Distance</th>

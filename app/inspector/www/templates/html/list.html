@@ -32,8 +32,11 @@
     </div>
     
     {{ range $i, $r := .Records -}}
+    {{ $oe, $err := r.OEmbeddings -}}
     <div class="row record-grid">
-	<div class="record-image">{{ if ne $r.Attributes.uri "" }}<img src="{{ $r.Attributes.uri }}" />{{ end }}</div>
+	<div class="record-image">
+	    {{ if $oe }}<img src="{{ $oe.Preview }}" />{{ end }}
+	</div>
 	
 	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
 	    <tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
