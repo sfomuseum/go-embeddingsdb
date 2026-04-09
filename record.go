@@ -32,3 +32,8 @@ func (r *Record) Key() string {
 func (r *Record) OEmbeddings() (*oembeddings.OEmbeddings, error) {
 	return oembeddings.FromAttributes(r.Attributes)
 }
+
+func (r *Record) OEmbeddingsOrNil() *oembeddings.OEmbeddings {
+	oe, _ :=  oembeddings.FromAttributes(r.Attributes)
+	return oe
+}

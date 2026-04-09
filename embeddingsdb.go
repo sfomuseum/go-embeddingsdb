@@ -78,3 +78,8 @@ type SimilarRecord struct {
 func (r *SimilarRecord) OEmbeddings() (*oembeddings.OEmbeddings, error) {
 	return oembeddings.FromAttributes(r.Attributes)
 }
+
+func (r *SimilarRecord) OEmbeddingsOrNil() *oembeddings.OEmbeddings {
+	oe, _ :=  oembeddings.FromAttributes(r.Attributes)
+	return oe
+}

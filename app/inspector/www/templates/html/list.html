@@ -32,7 +32,7 @@
     </div>
     
     {{ range $i, $r := .Records -}}
-    {{ $oe, $err := r.OEmbeddings -}}
+    {{ $oe := $r.OEmbeddingsOrNil -}}
     <div class="row record-grid">
 	<div class="record-image">
 	    {{ if $oe }}<img src="{{ $oe.Preview }}" />{{ end }}

@@ -6,7 +6,7 @@
     
 <div class="row record-grid">
     <div class="record-image">
-	{{ $oe, err := .Record.OEmbeddings }}
+	{{ $oe := .Record.OEmbeddingsOrNil }}
 	{{ if $oe -}}
 	<img src="{{ $oe.Preview }}" alt="{{ $oe.SubjectTitle }}" />
 	{{ end -}}	
@@ -61,7 +61,7 @@
 	    
 <div class="row similar-grid">
     {{ range $i, $s := .Similar -}}
-    {{ $oe, err := $s.OEmbeddings -}}    
+    {{ $oe := $s.OEmbeddingsOrNil -}}    
     <div class="similar-image">
 	{{ if $oe -}}
 	<img src="{{ $oe.Preview }}" />
