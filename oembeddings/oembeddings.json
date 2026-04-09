@@ -26,11 +26,11 @@
     },
     "subject_title": {
       "type": "string",
-      "minLength": 1
+      "minLength": 0
     },
     "subject_creditline": {
       "type": "string",
-      "minLength": 1
+      "minLength": 0
     },
     "provider_name": {
       "type": "string",

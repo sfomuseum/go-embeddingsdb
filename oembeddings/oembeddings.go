@@ -24,3 +24,22 @@ type OEmbeddings struct {
 	// The primary web page for the provider (holder) of the subject being depicted.
 	ProviderURL string `json:"provider_url"`
 }
+
+func (o *OEmbeddings) AsMap() map[string]string {
+
+	o_map := map[string]string{
+		"type":               o.Type,
+		"preview":            o.Preview,
+		"subject_url":        o.SubjectURL,
+		"subject_title":      o.SubjectTitle,
+		"subject_creditline": o.SubjectCreditline,
+		"provider_name":      o.ProviderName,
+		"provider_url":       o.ProviderURL,
+	}
+
+	if o.DepictionURL != "" {
+		o_map["depiction_url"] = o.DepictionURL
+	}
+
+	return o_map
+}

@@ -12,6 +12,8 @@ func TestOEmbeddingsJSONSchema(t *testing.T) {
 		"../fixtures/oembeddings_text.json",
 		"../fixtures/oembeddings_extra.json",
 		"../fixtures/oembeddings_no_depiction_url.json",
+		"../fixtures/oembeddings_x_urn.json",
+		"../fixtures/oembeddings_empty.json",
 	}
 
 	for _, path := range tests {
