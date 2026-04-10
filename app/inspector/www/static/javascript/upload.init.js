@@ -70,6 +70,12 @@ window.addEventListener('load', function(e){
 		const img = document.createElement("img");
 		img.setAttribute("src", similar.attributes["preview"]);
 		image_el.appendChild(img);
+	    } else {
+
+		const div = document.createElement("div");
+		div.setAttribute("class", "no-preview");
+		div.appendChild(document.createTextNode("No preview available"));
+		image_el.appendChild(div);
 	    }
 	    
 	    grid_el.appendChild(image_el);
