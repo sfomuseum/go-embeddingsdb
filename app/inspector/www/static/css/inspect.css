@@ -34,6 +34,23 @@
 	max-width: 500px;
 }
 
+.list-grid {
+	display: grid;
+	grid-template-columns:1fr 1fr 1fr;
+	gap: 50px 10px;
+	margin-bottom: 1.5rem;
+}
+
+.list-grid-item {
+	border: solid thin;
+	padding: .5rem;
+}
+
+.list-grid img {
+	max-height: 200px;
+	max-width: 200px;
+}
+
 .record-grid {
 	display: grid;
 	grid-template-columns:1fr 1fr;
