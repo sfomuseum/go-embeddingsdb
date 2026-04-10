@@ -452,7 +452,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	count_providers := len(providers)
 
-	q := `SELECT DISTINCT(model) AS model FROM embeddings WHERE model != "" ORDER by model ASC`
+	q := "SELECT DISTINCT(model) AS model FROM embeddings WHERE model != ''"
 	args := make([]any, 0)
 
 	if count_providers > 0 {
@@ -465,13 +465,16 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 			args[i] = pr
 		}
 
-		q = fmt.Sprintf("%s WHERE provider IN (%s)", q, strings.Join(in, ","))
+		q = fmt.Sprintf("%s AND provider IN (%s)", q, strings.Join(in, ","))
 	}
+
+	q = fmt.Sprintf("%s ORDER by model ASC", q)
 
 	rows, err := db.vec_db.QueryContext(ctx, q, args...)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query models, %w", err)
+		logger.Error("Failed to query models", "q", q, "error", err)
+		return nil, fmt.Errorf("Failed to query models '%s', %w", err)
 	}
 
 	defer rows.Close()
@@ -507,7 +510,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 
-	q := `SELECT DISTINCT(provider) AS provider FROM embeddings WHERE provider != "" ORDER BY provider ASC`
+	q := "SELECT DISTINCT(provider) AS provider FROM embeddings WHERE provider != '' ORDER BY provider ASC"
 
 	rows, err := db.vec_db.QueryContext(ctx, q)
 
