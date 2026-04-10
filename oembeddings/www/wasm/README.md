@@ -1,0 +1,1 @@
+WASM binaries are not bundled with this package. Run the `make wasmjs` target from the root folder.

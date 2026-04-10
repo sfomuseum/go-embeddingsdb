@@ -69,6 +69,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		pg_opts.PerPage(int64(15))
 		pg_opts.Pointer(int64(1))
 
 		page, err := sanitize.GetInt64(req, "page")

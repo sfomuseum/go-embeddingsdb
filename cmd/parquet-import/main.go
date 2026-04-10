@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
@@ -23,7 +25,7 @@ func main() {
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.\n")
+		fmt.Fprintf(os.Stderr, "Import parquet-encoded embeddingsdb records from one or more files or HTTP(S) URIs and add them to an embeddingsdb instance.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] parquet_file(N) parquet_file(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
@@ -47,19 +49,39 @@ func main() {
 
 	for _, path := range fs.Args() {
 
-		r, err := os.Open(path)
+		switch {
+		case strings.HasPrefix(path, "http"):
 
-		if err != nil {
-			log.Fatalf("Failed to open %s for reading, %v", path, err)
-		}
+			uri, err := url.Parse(path)
 
-		defer r.Close()
+			if err != nil {
+				log.Fatalf("Failed to parse %s as URL, %v", path, err)
+			}
 
-		logger.Debug("Import data", "path", path)
-		_, err = parquet.Import(ctx, cl, r)
+			logger.Debug("Import remote data", "url", uri.String())
 
-		if err != nil {
-			log.Fatalf("Failed to export Parquet data for %s, %v", path, err)
+			_, err = parquet.ImportRemote(ctx, cl, uri)
+
+			if err != nil {
+				log.Fatalf("Failed to import remote data from %s, %v", uri.String(), err)
+			}
+
+		default:
+
+			r, err := os.Open(path)
+
+			if err != nil {
+				log.Fatalf("Failed to open %s for reading, %v", path, err)
+			}
+
+			defer r.Close()
+
+			logger.Debug("Import data", "path", path)
+			_, err = parquet.Import(ctx, cl, r)
+
+			if err != nil {
+				log.Fatalf("Failed to import Parquet data for %s, %v", path, err)
+			}
 		}
 	}
 

@@ -35,7 +35,7 @@ func main() {
 	case "record":
 		record(args[2:])
 	case "remove":
-		remove(args[2:])		
+		remove(args[2:])
 	case "similar-by-id":
 		similarById(args[2:])
 	case "models":
@@ -56,7 +56,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n\t%s [command] [options]\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "Valid commands are:\n")
 	fmt.Fprintf(os.Stderr, "* record [options]\n")
-	fmt.Fprintf(os.Stderr, "* remove [options]\n")	
+	fmt.Fprintf(os.Stderr, "* remove [options]\n")
 	fmt.Fprintf(os.Stderr, "* similar-by-id [options]\n")
 	fmt.Fprintf(os.Stderr, "* list [options]\n")
 	fmt.Fprintf(os.Stderr, "* models [options]\n")
@@ -220,7 +220,7 @@ func listRecords(args []string) {
 	for r, err := range client.ListRecords(ctx, cl, list_opts) {
 
 		if err != nil {
-			log.Fatalf("List records iterator yielded an error, %v", "error", err)
+			log.Fatalf("List records iterator yielded an error, %v", err)
 		}
 
 		err := enc.Encode(r)

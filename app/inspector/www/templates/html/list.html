@@ -30,33 +30,45 @@
 	</details>
 	
     </div>
-    
-    {{ range $i, $r := .Records -}}
-    <div class="row record-grid">
-	<div class="record-image">{{ if ne $r.Attributes.uri "" }}<img src="{{ $r.Attributes.uri }}" />{{ end }}</div>
-	
-	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
-	    <tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
-	    <tr><th>Depiction ID</th><td><a href="{{ $root.URIs.Record }}{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
-		<tr><th>Subject ID</th><td>{{ $r.SubjectId }}</td></tr>
-		<tr><th>Model</th><td><span class="hey-look">{{ $r.Model }}</span></td></tr>
-		<tr><th>Created</th><td>{{ FormatUnixTime $r.Created "2006-01-02" }}</td></tr>	
-		<tr><th>Embeddings</th><td><a href="{{ $root.URIs.APIEmbeddings }}{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
-		<tr>
-		    <th>Attributes</th>
-		    <td>
-			<table class="table attributes">
-			    {{ range $k, $v := $r.Attributes -}}
-			    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
-				{{ end -}}
-			</table>
-		    </td>
-		</tr>
-	</table>
-	
-    </div>
-    {{ end -}}
 
+    <div class="row list-grid">    
+    {{ range $i, $r := .Records -}}
+    {{ $oe := $r.OEmbeddingsOrNil -}}
+	<div class="list-grid-item">
+	    
+	    <div class="list-grid-image">
+		{{ if $oe -}}
+		<img src="{{ $oe.Preview }}" />
+		{{ else -}}
+		<div class="no-preview">No preview available</div>
+		{{ end -}}
+	    </div>
+	    
+	    <table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
+		<tr><th>Provider</th><td>{{ $r.Provider }}</td></tr>
+		<tr><th>Depiction ID</th><td><a href="{{ $root.URIs.Record }}{{ $r.Provider }}/{{ $r.DepictionId }}/?model={{ $r.Model }}">{{ $r.DepictionId }}</td></tr>
+		    <tr><th>Subject ID</th><td>{{ $r.SubjectId }}</td></tr>
+		    <tr><th>Model</th><td><span class="hey-look">{{ $r.Model }}</span></td></tr>
+		    <!--
+		    <tr><th>Created</th><td>{{ FormatUnixTime $r.Created "2006-01-02" }}</td></tr>	
+		    <tr><th>Embeddings</th><td><a href="{{ $root.URIs.APIEmbeddings }}{{ $r.Provider }}/{{ $r.DepictionId }}?model={{ $r.Model }}" target="embeddings">link</a></td></tr>	
+		    <tr>
+			<th>Attributes</th>
+			<td>
+			    <table class="table attributes">
+				{{ range $k, $v := $r.Attributes -}}
+				<tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
+				{{ end -}}
+			    </table>
+			</td>
+		    </tr>
+		    -->
+	    </table>
+	    
+	</div>
+    {{ end -}}
+    </div>
+    
     <div class="pagination">
 	<div class="pagination-el pagination-previous">
 	    {{ if ne .Pagination.Previous 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Previous }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
