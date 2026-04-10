@@ -4,63 +4,46 @@
 <div class="container" id="main" data-api-upload-uri="{{ .URIs.APIUpload }}" data-record-uri="{{ .URIs.Record }}">
 
     <div id="upload-grid">
-	<div id="upload-image">
+
+	<div>
+	    
+	    <div id="upload-image"></div>
+
+	    <form class="form" method="POST" enctype="multipart/form-data" id="upload-form">
+		<div class="mb-3">
+		    <label for="upload" class="form-label">Choose a file to find similar records for</label>
+		    <input type="file" class="form-control" id="upload" name="upload" accept="image/png,image/jpeg,image/gif" />
+		</div>	
+		<div class="mb-3">
+		    <label for="upload-model-select" class="form-label">Choose the model to create (image) embeddings with</label>	
+		    <select class="form-select" id="upload-model-select" name="model">
+			{{ range $i, $m := .Models -}}
+			<option value="{{ $m }}">{{ $m }}</option>
+			{{ end -}}
+		    </select>	    
+		</div>
+		<div class="mb-3">
+		    <label for="upload-provider-select" class="form-label">Filter results by provider (optional)</label>	
+		    <select class="form-select" id="upload-provider-select" name="similar-provider">
+			<option value="">Any providers</option>
+			{{ range $i, $p := .Providers -}}
+			<option value="{{ $p }}">{{ $p }}</option>
+			{{ end -}}
+		    </select>	    
+		</div>
+		<button type="submit" class="btn btn-primary" id="submit" disabled="disbled">Upload</button>
+		<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#666" class="bi bi-arrow-clockwise" viewBox="0 0 16 16" id="upload-spinner-svg"><g id="upload-spinner"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></g></svg>
+		<progress id="progress" max="100" value="0"></progress>	    
+	    </form>
+	    
 	</div>
-
-	<form class="form" method="POST" enctype="multipart/form-data" id="upload-form">
-	    <div class="mb-3">
-		<label for="upload" class="form-label">Choose a file to find similar records for</label>
-		<input type="file" class="form-control" id="upload" name="upload" accept="image/png,image/jpeg,image/gif" />
-	    </div>	
-	    <div class="mb-3">
-		<label for="upload-model-select" class="form-label">Choose the model to create (image) embeddings with</label>	
-		<select class="form-select" id="upload-model-select" name="model">
-		    {{ range $i, $m := .Models -}}
-		    <option value="{{ $m }}">{{ $m }}</option>
-		    {{ end -}}
-		</select>	    
-	    </div>
-	    <div class="mb-3">
-		<label for="upload-provider-select" class="form-label">Filter results by provider (optional)</label>	
-		<select class="form-select" id="upload-provider-select" name="similar-provider">
-		    <option value="">Any providers</option>
-		    {{ range $i, $p := .Providers -}}
-		    <option value="{{ $p }}">{{ $p }}</option>
-		    {{ end -}}
-		</select>	    
-	    </div>
-	    <button type="submit" class="btn btn-primary" id="submit" disabled="disbled">Upload</button>
-	    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#666" class="bi bi-arrow-clockwise" viewBox="0 0 16 16" id="upload-spinner-svg"><g id="upload-spinner"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></g></svg>
-	    <progress id="progress" max="100" value="0"></progress>	    
-	</form>
-	
-    </div>
-
-    <div id="upload-similar">
+	<div>
+	    <div id="upload-similar"></div>
+	</div>
     </div>
 </div>
 
 <script type="text/javascript" src="{{ .URIs.JavaScript }}upload.init.js"></script>
-
-<template id="similar-results">
-    <div class="row similar-grid">
-    </div>
-</template>
-
-<template id="similar-result-single">
-    <div class="similar-image"></div>
-    <table class="table similar-table">
-	<tr>
-	    <th>Distance</th>
-	    <th>Provider</th>
-	    <th>Depiction ID</th>
-	    <th>Subject ID</th>
-	    <th>Attributes</th>
-	</tr>
-	<tr id="similar-item">
-	</tr>    
-    </table>
-</template>
 
 {{ template "inc_footer" . -}}
 {{ end -}}

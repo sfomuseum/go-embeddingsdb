@@ -30,7 +30,8 @@ window.addEventListener('load', function(e){
 
 	    upload_image.innerHTML = "";
 	    upload_image.appendChild(im);
-
+	    upload_image.style.display = "block";
+	    
 	    // Result any existing similar results
 	    target.innerHTML = "";	    
 	};
@@ -56,20 +57,18 @@ window.addEventListener('load', function(e){
 	const count_headers = table_headers.length;
 	
 	const grid_el = document.createElement("div");
-	grid_el.setAttribute("class", "row similar-grid");
 	
 	for (var i=0; i < count; i++){
 	    
 	    const similar = data[i];
-	    console.log("similar", similar);
 	    
 	    const image_el = document.createElement("div");
 	    image_el.setAttribute("class", "similar-image");
 	    
-	    if (similar.attributes["uri"]){
+	    if (similar.attributes["preview"]){
 		
 		const img = document.createElement("img");
-		img.setAttribute("src", similar.attributes["uri"]);
+		img.setAttribute("src", similar.attributes["preview"]);
 		image_el.appendChild(img);
 	    }
 	    
@@ -79,53 +78,57 @@ window.addEventListener('load', function(e){
 	    
 	    const table_el = document.createElement("table");
 	    table_el.setAttribute("class", "table similar-table");
-	    
-	    const header_row = document.createElement("tr");
-	    
-	    for (var j=0; j < count_headers; j++){
+
+	    const table_data = {
+		"Distance": similar.similarity,
+		"Provider": similar.provider,
+		"Depiction": similar.depiction_id,
+		"Subject": similar.subject_id,				
+	    };
+
+	    for (const k in table_data) {
+		
+		const v = table_data[k];
+		
+		const row = document.createElement("tr");
 		
 		const header = document.createElement("th");
-		header.appendChild(document.createTextNode(table_headers[j]));
-		header_row.appendChild(header);
+		header.appendChild(document.createTextNode(k));
+		row.appendChild(header);
+		
+		const cell = document.createElement("td");
+
+		if (k == "Depiction"){
+
+		    const depiction_url = new URL("/", location);
+		    const depiction_params = new URLSearchParams();
+		    
+		    depiction_url.pathname = record_uri + similar.provider + "/" + similar.depiction_id;
+		    depiction_params.set("model", model_input.value);
+		    
+		    depiction_url.search = depiction_params;
+		    
+		    const depiction_link = document.createElement("a");
+		    depiction_link.setAttribute("href", depiction_url.toString());
+		    depiction_link.appendChild(document.createTextNode(similar.depiction_id));
+
+		    cell.appendChild(depiction_link);
+		    
+		} else {
+		    
+		    cell.appendChild(document.createTextNode(v));
+		}
+
+		row.appendChild(cell);
+		table_el.appendChild(row);
 	    }
-	    
-	    table_el.appendChild(header_row);
-
-	    // START OF properties (data)
-	    
-	    const similar_row = document.createElement("tr");
-	    
-	    const distance_cell = document.createElement("td");
-	    distance_cell.appendChild(document.createTextNode(similar.similarity));
-	    similar_row.appendChild(distance_cell);
-	    
-	    const provider_cell = document.createElement("td");
-	    provider_cell.appendChild(document.createTextNode(similar.provider));
-	    similar_row.appendChild(provider_cell);
-	    
-	    const depiction_cell = document.createElement("td");
-
-	    const depiction_url = new URL("/", location);
-	    const depiction_params = new URLSearchParams();
-
-	    depiction_url.pathname = record_uri + similar.provider + "/" + similar.depiction_id;
-	    depiction_params.set("model", model_input.value);
-
-	    depiction_url.search = depiction_params;
-	    
-	    const depiction_link = document.createElement("a");
-	    depiction_link.setAttribute("href", depiction_url.toString());
-	    
-	    depiction_link.appendChild(document.createTextNode(similar.depiction_id));
-	    depiction_cell.appendChild(depiction_link);
-	    
-	    similar_row.appendChild(depiction_cell);
-	    
-	    const subject_cell = document.createElement("td");
-	    subject_cell.appendChild(document.createTextNode(similar.subject_id));
-	    similar_row.appendChild(subject_cell);
-
+		    
 	    // START OF attributes
+
+	    const attrs_row = document.createElement("tr");
+	    const attrs_header = document.createElement("th");
+	    attrs_header.appendChild(document.createTextNode("Attributes"));
+	    attrs_row.appendChild(attrs_header);
 	    
 	    const attrs_cell = document.createElement("td");
 	    
@@ -148,11 +151,10 @@ window.addEventListener('load', function(e){
 	    }
 	    
 	    attrs_cell.appendChild(attrs_table);
-	    similar_row.appendChild(attrs_cell);
+	    attrs_row.appendChild(attrs_cell);
+	    table_el.appendChild(attrs_row);
 	    
 	    // END OF attributes
-	    
-	    table_el.appendChild(similar_row);
 
 	    // END OF properties (header and data)
 	    
