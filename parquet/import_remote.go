@@ -27,7 +27,15 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 		return count, err
 	}
 
-	// SET UP DATABASE here...?
+	setup_opts := &database.SetupDuckDBDatabaseOptions{
+		Dimensions: 512,
+	}
+
+	err = database.SetupDuckDBDatabase(ctx, db, setup_opts)
+
+	if err != nil {
+		return count, err
+	}
 
 	defer db.Close()
 
@@ -52,7 +60,7 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 		}
 	}()
 
-	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM read_parquet('%s')`, uri.String())
+	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, model, embeddings, created, attributes FROM read_parquet('%s')`, uri.String())
 	rows, err := db.QueryContext(ctx, q)
 
 	if err != nil {
@@ -62,6 +70,9 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 	defer rows.Close()
 
 	for rows.Next() {
+
+		// logger.Info("Next")
+		// continue
 
 		row, err := database.InflateDuckDBRecord(ctx, rows)
 

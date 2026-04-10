@@ -75,10 +75,12 @@ type SimilarRecord struct {
 	Attributes map[string]string `json:"attributes"`
 }
 
+// Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'.
 func (r *SimilarRecord) OEmbeddings() (*oembeddings.OEmbeddings, error) {
 	return oembeddings.FromAttributes(r.Attributes)
 }
 
+// Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'. Return nil if this is not possible.
 func (r *SimilarRecord) OEmbeddingsOrNil() *oembeddings.OEmbeddings {
 	oe, _ := oembeddings.FromAttributes(r.Attributes)
 	return oe

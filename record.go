@@ -17,7 +17,7 @@ type Record struct {
 	// Model is the label for the model used to generate embeddings for DepictionId.
 	Model string `json:"model" parquet:"model,dict,zstd"`
 	// Embeddings are the embeddings generated for DepictionId using Model.
-	Embeddings []float32 `json:"embeddings" parquet:"embeddings,list"`
+	Embeddings []float32 `json:"embeddings" parquet:"embeddings,plain,list"	// Note the 'plain,list'. This is important in order to prevent DLBA which makes DuckDB sad.`
 	// Created is the Unix timestamp when Embeddings were generated.
 	Created int64 `json:"created" parquet:"created"`
 	// Attributes is an arbitrary map of key-value properties associated with the embeddings. Record attributes
@@ -29,10 +29,12 @@ func (r *Record) Key() string {
 	return fmt.Sprintf("%s-%s-%s", r.Provider, r.DepictionId, r.Model)
 }
 
+// Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'.
 func (r *Record) OEmbeddings() (*oembeddings.OEmbeddings, error) {
 	return oembeddings.FromAttributes(r.Attributes)
 }
 
+// Derive an [oembeddings.OEmbeddings] instance from the attributes in 'r'. Return nil if this is not possible.
 func (r *Record) OEmbeddingsOrNil() *oembeddings.OEmbeddings {
 	oe, _ := oembeddings.FromAttributes(r.Attributes)
 	return oe

@@ -116,7 +116,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, fmt.Errorf("Failed to open database connection, %w", err)
 	}
 
-	setup_opts := &setupDuckDBDatabaseOptions{
+	setup_opts := &SetupDuckDBDatabaseOptions{
 		Dimensions: dimensions,
 	}
 
@@ -131,7 +131,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 		setup_opts.DatabasePath = abs_path
 	}
 
-	err = setupDuckDBDatabase(ctx, vec_db, setup_opts)
+	err = SetupDuckDBDatabase(ctx, vec_db, setup_opts)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup database, %w", err)
@@ -610,12 +610,12 @@ func InflateDuckDBRecord(ctx context.Context, rows any) (*embeddingsdb.Record, e
 	return r, nil
 }
 
-type setupDuckDBDatabaseOptions struct {
+type SetupDuckDBDatabaseOptions struct {
 	Dimensions   int
 	DatabasePath string
 }
 
-func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatabaseOptions) error {
+func SetupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *SetupDuckDBDatabaseOptions) error {
 
 	t1 := time.Now()
 

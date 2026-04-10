@@ -303,6 +303,8 @@ go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import 
 
 This package uses build tags to enable support for various features. The default set of tags are `duckdb,sqlite` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
 
+_Note: The `duckdb` build tag is required for enough things that it may simply be removed (and DuckDB will always be a dependency). TBD._
+
 #### duckdb
 
 The `duckdb` tag adds support for the [DuckDB](https://duckdb.org/) database as an embeddings database.
