@@ -638,17 +638,17 @@ go run -tags=duckdb,sqlite -mod vendor \
 
 Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
 
-![](docs/images/embeddingsdb-list.png)
+![](docs/images/embeddingsdb-list-2.png)
 
 You can filter the list view by model and by provider (the source of embeddings). Individual record pages look like this:
 
-![](docs/images/embeddingsdb-record.png)
+![](docs/images/embeddingsdb-record-2.png)
 
 By default record pages will show similar records for a single model across all providers. Both of these facets may be updated.
 
 If enabled (with the `-enable-upload` flag) there is also an endpoint where you can upload an image of your choosing, generate embeddings on the fly for that image and then use those data to search for similar images in the `embeddingsdb` database. For example:
 
-![](docs/images/embeddingsdb-search.png)
+![](docs/images/embeddingsdb-upload-2.png)
 
 #### Note and caveats
 
