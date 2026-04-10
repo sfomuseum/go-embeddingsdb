@@ -640,15 +640,19 @@ Opening your web browser to `http://localhost:8082` you would see something like
 
 ![](docs/images/embeddingsdb-list-2.png)
 
-You can filter the list view by model and by provider (the source of embeddings). Individual record pages look like this:
+You can filter the list view by model and by provider (the source of embeddings). As you can see the list view needs some loving to collapse similar depictions with multiple models in a single view. Soon, I hope.
+
+Individual record pages look like this:
 
 ![](docs/images/embeddingsdb-record-2.png)
 
-By default record pages will show similar records for a single model across all providers. Both of these facets may be updated.
+By default record pages will show similar records for a single model across all providers. Both of these facets may be updated. The left hand panel (the record being viewed) will remain fixed but the right hand panel (containing similar records) will scroll.
 
 If enabled (with the `-enable-upload` flag) there is also an endpoint where you can upload an image of your choosing, generate embeddings on the fly for that image and then use those data to search for similar images in the `embeddingsdb` database. For example:
 
 ![](docs/images/embeddingsdb-upload-2.png)
+
+As with the record view, the left hand panel (the image that was uploaded) will remain fixed but the right hand panel (containing similar records) will scroll.
 
 #### Note and caveats
 
