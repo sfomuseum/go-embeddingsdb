@@ -9,6 +9,8 @@
 	{{ $oe := .Record.OEmbeddingsOrNil }}
 	{{ if $oe -}}
 	<img src="{{ $oe.Preview }}" alt="{{ $oe.SubjectTitle }}" />
+	{{ else -}}
+	<div class="no-preview">No preview available</div>
 	{{ end -}}	
     </div>
 
@@ -33,7 +35,7 @@
 	    <td>
 		<table class="table attributes">
 		    {{ range $k, $v := .Record.Attributes -}}
-		    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+		    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
 			{{ end -}}
 		</table>
 	    </td>
@@ -65,6 +67,8 @@
     <div class="similar-image">
 	{{ if $oe -}}
 	<img src="{{ $oe.Preview }}" />
+	{{ else -}}
+        <div class="no-preview">No preview available</div>	
 	{{ end -}}
     </div>
     <table class="table similar-table">
@@ -83,7 +87,7 @@
 	    <td>
 		<table class="table attributes">
 		    {{ range $k, $v := $s.Attributes }}
-		    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+		    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
 			{{ end }}
 	        </table>
 	    </td>

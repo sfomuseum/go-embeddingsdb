@@ -68,21 +68,30 @@
 	padding-left: 0;
 }
 
+.attributes {
+	min-width: fit-content;
+	table-layout:fixed;
+	font-size:small;
+	font-family:monospace;
+	
+}
+
 .attributes td {
 	vertical-align: top !important;
 	padding: .5rem;
 	padding-top: 0;
+	word-break: break-all !important;
 }
 
 .attributes th {
 	vertical-align: top !important;
 	padding: .5rem;
 	padding-top: 0;
+	width: 30%;
 }
 
-.attributes {
-	font-size:small;
-	font-family:monospace;
+.no-preview {
+	font-style:italic;
 }
 
 #similar-controls {

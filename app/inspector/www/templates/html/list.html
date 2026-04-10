@@ -35,7 +35,11 @@
     {{ $oe := $r.OEmbeddingsOrNil -}}
     <div class="row record-grid">
 	<div class="record-image">
-	    {{ if $oe }}<img src="{{ $oe.Preview }}" />{{ end }}
+	    {{ if $oe -}}
+	    <img src="{{ $oe.Preview }}" />
+	    {{ else -}}
+	    <div class="no-preview">No preview available</div>
+	    {{ end -}}
 	</div>
 	
 	<table class="table record-table" id="record-table" data-provider="{{ $r.Provider }}" data-depiction-id="{{ $r.DepictionId }}" data-model="{{ $r.Model }}">
@@ -50,7 +54,7 @@
 		    <td>
 			<table class="table attributes">
 			    {{ range $k, $v := $r.Attributes -}}
-			    <tr><th>{{ $k }}<th><td>{{ $v }}</td></tr>
+			    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
 				{{ end -}}
 			</table>
 		    </td>
