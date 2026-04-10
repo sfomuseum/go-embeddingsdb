@@ -450,6 +450,7 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
 
+	logger := slog.Default()
 	count_providers := len(providers)
 
 	q := "SELECT DISTINCT(model) AS model FROM embeddings WHERE model != ''"

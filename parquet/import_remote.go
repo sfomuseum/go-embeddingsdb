@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/url"
 	"time"
@@ -22,16 +21,6 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 	count := int64(0)
 
 	db, err := sql.Open("duckdb", "")
-
-	if err != nil {
-		return count, err
-	}
-
-	setup_opts := &database.SetupDuckDBDatabaseOptions{
-		Dimensions: 512,
-	}
-
-	err = database.SetupDuckDBDatabase(ctx, db, setup_opts)
 
 	if err != nil {
 		return count, err
@@ -60,7 +49,8 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 		}
 	}()
 
-	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, model, embeddings, created, attributes FROM read_parquet('%s')`, uri.String())
+	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, model, embeddings, created, CAST(TO_JSON(attributes) AS VARCHAR) AS attributes FROM read_parquet('%s')`, uri.String())
+
 	rows, err := db.QueryContext(ctx, q)
 
 	if err != nil {
@@ -71,12 +61,10 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 
 	for rows.Next() {
 
-		// logger.Info("Next")
-		// continue
-
 		row, err := database.InflateDuckDBRecord(ctx, rows)
 
-		if err == io.EOF {
+		if err != nil {
+			logger.Error("Failed to inflate row", "error", err)
 			return count, err
 		}
 
@@ -103,5 +91,4 @@ func ImportRemote(ctx context.Context, cl client.Client, uri *url.URL) (int64, e
 	}
 
 	return count, nil
-
 }
