@@ -3,99 +3,103 @@
 {{ $root := . }}
 
 <div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
-    
-<div class="row record-grid">
-    <div class="record-image">
-	{{ $oe := .Record.OEmbeddingsOrNil }}
-	{{ if $oe -}}
-	<img src="{{ $oe.Preview }}" alt="{{ $oe.SubjectTitle }}" />
-	{{ else -}}
-	<div class="no-preview">No preview available</div>
-	{{ end -}}	
+
+    <div class="row" id="similar-controls">
+	
+	<label for="model-provider" class="form-label">Filter similar records by provider</label>
+	<select class="form-select" id="model-provider">
+	    <option value="">All providers</option>
+	    {{ range $i, $p := .Providers -}}
+	    <option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
+	    {{ end -}}
+	</select>
+	
+	<!--
+	     <label for="max-distance" class="form-label">Max Distance</label>
+	     <input type="range" class="form-range" min="0" max="5.0" id="max-distance">
+	-->
+	
     </div>
-
-    <table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
-	<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
-	<tr><th>Depiction ID</th><td>{{ .Record.DepictionId }}</td></tr>
-	<tr><th>Subject ID</th><td>{{ .Record.SubjectId }}</td></tr>
-	<tr><th>Model</th>
-	    <td>
-		<span id="model-current">{{ .Record.Model }}</span>
-		<select class="form-select" id="model-select">
-		    {{ range $i, $m := .Models -}}
-		    <option value="{{ $m }}" {{ if eq $m $.Record.Model }}selected="selected"{{ end }}>{{ $m }}</option>
-		    {{ end -}}
-		</select>
-	    </td>
-	</tr>
-	<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
-	<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
-	<tr>
-	    <th>Attributes</th>
-	    <td>
-		<table class="table attributes">
-		    {{ range $k, $v := .Record.Attributes -}}
-		    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
-			{{ end -}}
-		</table>
-	    </td>
-	</tr>
-    </table>
     
-</div>
+    <div class="row record-grid">
 
-<div class="row" id="similar-controls">
-
-    <label for="model-provider" class="form-label">Filter similar records by provider</label>
-    <select class="form-select" id="model-provider">
-	<option value="">All providers</option>
-	{{ range $i, $p := .Providers -}}
-	<option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
-	{{ end -}}
-    </select>
-
-    <!--
-    <label for="max-distance" class="form-label">Max Distance</label>
-    <input type="range" class="form-range" min="0" max="5.0" id="max-distance">
-    -->
-    
-</div>
+	<div class="record">
+	    <div class="record-image">
+		{{ $oe := .Record.OEmbeddingsOrNil }}
+		{{ if $oe -}}
+		<img src="{{ $oe.Preview }}" alt="{{ $oe.SubjectTitle }}" />
+		{{ else -}}
+		<div class="no-preview">No preview available</div>
+		{{ end -}}	
+	    </div>
 	    
-<div class="row similar-grid">
-    {{ range $i, $s := .Similar -}}
-    {{ $oe := $s.OEmbeddingsOrNil -}}    
-    <div class="similar-image">
-	{{ if $oe -}}
-	<img src="{{ $oe.Preview }}" />
-	{{ else -}}
-        <div class="no-preview">No preview available</div>	
-	{{ end -}}
+	    <table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
+		<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
+		<tr><th>Depiction&nbsp;ID</th><td>{{ .Record.DepictionId }}</td></tr>
+		<tr><th>Subject&nbsp;ID</th><td>{{ .Record.SubjectId }}</td></tr>
+		<tr><th>Model</th>
+		    <td>
+			<span id="model-current">{{ .Record.Model }}</span>
+			<select class="form-select" id="model-select">
+			    {{ range $i, $m := .Models -}}
+			    <option value="{{ $m }}" {{ if eq $m $.Record.Model }}selected="selected"{{ end }}>{{ $m }}</option>
+			    {{ end -}}
+			</select>
+		    </td>
+		</tr>
+		<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
+		<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
+		<tr>
+		    <th>Attributes</th>
+		    <td>
+			<table class="table attributes">
+			    {{ range $k, $v := .Record.Attributes -}}
+			    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
+			    {{ end -}}
+			</table>
+		    </td>
+		</tr>
+	    </table>
+	    
+	</div>
+	<div class="record-similar">
+	    {{ range $i, $s := .Similar -}}
+	    {{ $oe := $s.OEmbeddingsOrNil -}}    
+	    <div class="similar-image">
+		{{ if $oe -}}
+		<img src="{{ $oe.Preview }}" />
+		{{ else -}}
+		<div class="no-preview">No preview available</div>	
+		{{ end -}}
+	    </div>
+	    <table class="table similar-table">
+		<tr>
+		    <th>Distance</th><td>{{ $s.Distance }}</td>
+		</tr>
+		<tr>
+		    <th>Provider</th><td>{{ $s.Provider }}</td>
+		</tr>
+		<tr>
+		    <th>Depiction&nbsp;ID</th><td><a href="{{ $root.URIs.Record }}{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
+		</tr>
+		<tr>
+		    <th>Subject&nbsp;ID</th><td>{{ $s.SubjectId }}</td>
+		</tr>
+		<tr>
+		    <th>Attributes</th><td>
+			<table class="table attributes">
+			    {{ range $k, $v := $s.Attributes }}
+			    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
+			    {{ end }}
+			</table>
+		    </td>
+		</tr>    
+	    </table>
+	    {{ end -}}
+	</div>
+	
     </div>
-    <table class="table similar-table">
-	<tr>
-	    <th>Distance</th>
-	    <th>Provider</th>
-	    <th>Depiction ID</th>
-	    <th>Subject ID</th>
-	    <th>Attributes</th>
-	</tr>
-	<tr>
-	    <td>{{ $s.Distance }}</td>
-	    <td>{{ $s.Provider }}</td>
-	    <td><a href="{{ $root.URIs.Record }}{{ $s.Provider }}/{{ $s.DepictionId }}?model={{ $.Record.Model }}">{{ $s.DepictionId }}</a></td>
-	    <td>{{ $s.SubjectId }}</td>	    	    
-	    <td>
-		<table class="table attributes">
-		    {{ range $k, $v := $s.Attributes }}
-		    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
-			{{ end }}
-	        </table>
-	    </td>
-	</tr>    
-    </table>
-    {{ end -}}
-</div>
-
+    
 </div>
 
 <script type="text/javascript" src="{{ .URIs.JavaScript }}record.init.js"></script>

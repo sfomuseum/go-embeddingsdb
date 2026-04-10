@@ -20,8 +20,13 @@
 }
 
 .similar-image img {
-	max-height: 200px;
-	max-width: 200px;
+	max-height: 300px;
+	max-width: 300px;
+}
+
+.record {
+	border: solid 1px #000;
+	padding: 1rem;
 }
 
 .record-image img {
@@ -31,9 +36,24 @@
 
 .record-grid {
 	display: grid;
-	grid-template-columns:520px 1fr;
+	grid-template-columns:1fr 1fr;
 	gap: 50px 10px;
 	margin-bottom: 1.5rem;
+}
+
+.record-grid > *:first-child,
+.record-grid > .left-col {
+  position: sticky;
+  top: 0; 
+  background: #fff;  
+  z-index: 1;        
+}
+
+.record-grid > *:last-child,
+.record-grid > .right-col {
+  overflow-y: auto;
+  height: 100vh;         /* or: height: calc(100vh - 1.5rem); to account for margin */
+  padding-left: 10px;
 }
 
 .similar-grid {
