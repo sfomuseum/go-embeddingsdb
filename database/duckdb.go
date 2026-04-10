@@ -208,7 +208,7 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
 	row := db.vec_db.QueryRowContext(ctx, q, req.Provider, req.DepictionId, req.Model)
-	return db.inflateRecord(ctx, row)
+	return InflateDuckDBRecord(ctx, row)
 }
 
 func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
@@ -376,7 +376,7 @@ func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 
 	for rows.Next() {
 
-		r, err := db.inflateRecord(ctx, rows)
+		r, err := InflateDuckDBRecord(ctx, rows)
 
 		if err != nil {
 			return nil, nil, err
@@ -417,7 +417,7 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 		for rows.Next() {
 
-			r, err := db.inflateRecord(ctx, rows)
+			r, err := InflateDuckDBRecord(ctx, rows)
 
 			if err != nil {
 				if !yield(nil, err) {
@@ -452,7 +452,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	count_providers := len(providers)
 
-	q := "SELECT DISTINCT(model) AS model FROM embeddings ORDER by model ASC"
+	q := `SELECT DISTINCT(model) AS model FROM embeddings WHERE model != "" ORDER by model ASC`
 	args := make([]any, 0)
 
 	if count_providers > 0 {
@@ -507,7 +507,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 
-	q := "SELECT DISTINCT(provider) AS provider FROM embeddings ORDER BY provider ASC"
+	q := `SELECT DISTINCT(provider) AS provider FROM embeddings WHERE provider != "" ORDER BY provider ASC`
 
 	rows, err := db.vec_db.QueryContext(ctx, q)
 
@@ -550,7 +550,7 @@ func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }
 
-func (db *DuckDBDatabase) inflateRecord(ctx context.Context, rows any) (*embeddingsdb.Record, error) {
+func InflateDuckDBRecord(ctx context.Context, rows any) (*embeddingsdb.Record, error) {
 
 	var provider string
 	var depiction_id string
@@ -685,7 +685,7 @@ func setupDuckDBDatabase(ctx context.Context, db *sql.DB, opts *setupDuckDBDatab
 		slog.Debug("Load database from path", "path", opts.DatabasePath)
 		cmds = append(cmds, fmt.Sprintf("IMPORT DATABASE '%s'", opts.DatabasePath))
 	} else {
-		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT, depiction_id TEXT, subject_id TEXT, model TEXT, attributes TEXT, vec FLOAT[%d], created BIGINT, lastmodified BIGINT)", opts.Dimensions))
+		cmds = append(cmds, fmt.Sprintf("CREATE TABLE embeddings(provider TEXT NOT NULL, depiction_id TEXT NOT NULL, subject_id TEXT NOT NULL, model TEXT NOT NULL, attributes TEXT NOT NULL, vec FLOAT[%d], created BIGINT NOT NULL, lastmodified BIGINT NOT NULL)", opts.Dimensions))
 		cmds = append(cmds, "CREATE UNIQUE INDEX id_model ON embeddings (provider, depiction_id, model)")
 		cmds = append(cmds, "CREATE INDEX by_provider ON embeddings (provider, model, created)")
 		cmds = append(cmds, "CREATE INDEX by_model ON embeddings (model, provider, created)")

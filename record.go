@@ -34,6 +34,6 @@ func (r *Record) OEmbeddings() (*oembeddings.OEmbeddings, error) {
 }
 
 func (r *Record) OEmbeddingsOrNil() *oembeddings.OEmbeddings {
-	oe, _ :=  oembeddings.FromAttributes(r.Attributes)
+	oe, _ := oembeddings.FromAttributes(r.Attributes)
 	return oe
 }
