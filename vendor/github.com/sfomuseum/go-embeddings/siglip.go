@@ -12,21 +12,22 @@ import (
 	"time"
 )
 
-type MLXClipEmbedder[T Float] struct {
+func init() {
+	ctx := context.Background()
+	RegisterEmbedder[float32](ctx, "siglip", NewSigLIPCommandLineEmbedder)
+	RegisterEmbedder[float32](ctx, "siglip32", NewSigLIPCommandLineEmbedder)
+	RegisterEmbedder[float64](ctx, "siglip64", NewSigLIPCommandLineEmbedder)
+}
+
+type SigLIPCommandLineEmbedder[T Float] struct {
 	Embedder[T]
 	python        string
 	embeddings_py string
+	model         string
 	precision     string
 }
 
-func init() {
-	ctx := context.Background()
-	RegisterEmbedder[float32](ctx, "mlxclip", NewMLXClipEmbedder)
-	RegisterEmbedder[float32](ctx, "mlxclip32", NewMLXClipEmbedder)
-	RegisterEmbedder[float64](ctx, "mlxclip64", NewMLXClipEmbedder)
-}
-
-func NewMLXClipEmbedder[T Float](ctx context.Context, uri string) (Embedder[T], error) {
+func NewSigLIPCommandLineEmbedder[T Float](ctx context.Context, uri string) (Embedder[T], error) {
 
 	u, err := url.Parse(uri)
 
@@ -48,12 +49,6 @@ func NewMLXClipEmbedder[T Float](ctx context.Context, uri string) (Embedder[T], 
 		return nil, err
 	}
 
-	precision := "float64"
-
-	if strings.HasSuffix(u.Scheme, "32") {
-		precision = fmt.Sprintf("%s#as-float%d", precision, 32)
-	}
-
 	python := "python"
 
 	if q.Has("python") {
@@ -73,22 +68,36 @@ func NewMLXClipEmbedder[T Float](ctx context.Context, uri string) (Embedder[T], 
 		python = abs_python
 	}
 
-	e := &MLXClipEmbedder[T]{
+	if !q.Has("model") {
+		return nil, fmt.Errorf("Required model (HuggingFace checkpoint URI) missing.")
+	}
+
+	model := q.Get("model")
+
+	precision := "float32"
+
+	if strings.HasSuffix(u.Scheme, "64") {
+		precision = fmt.Sprintf("%s#as-float%d", precision, 64)
+	}
+
+	e := &SigLIPCommandLineEmbedder[T]{
 		python:        python,
 		embeddings_py: embeddings_py,
 		precision:     precision,
+		model:         model,
 	}
 
 	return e, nil
 }
 
-func (e *MLXClipEmbedder[T]) TextEmbeddings(ctx context.Context, req *EmbeddingsRequest) (EmbeddingsResponse[T], error) {
-	return e.generate_embeddings(ctx, req, "text", string(req.Body))
+func (e *SigLIPCommandLineEmbedder[T]) TextEmbeddings(ctx context.Context, req *EmbeddingsRequest) (EmbeddingsResponse[T], error) {
+
+	return e.generateEmbeddingsFromCommandLine(ctx, req, "text", string(req.Body))
 }
 
-func (e *MLXClipEmbedder[T]) ImageEmbeddings(ctx context.Context, req *EmbeddingsRequest) (EmbeddingsResponse[T], error) {
+func (e *SigLIPCommandLineEmbedder[T]) ImageEmbeddings(ctx context.Context, req *EmbeddingsRequest) (EmbeddingsResponse[T], error) {
 
-	tmp, err := os.CreateTemp("", "mlxclip.*.img")
+	tmp, err := os.CreateTemp("", "siglip.*.img")
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create tmp file, %w", err)
@@ -108,12 +117,12 @@ func (e *MLXClipEmbedder[T]) ImageEmbeddings(ctx context.Context, req *Embedding
 		return nil, err
 	}
 
-	return e.generate_embeddings(ctx, req, "image", tmp.Name())
+	return e.generateEmbeddingsFromCommandLine(ctx, req, "image", tmp.Name())
 }
 
-func (e *MLXClipEmbedder[T]) generate_embeddings(ctx context.Context, req *EmbeddingsRequest, target string, input string) (EmbeddingsResponse[T], error) {
+func (e *SigLIPCommandLineEmbedder[T]) generateEmbeddingsFromCommandLine(ctx context.Context, req *EmbeddingsRequest, target string, input string) (EmbeddingsResponse[T], error) {
 
-	tmp, err := os.CreateTemp("", "mlxclip.*.json")
+	tmp, err := os.CreateTemp("", "siglip.*.json")
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create tmp file, %w", err)
@@ -129,9 +138,10 @@ func (e *MLXClipEmbedder[T]) generate_embeddings(ctx context.Context, req *Embed
 
 	args := []string{
 		e.embeddings_py,
-		target,
-		input,
-		tmp.Name(),
+		"--model_name", e.model,
+		"--embeddings_type", target,
+		"--embeddings_source", input,
+		"--embeddings_output", tmp.Name(),
 	}
 
 	cmd := exec.CommandContext(ctx, e.python, args...)
@@ -165,7 +175,7 @@ func (e *MLXClipEmbedder[T]) generate_embeddings(ctx context.Context, req *Embed
 		CommonId:        req.Id,
 		CommonPrecision: e.precision,
 		CommonCreated:   ts,
-		CommonModel:     "mlxclip",
+		CommonModel:     e.model,
 	}
 
 	switch {

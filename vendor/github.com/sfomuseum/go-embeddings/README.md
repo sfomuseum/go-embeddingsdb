@@ -204,8 +204,14 @@ Derive vector embeddings from a Python script using the [harperreed/mlx_clip](ht
 The option requires a device using an Apple Silicon chip and involves a non-zero manual set up process discussed below.
 
 ```
-mlxclip://{PATH_TO_EMBEDDINGS_DOT_PY}
+mlxclip://{PATH_TO_EMBEDDINGS_DOT_PY}?{PARAMETERS}
 ```
+
+Valid query parameters are:
+
+| Name | Value | Required | Notes |
+| --- | --- | --- | --- |
+| python | string | no | The path to the Python runtime to use. For example one created by a Python virtual environment. |
 
 #### Set up
 
@@ -272,7 +278,7 @@ openclip://?{PARAMETERS}
 
 | Name | Value | Required | Notes |
 | --- | --- | --- | --- |
-| client-uri | string | no | The URI of the HTTP endpoint exposing the OpenCLIP model functionality. Default is `http://localhost:8080`. |
+| client-uri | string | no | The URI of the HTTP endpoint exposing the OpenCLIP model functionality. Default is `http://localhost:5000`. |
 
 #### Set up
 
@@ -298,9 +304,93 @@ INFO:werkzeug:WARNING: This is a development server. Do not use it in a producti
 INFO:werkzeug:Press CTRL+C to quit
 ```
 
+### siglip://
+
+Derive vector embeddings from a Python script using the Google [SigLIP (2)](https://github.com/google-research/big_vision/blob/main/big_vision/configs/proj/image_text/README_siglip2.md) models.
+
+#### Set up
+
+Set up is not yet automated so you'll need to do something like this:
+
+```
+$> cd /usr/local/src
+$> python -m venv siglip
+$> cd siglip/
+$> bash bin/activate
+$> bin/pip install torch transformers pillow protobuf SentencePiece Flask
+```
+
+##### Command line
+
+If you want to derive SigLIP embeddings from a simple command line tool copy the included code in [siglip_py.txt](siglip_py.txt) in to a file called `embeddings.py` (or whatever you choose). Putting it all together the URI to create a new `Embedder` intance would be:
+
+```
+siglib://{OPTIONAL_HOST}{PATH_TO_EMBEDDINGS_DOT_PY}?{PARAMETERS}`
+```
+
+Valid query parameters are:
+
+| Name | Value | Required | Notes |
+| --- | --- | --- | --- |
+| model | string | yes | The HuggingFace checkpoint URI of the model to use. For example "google/siglip-so400m-patch14-384" |
+| python | string | no | The path to the Python runtime to use. For example one created by a Python virtual environment. |
+
+For example:
+
+```
+siglip:///usr/local/src/siglip/embeddings.py?model=google/siglip-base-patch16-224&python=/usr/local/src/siglip/bin/python
+```
+
+_Note how the Python runtime created in the virtual environment is specified in the `?python=` query parameter._
+
+And then putting it altogether with the `bin/embeddings` tool described above:
+
+```
+$> echo "Hello world" | ./bin/embeddings -client-uri 'siglip://venv/usr/local/src/siglip/embeddings.py?model=google/siglip-base-patch16-224&python=/usr/local/src/siglip/bin/python' text -
+{"embeddings":[0.010030805,-0.02573614,0.029724538,... and so on
+```
+
+##### Client
+
+If you want to derive SigLIP embeddings from a long-running server instance copy the included code in [siglip_server_py.txt](siglip_server_py.txt) in to a file called `embeddings_server.py` (or whatever you choose). This is a simple Flask application which can be launch as follows:
+
+```
+$> ./bin/flask --app embeddings_server run
+Loading weights: 100%
+ * Serving Flask app 'embeddings_server'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+```
+
+_Note: As of this writing the included server code only supports a single SigLIP model. The default value is `google/siglip-base-patch16-224`. If you want to use a different model you will need to change it manually._
+
+The URI to create a new `Embedder` instance with this server would be:
+
+```
+siglip-client://?{PARAMTERS}
+```
+
+Valid parameters are:
+
+| Name | Value | Required | Notes |
+| --- | --- | --- | --- |
+| client-uri | string | no | The URI of the HTTP endpoint exposing the OpenCLIP model functionality. Default is `http://localhost:5000`. |
+
+
+For example:
+
+```
+$> ./bin/embeddings -client-uri 'siglip-client://' image test.pmg
+{"embeddings":[-0.017064538,0.00726526,-0.0042089703 ... and so on
+```
+
 #### See also
 
-* https://github.com/mlfoundations/open_clip
+* https://github.com/google-research/big_vision/blob/main/big_vision/configs/proj/image_text/README_siglip2.md
+* https://huggingface.co/google/siglip-base-patch16-224
+* https://huggingface.co/google/siglip-so400m-patch14-384
 
 ## Tests
 
@@ -314,3 +404,4 @@ Because so many of the implementations above depend on the availability of exter
 | mobileclip:// | mobileclip |
 | ollama:// | ollama |
 | openclip:// | openclip |
+| siglip:// | siglip |
