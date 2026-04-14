@@ -63,6 +63,9 @@
 	    
 	</div>
 	<div class="record-similar">
+	  {{ if eq (len .Similar) 0 -}}
+	  No similar records found.
+	  {{ else -}}
 	    {{ range $i, $s := .Similar -}}
 	    {{ $oe := $s.OEmbeddingsOrNil -}}    
 	    <div class="similar-image">
@@ -95,6 +98,7 @@
 		    </td>
 		</tr>    
 	    </table>
+	    {{ end -}}
 	    {{ end -}}
 	</div>
 	
