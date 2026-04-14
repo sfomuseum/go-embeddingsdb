@@ -870,7 +870,7 @@ Finally rebuild the `embeddingsdb-server` with the customized DuckDB library usi
 ```
 $> cd /usr/local/src/go-embeddingsdb
 $> mkdir work
-$> cp cp /usr/local/src/duckdb/build/release/libduckdb_bundle.a ./work/
+$> cp /usr/local/src/duckdb/build/release/libduckdb_bundle.a ./work/
 
 $> make server-bundle
 CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" \
