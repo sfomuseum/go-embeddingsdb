@@ -5,6 +5,12 @@ TAGS=sqlite
 vuln:
 	govulncheck -show verbose ./...
 
+# godoc over http is deprecated but
+# go install golang.org/x/tools/cmd/godoc@latest
+
+godoc:
+	godoc -http=:6060
+
 test:
 	go test -tags $(TAGS) -v ./...
 
@@ -41,3 +47,4 @@ server-bundle:
 
 proto:
 	protoc --go_out=. --go_opt=paths=source_relative --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative grpc/org_sfomuseum_embeddingsdb_service.proto
+
