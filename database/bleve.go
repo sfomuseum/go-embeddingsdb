@@ -6,9 +6,11 @@ import (
 	"context"
 	"fmt"
 	"iter"
-
-	_ "github.com/blevesearch/bleve/v2"
-
+	"net/url"
+	"log/slog"
+	"strconv"
+	
+	"github.com/blevesearch/bleve/v2"
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -16,6 +18,7 @@ import (
 
 type BleveDatabase struct {
 	Database
+	index bleve.Index
 }
 
 func init() {
@@ -29,7 +32,48 @@ func init() {
 }
 
 func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
-	db := &BleveDatabase{}
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse URI, %w", err)
+	}
+
+	path_index := u.Path
+	
+	q := u.Query()
+
+	dimensions := 512
+
+	if q.Has("dimensions") {
+
+		v, err := strconv.Atoi(q.Get("dimensions"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Invalid ?dimensions= parameter, %w", err)
+		}
+
+		dimensions = v
+		slog.Debug("Reassign dimensions", "value", dimensions)
+	}
+	
+	vec_mapping := bleve.NewVectorFieldMapping()
+	vec_mapping.Dims = dimensions
+	vec_mapping.Similarity = "l2_norm"
+	
+	idx_mapping := bleve.NewIndexMapping()
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
+	
+	index, err := bleve.New(path_index, idx_mapping)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	db := &BleveDatabase{
+		index: index,
+	}
+	
 	return db, nil
 }
 
@@ -38,7 +82,8 @@ func (db *BleveDatabase) Export(ctx context.Context, uri string) error {
 }
 
 func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
-	return nil
+
+	return db.index.Index(rec.Key(), rec)
 }
 
 func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
