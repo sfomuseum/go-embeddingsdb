@@ -1,3 +1,5 @@
+//go:build bleve
+
 package database
 
 // https://github.com/blevesearch/bleve/blob/master/docs/vectors.md
@@ -16,6 +18,7 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/blevesearch/bleve/v2/search/query"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
@@ -36,6 +39,37 @@ func init() {
 	}
 }
 
+func defaultMappings(dimensions int) *mapping.IndexMappingImpl {
+
+	kw_mapping := bleve.NewTextFieldMapping()
+	kw_mapping.Analyzer = "keyword"
+	kw_mapping.Store = false
+	kw_mapping.Index = true
+	kw_mapping.DocValues = true
+
+	vec_mapping := bleve.NewVectorFieldMapping()
+	vec_mapping.Dims = dimensions
+	vec_mapping.Similarity = "l2_norm"
+	vec_mapping.Store = true
+	vec_mapping.Index = true
+	vec_mapping.DocValues = true
+
+	idx_mapping := bleve.NewIndexMapping()
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("model", kw_mapping)
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("provider", kw_mapping)
+
+	return idx_mapping
+}
+
+// Create a new [BleveDatabase] instance for managing embeddings using the Bleve document store derived from 'uri' which is expected to take the form of:
+//
+//	bleve://{PATH}?{QUERY_PARAMETERS}
+//
+// If {PATH} is omitted an in-memory database will be created.
+//
+// Valid query parameters are:
+// * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
 func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -62,24 +96,6 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		slog.Debug("Reassign dimensions", "value", dimensions)
 	}
 
-	kw_mapping := bleve.NewTextFieldMapping()
-	kw_mapping.Analyzer = "keyword"
-	kw_mapping.Store = false
-	kw_mapping.Index = true
-	kw_mapping.DocValues = true
-
-	vec_mapping := bleve.NewVectorFieldMapping()
-	vec_mapping.Dims = dimensions
-	vec_mapping.Similarity = "l2_norm"
-	vec_mapping.Store = true
-	vec_mapping.Index = true
-	vec_mapping.DocValues = true
-
-	idx_mapping := bleve.NewIndexMapping()
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("model", kw_mapping)
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("provider", kw_mapping)
-
 	var index bleve.Index
 
 	bleve_opts := map[string]interface{}{
@@ -89,12 +105,14 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	switch path_index {
 	case "":
+		idx_mapping := defaultMappings(dimensions)
 		index, err = bleve.NewMemOnly(idx_mapping)
 	default:
 
 		_, err = os.Stat(path_index)
 
 		if err != nil {
+			idx_mapping := defaultMappings(dimensions)
 			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", bleve_opts)
 		} else {
 			index, err = bleve.OpenUsing(path_index, bleve_opts)
@@ -102,7 +120,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to create Bleve index, %w", err)
 	}
 
 	db := &BleveDatabase{
@@ -124,13 +142,13 @@ func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 	err := db.index.Index(id, rec)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to add record %s, %w", id, err)
 	}
 
 	raw, err := json.Marshal(rec)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to marshal record for storing internally, %w", err)
 	}
 
 	return db.index.SetInternal([]byte(id), raw)
@@ -138,7 +156,8 @@ func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 
 func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
 
-	id := fmt.Sprintf("%s-%s-%s", req.Provider, req.DepictionId, req.Model)
+	id := req.Key()
+	// id := fmt.Sprintf("%s-%s-%s", req.Provider, req.DepictionId, req.Model)
 
 	q := bleve.NewDocIDQuery([]string{id})
 
@@ -148,7 +167,7 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 	rsp, err := db.index.Search(bl_req)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to execute search, %w", err)
 	}
 
 	if rsp.Total != 1 {
@@ -162,7 +181,8 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 
 func (db *BleveDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
 
-	id := fmt.Sprintf("%s-%s-%s", req.Provider, req.DepictionId, req.Model)
+	id := req.Key()
+	// id := fmt.Sprintf("%s-%s-%s", req.Provider, req.DepictionId, req.Model)
 	return db.index.Delete(id)
 }
 
@@ -205,7 +225,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	rsp, err := db.index.Search(search_req)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to execute search request, %w", err)
 	}
 
 	for _, hit := range rsp.Hits {
@@ -219,7 +239,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 		rec, err := db.getInternal(hit.ID)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Failed to get internal record for '%s', %w", hit.ID, err)
 		}
 
 		// Why isn't this filter being applied above?
@@ -256,14 +276,15 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	rsp, err := db.index.Search(req)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("Failed to execute search, %w", err)
 	}
 
 	for _, h := range rsp.Hits {
+
 		rec, err := db.getInternal(h.ID)
 
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("Failed to retrieve internal record '%s', %w", h.ID, err)
 		}
 
 		records = append(records, rec)
@@ -272,7 +293,7 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	pg_rsp, err := countable.NewResultsFromCountWithOptions(pg_opts, int64(rsp.Total))
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("Failed to derive pagination results, %w", err)
 	}
 
 	return records, pg_rsp, nil
@@ -285,14 +306,14 @@ func (db *BleveDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddin
 		idx, err := db.index.Advanced()
 
 		if err != nil {
-			yield(nil, err)
+			yield(nil, fmt.Errorf("Failed to retrieve internal index, %w", err))
 			return
 		}
 
 		idx_r, err := idx.Reader()
 
 		if err != nil {
-			yield(nil, err)
+			yield(nil, fmt.Errorf("Failed to retrieve internal reader, %w", err))
 			return
 		}
 
@@ -301,7 +322,7 @@ func (db *BleveDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddin
 		id_r, err := idx_r.DocIDReaderAll()
 
 		if err != nil {
-			yield(nil, err)
+			yield(nil, fmt.Errorf("Failed to retrieve document reader, %w", err))
 			return
 		}
 
@@ -312,13 +333,13 @@ func (db *BleveDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddin
 			id, err := id_r.Next()
 
 			if err != nil {
-				yield(nil, err)
+				yield(nil, fmt.Errorf("Document reader did not yield next, %w", err))
 				return
 			}
 
 			rec, err := db.getInternal(string(id))
 
-			if !yield(rec, err) {
+			if !yield(rec, fmt.Errorf("Failed to retrieve internal record for '%s', %w", string(id), err)) {
 				return
 			}
 		}
@@ -337,7 +358,7 @@ func (db *BleveDatabase) LastUpdate(ctx context.Context) (int64, error) {
 	rsp, err := db.index.Search(req)
 
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("Failed to execute search request, %w", err)
 	}
 
 	if rsp.Total == 0 {
@@ -347,7 +368,7 @@ func (db *BleveDatabase) LastUpdate(ctx context.Context) (int64, error) {
 	rec, err := db.getInternal(rsp.Hits[0].ID)
 
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("Failed to retrieve internal record for '%s', %w", rsp.Hits[0].ID, err)
 	}
 
 	return rec.Created, nil
@@ -359,7 +380,7 @@ func (db *BleveDatabase) URI() string {
 
 func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
 
-	facet := bleve.NewFacetRequest("model", 1000000)
+	facet := bleve.NewFacetRequest("model", 1000000) // derive this number from document count
 	query := bleve.NewMatchAllQuery()
 	req := bleve.NewSearchRequest(query)
 	req.AddFacet("model", facet)
@@ -367,7 +388,7 @@ func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]str
 	rsp, err := db.index.Search(req)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to execute search request, %w", err)
 	}
 
 	terms := rsp.Facets["model"].Terms.Terms()
@@ -382,7 +403,7 @@ func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]str
 
 func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
 
-	facet := bleve.NewFacetRequest("provider", 1000000)
+	facet := bleve.NewFacetRequest("provider", 1000000) // derive this number from document count
 	query := bleve.NewMatchAllQuery()
 	req := bleve.NewSearchRequest(query)
 	req.AddFacet("provider", facet)
@@ -390,7 +411,7 @@ func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
 	rsp, err := db.index.Search(req)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to execute search request, %w", err)
 	}
 
 	terms := rsp.Facets["provider"].Terms.Terms()
@@ -412,7 +433,7 @@ func (db *BleveDatabase) getInternal(id string) (*embeddingsdb.Record, error) {
 	raw, err := db.index.GetInternal([]byte(id))
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to get internal record, %w", err)
 	}
 
 	if raw == nil {
@@ -424,7 +445,7 @@ func (db *BleveDatabase) getInternal(id string) (*embeddingsdb.Record, error) {
 	err = json.Unmarshal(raw, &rec)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to unmarshal internal record, %w", err)
 	}
 
 	return rec, nil

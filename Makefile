@@ -1,7 +1,7 @@
 GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
-LDFLAGS=-s -w -r /usr/local/lib
+LDFLAGS=-s -w
 
-TAGS=sqlite,vectors
+TAGS=sqlite
 
 vuln:
 	govulncheck -show verbose ./...

@@ -168,7 +168,11 @@ The WASM binary needs to be built manually using the `make wasmjs` Makefile targ
 
 ## Databases
 
-Here's the "tl;dr" so far: The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
+Here's the "tl;dr" so far:
+
+The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
+
+The Bleve implementation is also fast but is still pretty fiddly to get set up because of the dependency on `libfaiss` (see details below). It is also slow to index large datasets in advance of add bulk indexing methods to the `Database` interface. It does not require loading all data in to memory.
 
 ### duckdb://
 
@@ -198,6 +202,10 @@ duckdb:///usr/local/data/embeddings
 
 Manage embeddings use the [SQLite](https://www.sqlite.org/) database and the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
 
+```
+sqlite://?{QUERY_PARAMETERS}
+```
+
 Valid parameters are:
 
 | Key | Value | Required | Notes |
@@ -218,9 +226,29 @@ _Note: As of this writing only the Go-language [CGO bindings](https://github.com
 
 ### bleve://
 
-_This is work in development_
+Manage embeddings use the [Bleve](https://blevesearch.com/) document store.
 
-#### libfaiss
+_The Bleve implementation should still be considered experimental. It works but there are probably a bunch of places it could be improved and optimized._
+
+```
+bleve://{PATH}?{QUERY_PARAMETERS}
+```
+
+If `{PATH}` is omitted then an in-memory database will be created.
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+
+For example:
+
+```
+bleve:///usr/local/data/bleve-embeddings
+```
+
+#### Building (libfaiss)
 
 This is a bit of a chore on a Mac. If you have already installed `libfaiss` from Homebrew (or whatever) you need to remove it and install the Bleve-specific fork:
 
@@ -249,7 +277,9 @@ _For build instructions for Linux and Windows please consult the [Bleve document
 This also means you need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
 
 ```
-go build -tags=sqlite,vectors -mod readonly -ldflags="-s -w -r /usr/local/lib" -o bin/embeddingsdb-client cmd/client/main.go
+$> make cli TAGS=sqlite,bleve,vectors LDFLAGS='-s -w -r /usr/local/lib'
+go build -tags=sqlite,bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/lib" -o bin/embeddingsdb-client cmd/client/main.go
+...and so on
 ```
 
 If that weren't enough the current versioned Bleve release (2.5.7) is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from a [go.work](https://go.dev/doc/tutorial/workspaces) file. This is not ideal but it's less less-ideal than the alternatives.
@@ -349,11 +379,19 @@ Note: If you need to build a binary tool with support for DuckDB for MacOS _and_
 
 Build tags are used to enable support for various features. The default set of tags are `sqlite` but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
 
+#### bleve
+
+The `bleve` tag adds support for [Bleve](https://blevesearch.com/) document store as an embeddings database. Note that the `vectors` tags is also necessary.
+
 #### sqlite
 
 The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://alexgarcia.xyz/sqlite-vec/) extension for vector embeddings support.
 
 _Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
+
+#### vectors
+
+The `vectors` tag is necessary to compile `libfaiss` code when building Bleve document store support. This is a compliement to the `bleve` tag.
 
 ### embeddingsdb-server
 
