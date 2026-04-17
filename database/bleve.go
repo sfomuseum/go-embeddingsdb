@@ -5,22 +5,22 @@ package database
 import (
 	"context"
 	"fmt"
+	"encoding/json"
 	"iter"
 	"log/slog"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/blevesearch/bleve/v2"
-	index_api "github.com/blevesearch/bleve_index_api"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
 type BleveDatabase struct {
 	Database
+	uri string
 	index bleve.Index
 }
 
@@ -62,22 +62,22 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	kw_mapping := bleve.NewTextFieldMapping()
 	kw_mapping.Analyzer = "keyword"
-	kw_mapping.Store = true
+	kw_mapping.Store = false
 	kw_mapping.Index = true
 	kw_mapping.DocValues = true
-
-	num_mapping := bleve.NewNumericFieldMapping()
 
 	vec_mapping := bleve.NewVectorFieldMapping()
 	vec_mapping.Dims = dimensions
 	vec_mapping.Similarity = "l2_norm"
-
+	vec_mapping.Store = true     
+	vec_mapping.Index = true     
+	vec_mapping.DocValues = true
+	
 	idx_mapping := bleve.NewIndexMapping()
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("created", num_mapping)
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("model", kw_mapping)
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("provider", kw_mapping)
-
+	
 	var index bleve.Index
 
 	switch path_index {
@@ -99,6 +99,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	db := &BleveDatabase{
+		uri: uri,
 		index: index,
 	}
 
@@ -111,7 +112,21 @@ func (db *BleveDatabase) Export(ctx context.Context, uri string) error {
 
 func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
 
-	return db.index.Index(rec.Key(), rec)
+	id := rec.Key()
+	
+	err := db.index.Index(id, rec)
+
+	if err != nil {
+		return err
+	}
+
+	raw, err := json.Marshal(rec)
+
+	if err != nil {
+		return err
+	}
+	
+	return db.index.SetInternal([]byte(id), raw)
 }
 
 func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
@@ -121,6 +136,8 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 	q := bleve.NewDocIDQuery([]string{id})
 
 	bl_req := bleve.NewSearchRequestOptions(q, 1, 0, false)
+	bl_req.Fields = []string{"*"}
+	
 	rsp, err := db.index.Search(bl_req)
 
 	if err != nil {
@@ -133,64 +150,36 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 
 	first := rsp.Hits[0]
 
-	d, err := db.index.Document(first.ID)
+	return db.getInternal(first.ID)
+}
+
+func (db *BleveDatabase) getInternal(id string) (*embeddingsdb.Record, error){
+
+	raw, err := db.index.GetInternal([]byte(id))
+	
+	if err != nil {
+		return nil, err
+	}
+
+	if raw == nil {
+		return nil, fmt.Errorf("Internal record missing")
+	}
+	
+	var rec *embeddingsdb.Record
+	
+	err = json.Unmarshal(raw, &rec)
 
 	if err != nil {
 		return nil, err
 	}
 
-	rec := new(embeddingsdb.Record)
-
-	d.VisitFields(func(f index_api.Field) {
-		slog.Info("F", "f", f.Name(), "v", string(f.Value()))
-
-		switch {
-		case strings.HasPrefix(f.Name(), "attributes."):
-
-			attrs := rec.Attributes
-
-			if attrs == nil {
-				attrs = make(map[string]string)
-			}
-
-			k := strings.Replace(f.Name(), "attributes.", "", 1)
-			attrs[k] = string(f.Value())
-			rec.Attributes = attrs
-
-		default:
-			switch f.Name() {
-			case "subject_id":
-				rec.SubjectId = string(f.Value())
-			case "depiction_id":
-				rec.DepictionId = string(f.Value())
-			case "model":
-				rec.Model = string(f.Value())
-			case "provider":
-				rec.Provider = string(f.Value())
-			case "created":
-
-				str_v := string(f.Value())
-				str_v = strings.TrimSpace(str_v)
-				v, err := strconv.ParseInt(str_v, 10, 64)
-
-				if err != nil {
-					slog.Error("Failed to parse created time", "v", str_v)
-				} else {
-					rec.Created = v
-				}
-			case "embeddings":
-				// Y NO APPEAR EMBEDDINGS ???
-			default:
-				slog.Warn("Unrecognized field", "field", f.Name())
-			}
-		}
-	})
-
-	return rec, nil
+	return rec, nil	
 }
 
 func (db *BleveDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
-	return nil
+
+	id := fmt.Sprintf("%s-%s-%s", req.Provider, req.DepictionId, req.Model)	
+	return db.index.Delete(id)
 }
 
 func (db *BleveDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
@@ -212,7 +201,50 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, opts pagination.Option
 }
 
 func (db *BleveDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
-	return func(yield func(*embeddingsdb.Record, error) bool) {}
+	
+	return func(yield func(*embeddingsdb.Record, error) bool) {
+
+		idx, err := db.index.Advanced()
+		
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+		
+		idx_r, err := idx.Reader()
+		
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+		
+		defer idx_r.Close()
+
+		id_r, err := idx_r.DocIDReaderAll()
+		
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+		
+		defer id_r.Close()
+
+		for {
+			
+			id, err := id_r.Next()
+			
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			rec, err := db.getInternal(string(id))
+			
+			if !yield(rec, err) {
+				return
+			}
+		}
+	}
 }
 
 func (db *BleveDatabase) LastUpdate(ctx context.Context) (int64, error) {
@@ -220,7 +252,7 @@ func (db *BleveDatabase) LastUpdate(ctx context.Context) (int64, error) {
 }
 
 func (db *BleveDatabase) URI() string {
-	return "bleve://"
+	return db.uri
 }
 
 func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
