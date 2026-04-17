@@ -216,6 +216,42 @@ sqlite://?dsn=file:/usr/local/data/embeddings.db
 
 _Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
 
+### bleve://
+
+_This is work in development_
+
+#### libfaiss
+
+This is a bit of a chore on a Mac. If you have already installed `libfaiss` from Homebrew (or whatever) you need to remove it and install the Bleve-specific fork:
+
+```
+$> git clone ssh://git@github.com/blevesearch/faiss.git
+$> cd faiss
+
+$> export LDFLAGS="-L/opt/homebrew/opt/llvm/lib" \
+$> export CPPFLAGS="-I/opt/homebrew/opt/llvm/include" \
+$> export CXX=/opt/homebrew/opt/llvm/bin/clang++ \
+$> export CC=/opt/homebrew/opt/llvm/bin/clang \
+
+$> cmake -B build \
+  -DFAISS_ENABLE_GPU=OFF \
+  -DFAISS_ENABLE_C_API=ON \
+  -DBUILD_SHARED_LIBS=ON \
+  -DFAISS_ENABLE_PYTHON=OFF .
+
+$> make -C build
+$> sudo make -C build install
+$> sudo cp build/c_api/libfaiss_c.dylib /usr/local/lib
+```
+
+This also means you need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
+
+```
+go build -tags=sqlite,vectors -mod readonly -ldflags="-s -w -r /usr/local/lib" -o bin/embeddingsdb-client cmd/client/main.go
+```
+
+If that weren't enough the main Bleve release is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from `go.work`. This is not ideal but it's less less-ideal than the alternatives.
+
 ## Servers
 
 ### grcp://
