@@ -244,13 +244,15 @@ $> sudo make -C build install
 $> sudo cp build/c_api/libfaiss_c.dylib /usr/local/lib
 ```
 
+_For build instructions for Linux and Windows please consult the [Bleve documentation](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#setup-instructions)._
+
 This also means you need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
 
 ```
 go build -tags=sqlite,vectors -mod readonly -ldflags="-s -w -r /usr/local/lib" -o bin/embeddingsdb-client cmd/client/main.go
 ```
 
-If that weren't enough the main Bleve release is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from `go.work`. This is not ideal but it's less less-ideal than the alternatives.
+If that weren't enough the current versioned Bleve release (2.5.7) is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from a [go.work](https://go.dev/doc/tutorial/workspaces) file. This is not ideal but it's less less-ideal than the alternatives.
 
 ## Servers
 

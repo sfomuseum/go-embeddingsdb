@@ -17,7 +17,7 @@ type Record struct {
 	// Model is the label for the model used to generate embeddings for DepictionId.
 	Model string `json:"model" parquet:"model,dict,zstd" bleve:"store"`
 	// Embeddings are the embeddings generated for DepictionId using Model.
-	Embeddings []float32 `json:"embeddings" parquet:"embeddings,plain,list" bleve:"store"`	// Note the 'plain,list'. This is important in order to prevent DLBA which makes DuckDB sad.
+	Embeddings []float32 `json:"embeddings" parquet:"embeddings,plain,list" bleve:"store"` // Note the 'plain,list'. This is important in order to prevent DLBA which makes DuckDB sad.
 	// Created is the Unix timestamp when Embeddings were generated.
 	Created int64 `json:"created" parquet:"created" bleve:"store"`
 	// Attributes is an arbitrary map of key-value properties associated with the embeddings. Record attributes
