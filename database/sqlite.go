@@ -264,8 +264,8 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return false, nil
 }
 
-func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context) int {
-	return 0
+func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+	return 0, nil
 }
 
 func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context) error {

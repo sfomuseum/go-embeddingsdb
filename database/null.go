@@ -37,8 +37,8 @@ func (db *NullDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record)
 	return false, nil
 }
 
-func (db *NullDatabase) BatchedRecordsCount(ctx context.Context) int {
-	return 0
+func (db *NullDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+	return 0, nil
 }
 
 func (db *NullDatabase) AddBatchedRecord(ctx context.Context) error {

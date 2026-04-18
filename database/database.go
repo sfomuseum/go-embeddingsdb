@@ -26,7 +26,7 @@ type Database interface {
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
 	AddRecord(context.Context, *embeddingsdb.Record) (bool, error)
 	// The number of batched records currently waiting to be added.
-	BatchedRecordsCount(context.Context) int
+	BatchedRecordsCount(context.Context) (int, error)
 	// Add the pending batched records
 	AddBatchedRecords(context.Context) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.

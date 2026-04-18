@@ -19,7 +19,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -238,12 +237,12 @@ func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 	return true, nil
 }
 
-func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context) int {
+func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	return db.batch.Size()
+	return db.batch.Size(), nil
 }
 
 func (db *BleveDatabase) AddBatchedRecords(ctx context.Context) error {
@@ -351,10 +350,10 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	filter_q := bleve.NewConjunctionQuery(filters...)
 
 	// See the way we're assigning the filter to the KNN search? That's important.
-	
-	search_req := bleve.NewSearchRequest(bleve.NewMatchNoneQuery())	
+
+	search_req := bleve.NewSearchRequest(bleve.NewMatchNoneQuery())
 	search_req.AddKNNWithFilter("embeddings", req.Embeddings, int64(k), 1.0, filter_q)
-		
+
 	search_req.SortBy([]string{"-_score"})
 	search_req.Size = k
 	search_req.Fields = []string{"*"}
@@ -399,23 +398,23 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	from := int(countable.PageFromOptions(pg_opts))
 
 	var q query.Query
-	
+
 	if len(filters) > 0 {
-		
+
 		conjuncts := make([]query.Query, len(filters))
-		
+
 		for i, f := range filters {
 			mq := bleve.NewMatchQuery(fmt.Sprintf("%v", f.Value))
 			mq.SetField(f.Column)
 			conjuncts[i] = mq
 		}
-		
+
 		q = bleve.NewConjunctionQuery(conjuncts...)
-		
+
 	} else {
 		q = bleve.NewMatchAllQuery()
 	}
-	
+
 	req := bleve.NewSearchRequestOptions(q, per_page, from, false)
 	req.Fields = []string{"*"}
 

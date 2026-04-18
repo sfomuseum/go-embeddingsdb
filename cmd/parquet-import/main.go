@@ -43,7 +43,7 @@ func main() {
 	logger := slog.Default()
 	ctx := context.Background()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	cl, err := client.NewClient(ctx, client_uri)
