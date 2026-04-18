@@ -176,7 +176,7 @@ Here's the "tl;dr" so far:
 
 The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't uses a manageable amount of disk space but remains a chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
 
 ### duckdb://
 
