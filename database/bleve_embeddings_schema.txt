@@ -1,6 +1,6 @@
 {{ define "bleve_embeddings" -}}
 CREATE TABLE {{ .TableName  }} (
        id TEXT PRIMARY KEY,
-       embeddings []FLOAT,
+       embeddings FLOAT[],
 );
 {{ end -}}

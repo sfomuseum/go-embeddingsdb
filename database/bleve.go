@@ -9,6 +9,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"embed"
 	"encoding/binary"
 	"fmt"
@@ -24,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/duckdb/duckdb-go/v2"
+	"github.com/duckdb/duckdb-go/v2"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -42,14 +43,18 @@ var bleve_schema_fs embed.FS
 
 type BleveDatabase struct {
 	Database
-	uri           string
-	dimensions    int
-	index         bleve.Index
-	embeddings_db *sql.DB
-	embeddings_t  sfom_sql.Table
-	batch         *bleve.Batch
-	batch_size    int
-	mu            *sync.RWMutex
+	uri              string
+	dimensions       int
+	index            bleve.Index
+	embeddings_path  string
+	embeddings_tmp   bool
+	embeddings_db    *sql.DB
+	embeddings_tbl   sfom_sql.Table
+	embeddings_appdr *duckdb.Appender
+	embeddings_conn  *sql.Conn
+	batch            *bleve.Batch
+	batch_size       int
+	mu               *sync.RWMutex
 }
 
 func init() {
@@ -98,11 +103,21 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	var index bleve.Index
 	var path_embeddings string
+	var tmp_embeddings bool
 
 	switch path_index {
 	case "":
 		idx_mapping := bleveMappings(dimensions)
 		index, err = bleve.NewMemOnly(idx_mapping)
+
+		dir, err := os.MkdirTemp("", "embeddingsdb")
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create temp dir for static embeddings, %w", err)
+		}
+
+		path_embeddings = dir
+		tmp_embeddings = true
 	default:
 
 		_, err = os.Stat(path_index)
@@ -122,13 +137,17 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		}
 
 		path_embeddings = filepath.Join(path_index, "embeddingsdb")
+		tmp_embeddings = false
 	}
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create Bleve index, %w", err)
 	}
 
-	// START OF
+	// START OF code to store embeddings data in a local DuckDB database
+	// This is necessary because vector embeddings are not returned by default
+	// in Bleve's "Fields" dictionary and storing them internally (in Bleve)
+	// incurs a prohibitive disk usage cost.
 
 	emb_db, err := sql.Open("duckdb", path_embeddings)
 
@@ -148,19 +167,48 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, fmt.Errorf("Failed to setup (static) embeddings table, %w", err)
 	}
 
-	// END OF
+	emb_conn, err := emb_db.Conn(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create (static) embeddings db conn, %w", err)
+	}
+
+	var emb_appender *duckdb.Appender
+
+	err = emb_conn.Raw(func(conn any) error {
+
+		a, err := duckdb.NewAppenderFromConn(conn.(driver.Conn), "", emb_t.Name())
+
+		if err != nil {
+			return err
+		}
+
+		emb_appender = a
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to derive (static) embeddings appender, %w", err)
+	}
+
+	// END OF code to store embeddings data in a local DuckDB database
 
 	batch := index.NewBatch()
 	mu := new(sync.RWMutex)
 
 	db := &BleveDatabase{
-		uri:           uri,
-		index:         index,
-		dimensions:    dimensions,
-		embeddings_db: emb_db,
-		batch:         batch,
-		batch_size:    200,
-		mu:            mu,
+		uri:              uri,
+		index:            index,
+		dimensions:       dimensions,
+		embeddings_path:  path_embeddings,
+		embeddings_tmp:   tmp_embeddings,
+		embeddings_db:    emb_db,
+		embeddings_conn:  emb_conn,
+		embeddings_tbl:   emb_t,
+		embeddings_appdr: emb_appender,
+		batch:            batch,
+		batch_size:       200,
+		mu:               mu,
 	}
 
 	return db, nil
@@ -304,7 +352,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 
 	search_req := bleve.NewSearchRequest(filterQuery)
 	search_req.AddKNN("embeddings", req.Embeddings, int64(k), 1.0)
-	search_req.SortBy([]string{"_score"})
+	search_req.SortBy([]string{"-_score"})
 	search_req.Size = k
 	search_req.Fields = []string{"*"}
 
@@ -544,20 +592,55 @@ func (db *BleveDatabase) Close(ctx context.Context) error {
 
 	if db.batch.Size() >= 0 {
 
+		logger.Debug("Add remaining batched records", "count", db.batch.Size())
+
 		err := db.AddBatchedRecords(ctx)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to add remaining batched records, %w", err)
 		}
 	}
 
+	logger.Debug("Close static embeddings database")
+
+	err := db.embeddings_appdr.Close()
+
+	if err != nil {
+		return fmt.Errorf("Failed to close static embeddings appender, %w", err)
+	}
+
+	err = db.embeddings_conn.Close()
+
+	if err != nil {
+		return fmt.Errorf("Failed to close static embeddings appender DB connection, %w", err)
+	}
+
+	err = db.embeddings_db.Close()
+
+	if err != nil {
+		return fmt.Errorf("Failed to close static embeddings database, %w", err)
+	}
+
+	if db.embeddings_tmp {
+
+		err := os.RemoveAll(db.embeddings_path)
+
+		if err != nil {
+			return fmt.Errorf("Failed to remove temporary static embeddings (%s), %w", db.embeddings_path, err)
+		}
+	}
+
+	logger.Debug("Close Bleve index")
 	t2 := time.Now()
 
-	defer func() {
-		logger.Debug("Time to close index", "time", time.Since(t2))
-	}()
+	err = db.index.Close()
 
-	return db.index.Close()
+	if err != nil {
+		return fmt.Errorf("Failed to close Bleve index, %w", err)
+	}
+
+	logger.Debug("Time to close Bleve index", "time", time.Since(t2))
+	return nil
 }
 
 func (db *BleveDatabase) batchRecord(ctx context.Context, rec *embeddingsdb.Record) error {
@@ -677,61 +760,45 @@ func (db *BleveDatabase) storeEmbeddings(ctx context.Context, rec *embeddingsdb.
 
 	id := rec.Key()
 
-	q := fmt.Sprintf(`INSERT OR REPLACE INTO %s(id, embeddings) VALUES(?, ?)`, db.embeddings_t.Name())
+	q := fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, db.embeddings_tbl.Name())
 
-	_, err := db.embeddings_db.ExecContext(ctx, q, id, rec.Embeddings)
+	_, err := db.embeddings_db.ExecContext(ctx, q, id)
 
-	return err
+	if err != nil {
+		return err
+	}
 
-	/*
-		buf := make([]byte, len(data)*4)
+	err = db.embeddings_appdr.AppendRow(id, rec.Embeddings)
 
-		for i, f := range data {
-			bits := math.Float32bits(f)
-			binary.BigEndian.PutUint32(buf[i*4:], bits)
-		}
+	if err != nil {
+		return err
+	}
 
-		db.batch.SetInternal([]byte(id), buf)
-		return nil
-	*/
+	return db.embeddings_appdr.Flush()
 }
 
 func (db *BleveDatabase) assignEmbeddings(ctx context.Context, rec *embeddingsdb.Record) error {
 
 	id := rec.Key()
 
-	q := fmt.Sprintf(`SELECT embeddings FROM %s WHERE id = ?`, db.embeddings_t.Name())
+	comp := new(duckdb.Composite[[]float32])
+
+	q := fmt.Sprintf(`SELECT embeddings FROM %s WHERE id = ?`, db.embeddings_tbl.Name())
 
 	row := db.embeddings_db.QueryRowContext(ctx, q, id)
+	err := row.Scan(comp)
 
-	var embeddings []float32
-
-	err := row.Scan(&embeddings)
-
-	if err != nil {
+	switch {
+	case err == sql.ErrNoRows:
+		logger := slog.Default()
+		logger.Warn("No static embeddings found for record", "id", id)
+		return nil
+	case err != nil:
 		return err
+	default:
+		rec.Embeddings = comp.Get()
+		return nil
 	}
-
-	rec.Embeddings = embeddings
-	return nil
-
-	/*
-		buf, err := db.index.GetInternal([]byte(id))
-
-		if err != nil || buf == nil {
-			return nil, err
-		}
-
-		count := len(buf) / 4
-		result := make([]float32, count)
-
-		for i := 0; i < count; i++ {
-			bits := binary.BigEndian.Uint32(buf[i*4 : (i+1)*4])
-			result[i] = math.Float32frombits(bits)
-		}
-
-		return result, nil
-	*/
 }
 
 func bleveMappings(dimensions int) *mapping.IndexMappingImpl {

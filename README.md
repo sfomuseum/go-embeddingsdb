@@ -228,8 +228,6 @@ _Note: As of this writing only the Go-language [CGO bindings](https://github.com
 
 Manage embeddings use the [Bleve](https://blevesearch.com/) document store.
 
-_The Bleve implementation should still be considered experimental. It works but there are probably a bunch of places it could be improved and optimized._
-
 ```
 bleve://{PATH}?{QUERY_PARAMETERS}
 ```
@@ -247,6 +245,12 @@ For example:
 ```
 bleve:///usr/local/data/bleve-embeddings
 ```
+
+#### Building (DuckDB)
+
+Under the hood the Bleve implementation stores the static vector embeddings data in a separate DuckDB database. This is because the vector embeddings stored in Bleve itself are not returned as part of normal search queries and storing those data internally (to Bleve, outside of the search index) consumes an obscene amount of disk space. DuckDB simply uses less disk space.
+
+What this means, practically, when building a Bleve-backed implementation of the tools in this package is you will need to do the `go mod tidy && go mod vendor` dance, described below, to pull in the DuckDB `.a` files. Everything else should be handled internally and not your concern.
 
 #### Building (libfaiss)
 
