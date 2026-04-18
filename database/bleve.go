@@ -330,28 +330,31 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 
 	var filters []query.Query
 
-	modelQ := bleve.NewTermQuery(req.Model)
-	modelQ.SetField("model")
-
-	filters = append(filters, modelQ)
+	model_q := bleve.NewTermQuery(req.Model)
+	model_q.SetField("model")
+	filters = append(filters, model_q)
 
 	if req.SimilarProvider != nil && *req.SimilarProvider != "" {
-		provQ := bleve.NewTermQuery(*req.SimilarProvider)
-		provQ.SetField("provider")
-		filters = append(filters, provQ)
+		provider_q := bleve.NewMatchQuery(*req.SimilarProvider)
+		provider_q.Analyzer = "keyword"
+		provider_q.SetField("provider")
+		filters = append(filters, provider_q)
 	}
 
 	if len(req.Exclude) > 0 {
-		notQuery := bleve.NewDocIDQuery(req.Exclude)
-		boolQuery := bleve.NewBooleanQuery()
-		boolQuery.AddMustNot(notQuery)
-		filters = append(filters, boolQuery)
+		not_q := bleve.NewDocIDQuery(req.Exclude)
+		bool_q := bleve.NewBooleanQuery()
+		bool_q.AddMustNot(not_q)
+		filters = append(filters, bool_q)
 	}
 
-	filterQuery := bleve.NewConjunctionQuery(filters...)
+	filter_q := bleve.NewConjunctionQuery(filters...)
 
-	search_req := bleve.NewSearchRequest(filterQuery)
-	search_req.AddKNN("embeddings", req.Embeddings, int64(k), 1.0)
+	// See the way we're assigning the filter to the KNN search? That's important.
+	
+	search_req := bleve.NewSearchRequest(bleve.NewMatchNoneQuery())	
+	search_req.AddKNNWithFilter("embeddings", req.Embeddings, int64(k), 1.0, filter_q)
+		
 	search_req.SortBy([]string{"-_score"})
 	search_req.Size = k
 	search_req.Fields = []string{"*"}
@@ -376,15 +379,6 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 			return nil, fmt.Errorf("Failed to get internal record for '%s', %w", hit.ID, err)
 		}
 
-		// Why isn't this filter being applied above?
-
-		if len(req.Exclude) > 0 {
-
-			if slices.Contains(req.Exclude, rec.Key()) {
-				continue
-			}
-		}
-
 		results = append(results, &embeddingsdb.SimilarRecord{
 			Provider:    rec.Provider,
 			DepictionId: rec.DepictionId,
@@ -404,8 +398,25 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	per_page := int(pg_opts.PerPage())
 	from := int(countable.PageFromOptions(pg_opts))
 
-	query := bleve.NewMatchAllQuery()
-	req := bleve.NewSearchRequestOptions(query, per_page, from, false)
+	var q query.Query
+	
+	if len(filters) > 0 {
+		
+		conjuncts := make([]query.Query, len(filters))
+		
+		for i, f := range filters {
+			mq := bleve.NewMatchQuery(fmt.Sprintf("%v", f.Value))
+			mq.SetField(f.Column)
+			conjuncts[i] = mq
+		}
+		
+		q = bleve.NewConjunctionQuery(conjuncts...)
+		
+	} else {
+		q = bleve.NewMatchAllQuery()
+	}
+	
+	req := bleve.NewSearchRequestOptions(q, per_page, from, false)
 	req.Fields = []string{"*"}
 
 	rsp, err := db.index.Search(req)
