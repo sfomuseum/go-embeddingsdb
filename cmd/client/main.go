@@ -11,6 +11,8 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	_ "github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -98,11 +100,27 @@ func record(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
+
+	cl_closefunc := func() {
+
+		ctx := context.Background()
+		err := cl.Close(ctx)
+
+		if err != nil {
+			slog.Error("Failed to close", "error", err)
+			log.Fatalf("Failed to close client, %v", err)
+		}
+	}
+
+	defer cl_closefunc()
 
 	req := &embeddingsdb.GetRecordRequest{
 		Provider:    provider,

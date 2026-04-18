@@ -71,7 +71,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		model, _ := sanitize.GetString(req, "model")
 
 		if !slices.Contains(models, model) {
-			logger.Error("Unsupported model parameter", "model", model, "error", err)
+			logger.Error("Unsupported model parameter", "model", model, "models", models)
 			http.Error(rsp, "Bad request", http.StatusBadRequest)
 			return
 		}
@@ -80,6 +80,9 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			Embeddings: record.Embeddings,
 			Model:      model,
 			MaxResults: &opts.MaxResults,
+			Exclude: []string{
+				record.Key(),
+			},
 		}
 
 		similar_provider, err := sanitize.GetString(req, "similar-provider")

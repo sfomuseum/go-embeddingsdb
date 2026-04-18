@@ -55,7 +55,7 @@ func TestSQLiteDatabase(t *testing.T) {
 			},
 		}
 
-		err = db.AddRecord(ctx, rec)
+		_, err = db.AddRecord(ctx, rec)
 
 		if err != nil {
 			t.Fatalf("[%s] Failed to add record, %v", compression, err)
@@ -104,7 +104,7 @@ func TestSQLiteDatabase(t *testing.T) {
 			},
 		}
 
-		err = db.AddRecord(ctx, rec2)
+		_, err = db.AddRecord(ctx, rec2)
 
 		if err != nil {
 			t.Fatalf("[%s] Failed to add record 2, %v", compression, err)

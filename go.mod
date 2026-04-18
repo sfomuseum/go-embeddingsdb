@@ -3,7 +3,7 @@ module github.com/sfomuseum/go-embeddingsdb
 go 1.26.0
 
 require (
-	github.com/aaronland/go-http/v4 v4.0.2
+	github.com/aaronland/go-http/v4 v4.0.3
 	github.com/aaronland/go-pagination v0.3.0
 	github.com/aaronland/go-pagination-sql v0.2.0
 	github.com/aaronland/go-roster v1.0.0

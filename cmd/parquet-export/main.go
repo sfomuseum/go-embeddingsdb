@@ -7,6 +7,8 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
@@ -42,11 +44,27 @@ func main() {
 
 	ctx := context.Background()
 
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new database, %v", err)
 	}
+
+	cl_closefunc := func() {
+		slog.Info("CLOSE")
+		ctx := context.Background()
+		err := cl.Close(ctx)
+
+		if err != nil {
+			slog.Error("Failed to close client", "error", err)
+			log.Fatalf("Failed to close client, %v", err)
+		}
+	}
+
+	defer cl_closefunc()
 
 	var wr io.WriteCloser
 

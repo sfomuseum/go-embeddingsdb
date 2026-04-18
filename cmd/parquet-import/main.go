@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
@@ -41,11 +43,27 @@ func main() {
 	logger := slog.Default()
 	ctx := context.Background()
 
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new client, %v", err)
 	}
+
+	cl_closefunc := func() {
+
+		ctx := context.Background()
+		err := cl.Close(ctx)
+
+		if err != nil {
+			slog.Error("Failed to close", "error", err)
+			log.Fatalf("Failed to close client, %v", err)
+		}
+	}
+
+	defer cl_closefunc()
 
 	for _, path := range fs.Args() {
 

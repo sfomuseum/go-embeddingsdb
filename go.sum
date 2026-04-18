@@ -28,8 +28,8 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.54.0/go.mod h1:Mf6O40IAyB9zR/1J8nGDDPirZQQPbYJni8Yisy7NTMc=
 github.com/aaronland/go-aws/v3 v3.5.0 h1:krbdbbLEadrMXQD3Gz2dBoApeR7pQXvn4DpQoVhX5D0=
 github.com/aaronland/go-aws/v3 v3.5.0/go.mod h1:Obntrh1yihCcB3IZxdxICoGyh8YnZ6Xqc80epTnGGxA=
-github.com/aaronland/go-http/v4 v4.0.2 h1:3WreAK19ahl5kyLA+5DvORoEZtDJB+vXwYk4AZwPaXQ=
-github.com/aaronland/go-http/v4 v4.0.2/go.mod h1:q534C9tU2xlmtRYx7cTKmyZIEZBmA7WhXrUpX6g/RqQ=
+github.com/aaronland/go-http/v4 v4.0.3 h1:r3LY5ao2bsFiaXAgAblapvci4y/tq5SQB8CdKrjpr5E=
+github.com/aaronland/go-http/v4 v4.0.3/go.mod h1:whP6xvKeNGCgpxnEtMiTDjacgFCOgHIVY39T2P6VD6c=
 github.com/aaronland/go-pagination v0.2.0/go.mod h1:zrYVkUTBoe6yJ23l6OyTyfSpTyg6s/cNxZxNztXNQpQ=
 github.com/aaronland/go-pagination v0.3.0 h1:5YHm2ylZtWj40m+hyncrt4vaZxjZ5v6szi2F4OqkqO4=
 github.com/aaronland/go-pagination v0.3.0/go.mod h1:zrYVkUTBoe6yJ23l6OyTyfSpTyg6s/cNxZxNztXNQpQ=

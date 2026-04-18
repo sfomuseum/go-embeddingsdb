@@ -211,18 +211,18 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string) error {
 }
 
 // Add adds a [embeddingsdb.Record] instance to the SQLite database.
-func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
+func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
 
 	id, err := db.uidForRecord(ctx, rec.Provider, rec.DepictionId, rec.Model)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(rec.Embeddings)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	var vec_q string
@@ -235,19 +235,19 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	case sqlite_vec_default_compression:
 		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 	default:
-		return fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
+		return false, fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
 	}
 
 	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	enc_attrs, err := json.Marshal(rec.Attributes)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	now := time.Now()
@@ -258,10 +258,18 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	_, err = db.vec_db.ExecContext(ctx, records_q, id, rec.Provider, rec.DepictionId, rec.SubjectId, rec.Model, string(enc_attrs), rec.Created, lastmod)
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return err
+	return false, nil
+}
+
+func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context) error {
+	return nil
 }
 
 // Return the [embeddingsdb.Record] record matching 'provider', 'depiction_id' and 'model'.

@@ -7,7 +7,10 @@ import (
 	"log/slog"
 	"net"
 	"net/url"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -119,13 +122,26 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 		return fmt.Errorf("Failed to parse database URI, %w", err)
 	}
 
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	db, err := database.NewDatabase(ctx, s.db_uri)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create database, %w", err)
 	}
 
-	defer db.Close(ctx)
+	db_closefunc := func() {
+
+		ctx := context.Background()
+		err := db.Close(ctx)
+
+		if err != nil {
+			slog.Error("Failed to close database", "error", err)
+		}
+	}
+
+	defer db_closefunc()
 
 	db_path := db_u.Path
 
@@ -135,8 +151,23 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 		export_db := func() {
 
+			count, err := db.BatchedRecordsCount(ctx)
+
+			switch {
+			case err != nil:
+				slog.Warn("Failed to derive batched records count", "error", err)
+			case count > 0:
+
+				slog.Debug("Add batched records", "count", count)
+				err := db.AddBatchedRecords(ctx)
+
+				if err != nil {
+					slog.Error("Failed to add batched records", "error", err)
+				}
+			}
+
 			slog.Debug("Export database")
-			err := db.Export(ctx, db_path)
+			err = db.Export(ctx, db_path)
 
 			if err != nil {
 				slog.Error("Failed to export database", "db_path", db_path, "error", err)
