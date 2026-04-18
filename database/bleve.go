@@ -3,11 +3,13 @@
 package database
 
 // To do:
-// Store/retrieve embeddings to/from an external source (sqlite?)
+// Store/retrieve embeddings to/from an external source (sqlite? duckdb since it's already loaded?)
 // Filter by provider for list view
 
 import (
 	"context"
+	"database/sql"
+	"embed"
 	"encoding/binary"
 	"fmt"
 	"iter"
@@ -15,11 +17,14 @@ import (
 	"math"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	_ "github.com/duckdb/duckdb-go/v2"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -28,17 +33,23 @@ import (
 	"github.com/blevesearch/bleve/v2/search"
 	"github.com/blevesearch/bleve/v2/search/query"
 	"github.com/blevesearch/bleve_index_api"
+	sfom_sql "github.com/sfomuseum/go-database/sql"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
+//go:embed bleve_*_schema.txt
+var bleve_schema_fs embed.FS
+
 type BleveDatabase struct {
 	Database
-	uri        string
-	dimensions int
-	index      bleve.Index
-	batch      *bleve.Batch
-	batch_size int
-	mu         *sync.RWMutex
+	uri           string
+	dimensions    int
+	index         bleve.Index
+	embeddings_db *sql.DB
+	embeddings_t  sfom_sql.Table
+	batch         *bleve.Batch
+	batch_size    int
+	mu            *sync.RWMutex
 }
 
 func init() {
@@ -86,10 +97,11 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	var index bleve.Index
+	var path_embeddings string
 
 	switch path_index {
 	case "":
-		idx_mapping := defaultMappings(dimensions)
+		idx_mapping := bleveMappings(dimensions)
 		index, err = bleve.NewMemOnly(idx_mapping)
 	default:
 
@@ -103,27 +115,52 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 				"initialMmapSize":     512 * 1024 * 1024,
 			}
 
-			idx_mapping := defaultMappings(dimensions)
+			idx_mapping := bleveMappings(dimensions)
 			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", idx_config)
 		} else {
 			index, err = bleve.Open(path_index)
 		}
+
+		path_embeddings = filepath.Join(path_index, "embeddingsdb")
 	}
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create Bleve index, %w", err)
 	}
 
+	// START OF
+
+	emb_db, err := sql.Open("duckdb", path_embeddings)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create (static) embeddings index, %w", err)
+	}
+
+	emb_t, err := NewBleveEmbeddingsTable(ctx, "bleve://")
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create (static) embeddings table, %w", err)
+	}
+
+	err = sfom_sql.CreateTableIfNecessary(ctx, emb_db, emb_t)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to setup (static) embeddings table, %w", err)
+	}
+
+	// END OF
+
 	batch := index.NewBatch()
 	mu := new(sync.RWMutex)
 
 	db := &BleveDatabase{
-		uri:        uri,
-		index:      index,
-		dimensions: dimensions,
-		batch:      batch,
-		batch_size: 200,
-		mu:         mu,
+		uri:           uri,
+		index:         index,
+		dimensions:    dimensions,
+		embeddings_db: emb_db,
+		batch:         batch,
+		batch_size:    200,
+		mu:            mu,
 	}
 
 	return db, nil
@@ -531,9 +568,8 @@ func (db *BleveDatabase) batchRecord(ctx context.Context, rec *embeddingsdb.Reco
 	id := rec.Key()
 
 	db.batch.Index(id, rec)
-	return nil
 
-	// return db.storeEmbeddings(ctx, rec.Key(), rec.Embeddings)
+	return db.storeEmbeddings(ctx, rec)
 }
 
 func (db *BleveDatabase) inflateRecordWithMatch(ctx context.Context, doc *search.DocumentMatch) (*embeddingsdb.Record, error) {
@@ -575,15 +611,11 @@ func (db *BleveDatabase) inflateRecordWithMatch(ctx context.Context, doc *search
 		}
 	}
 
-	/*
-		e, err := db.getEmbeddings(ctx, doc.ID)
+	err := db.assignEmbeddings(ctx, rec)
 
-		if err != nil {
-			return nil, err
-		}
-
-		rec.Embeddings = e
-	*/
+	if err != nil {
+		return nil, err
+	}
 
 	return rec, nil
 }
@@ -632,52 +664,77 @@ func (db *BleveDatabase) inflateRecordWithDocument(ctx context.Context, doc inde
 		}
 	})
 
-	/*
-		e, err := db.getEmbeddings(ctx, doc.ID())
+	err := db.assignEmbeddings(ctx, rec)
 
-		if err != nil {
-			return nil, err
-		}
-
-		rec.Embeddings = e
-	*/
+	if err != nil {
+		return nil, err
+	}
 
 	return rec, nil
 }
 
-func (db *BleveDatabase) storeEmbeddings(ctx context.Context, id string, data []float32) error {
+func (db *BleveDatabase) storeEmbeddings(ctx context.Context, rec *embeddingsdb.Record) error {
 
-	buf := make([]byte, len(data)*4)
+	id := rec.Key()
 
-	for i, f := range data {
-		bits := math.Float32bits(f)
-		binary.BigEndian.PutUint32(buf[i*4:], bits)
+	q := fmt.Sprintf(`INSERT OR REPLACE INTO %s(id, embeddings) VALUES(?, ?)`, db.embeddings_t.Name())
+
+	_, err := db.embeddings_db.ExecContext(ctx, q, id, rec.Embeddings)
+
+	return err
+
+	/*
+		buf := make([]byte, len(data)*4)
+
+		for i, f := range data {
+			bits := math.Float32bits(f)
+			binary.BigEndian.PutUint32(buf[i*4:], bits)
+		}
+
+		db.batch.SetInternal([]byte(id), buf)
+		return nil
+	*/
+}
+
+func (db *BleveDatabase) assignEmbeddings(ctx context.Context, rec *embeddingsdb.Record) error {
+
+	id := rec.Key()
+
+	q := fmt.Sprintf(`SELECT embeddings FROM %s WHERE id = ?`, db.embeddings_t.Name())
+
+	row := db.embeddings_db.QueryRowContext(ctx, q, id)
+
+	var embeddings []float32
+
+	err := row.Scan(&embeddings)
+
+	if err != nil {
+		return err
 	}
 
-	db.batch.SetInternal([]byte(id), buf)
+	rec.Embeddings = embeddings
 	return nil
+
+	/*
+		buf, err := db.index.GetInternal([]byte(id))
+
+		if err != nil || buf == nil {
+			return nil, err
+		}
+
+		count := len(buf) / 4
+		result := make([]float32, count)
+
+		for i := 0; i < count; i++ {
+			bits := binary.BigEndian.Uint32(buf[i*4 : (i+1)*4])
+			result[i] = math.Float32frombits(bits)
+		}
+
+		return result, nil
+	*/
 }
 
-func (db *BleveDatabase) getEmbeddings(ctx context.Context, id string) ([]float32, error) {
-
-	buf, err := db.index.GetInternal([]byte(id))
-
-	if err != nil || buf == nil {
-		return nil, err
-	}
-
-	count := len(buf) / 4
-	result := make([]float32, count)
-
-	for i := 0; i < count; i++ {
-		bits := binary.BigEndian.Uint32(buf[i*4 : (i+1)*4])
-		result[i] = math.Float32frombits(bits)
-	}
-
-	return result, nil
-}
-
-func defaultMappings(dimensions int) *mapping.IndexMappingImpl {
+func bleveMappings(dimensions int) *mapping.IndexMappingImpl {
 
 	kw_mapping := bleve.NewTextFieldMapping()
 	kw_mapping.Analyzer = "keyword"
