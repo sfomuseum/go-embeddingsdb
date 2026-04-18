@@ -24,6 +24,9 @@ func GetSimilarRecordsFromRequest(req *net_http.Request, cl client.Client) ([]*e
 	similar_req := &embeddingsdb.SimilarRecordsRequest{
 		Embeddings: record.Embeddings,
 		Model:      model,
+		Exclude: []string{
+			record.Key(),
+		},
 	}
 
 	similar, err := cl.SimilarRecords(ctx, similar_req)
