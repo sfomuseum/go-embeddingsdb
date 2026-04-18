@@ -50,6 +50,10 @@ A database is a system for managing (storing, indexing and querying) embeddings.
 type Database interface {
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation.
 	AddRecord(context.Context, *embeddingsdb.Record) error
+	// The number of batched records currently waiting to be added.
+	BatchedRecordsCount(context.Context) int
+	// Add the pending batched records
+	AddBatchedRecords(context.Context) error	
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
 	// Remove a record from an EmbeddingsDB instance.
