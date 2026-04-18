@@ -135,6 +135,18 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 		export_db := func() {
 
+			count := db.BatchedRecordsCount(ctx)
+
+			if count > 0 {
+
+				slog.Debug("Add batched records", "count", count)
+				err := db.AddBatchedRecords(ctx)
+
+				if err != nil {
+					slog.Error("Failed to add batched records", "error", err)
+				}
+			}
+
 			slog.Debug("Export database")
 			err := db.Export(ctx, db_path)
 

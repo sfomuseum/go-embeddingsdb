@@ -14,6 +14,8 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -25,8 +27,11 @@ import (
 
 type BleveDatabase struct {
 	Database
-	uri   string
-	index bleve.Index
+	uri        string
+	index      bleve.Index
+	batch      *bleve.Batch
+	batch_size int
+	mu         *sync.RWMutex
 }
 
 func init() {
@@ -75,10 +80,12 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	var index bleve.Index
 
-	bleve_opts := map[string]interface{}{
-		"forceSegments":   true,
-		"persistInterval": 2000,
-	}
+	/*
+		bleve_opts := map[string]interface{}{
+			"forceSegments":   true,
+			"persistInterval": 2000 * time.Millisecond,
+		}
+	*/
 
 	switch path_index {
 	case "":
@@ -90,9 +97,10 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 		if err != nil {
 			idx_mapping := defaultMappings(dimensions)
-			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", bleve_opts)
+			index, err = bleve.New(path_index, idx_mapping)
+			// index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", bleve_opts)
 		} else {
-			index, err = bleve.OpenUsing(path_index, bleve_opts)
+			index, err = bleve.Open(path_index)
 		}
 	}
 
@@ -100,9 +108,15 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, fmt.Errorf("Failed to create Bleve index, %w", err)
 	}
 
+	batch := index.NewBatch()
+	mu := new(sync.RWMutex)
+
 	db := &BleveDatabase{
-		uri:   uri,
-		index: index,
+		uri:        uri,
+		index:      index,
+		batch:      batch,
+		batch_size: 500,
+		mu:         mu,
 	}
 
 	return db, nil
@@ -112,23 +126,70 @@ func (db *BleveDatabase) Export(ctx context.Context, uri string) error {
 	return nil
 }
 
-func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
+func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
 
 	id := rec.Key()
 
-	err := db.index.Index(id, rec)
-
-	if err != nil {
-		return fmt.Errorf("Failed to add record %s, %w", id, err)
-	}
+	db.batch.Index(id, rec)
 
 	raw, err := json.Marshal(rec)
 
 	if err != nil {
-		return fmt.Errorf("Failed to marshal record for storing internally, %w", err)
+		return true, err
 	}
 
-	return db.index.SetInternal([]byte(id), raw)
+	db.batch.SetInternal([]byte(id), raw)
+
+	if db.batch.Size() >= db.batch_size {
+
+		err := db.AddBatchedRecords(ctx)
+
+		if err != nil {
+			return true, err
+		}
+	}
+
+	return true, err
+}
+
+func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context) int {
+	return db.batch.Size()
+}
+
+func (db *BleveDatabase) AddBatchedRecords(ctx context.Context) error {
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		// pass
+	}
+
+	if db.batch.Size() == 0 {
+		return nil
+	}
+
+	logger := slog.Default()
+	logger = logger.With("size", db.batch.Size())
+	logger.Debug("Flush batch")
+
+	t1 := time.Now()
+
+	defer func() {
+		slog.Info("Time to flush batch", "time", time.Since(t1))
+	}()
+
+	err := db.index.Batch(db.batch)
+
+	if err != nil {
+		return err
+	}
+
+	db.batch = db.index.NewBatch()
+	return nil
 }
 
 func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
@@ -357,7 +418,13 @@ func (db *BleveDatabase) URI() string {
 
 func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
 
-	facet := bleve.NewFacetRequest("model", 1000000) // derive this number from document count
+	count, err := db.index.DocCount()
+
+	if err != nil {
+		return nil, err
+	}
+
+	facet := bleve.NewFacetRequest("model", int(count))
 	query := bleve.NewMatchAllQuery()
 	req := bleve.NewSearchRequest(query)
 	req.AddFacet("model", facet)
@@ -380,7 +447,13 @@ func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]str
 
 func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
 
-	facet := bleve.NewFacetRequest("provider", 1000000) // derive this number from document count
+	count, err := db.index.DocCount()
+
+	if err != nil {
+		return nil, err
+	}
+
+	facet := bleve.NewFacetRequest("provider", int(count))
 	query := bleve.NewMatchAllQuery()
 	req := bleve.NewSearchRequest(query)
 	req.AddFacet("provider", facet)
@@ -402,7 +475,35 @@ func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
 }
 
 func (db *BleveDatabase) Close(ctx context.Context) error {
-	return nil
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	logger := slog.Default()
+	logger.Debug("Close database")
+
+	t1 := time.Now()
+
+	defer func() {
+		logger.Debug("Time to close database", "time", time.Since(t1))
+	}()
+
+	if db.batch.Size() >= 0 {
+
+		err := db.AddBatchedRecords(ctx)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	t2 := time.Now()
+
+	defer func() {
+		logger.Debug("Time to close index", "time", time.Since(t2))
+	}()
+
+	return db.index.Close()
 }
 
 func (db *BleveDatabase) getInternal(id string) (*embeddingsdb.Record, error) {

@@ -32,7 +32,7 @@ func (s *grpcService) AddRecord(ctx context.Context, req *grpc.AddRecordRequest)
 	logger = logger.With("depiction_id", record.DepictionId)
 	logger = logger.With("model", record.Model)
 
-	err := s.db.AddRecord(ctx, record)
+	_, err := s.db.AddRecord(ctx, record)
 
 	if err != nil {
 		logger.Error("Failed to add record", "error", err)

@@ -57,7 +57,8 @@ func NewDatabaseClient(ctx context.Context, uri string) (Client, error) {
 }
 
 func (cl *DatabaseClient) AddRecord(ctx context.Context, record *embeddingsdb.Record) error {
-	return cl.db.AddRecord(ctx, record)
+	_, err := cl.db.AddRecord(ctx, record)
+	return err
 }
 
 func (cl *DatabaseClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
@@ -122,4 +123,8 @@ func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embedding
 	}
 
 	return cl.SimilarRecords(ctx, similar_req)
+}
+
+func (cl *DatabaseClient) Close(ctx context.Context) error {
+	return cl.db.Close(ctx)
 }
