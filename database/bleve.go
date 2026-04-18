@@ -2,7 +2,9 @@
 
 package database
 
-// https://github.com/blevesearch/bleve/blob/master/docs/vectors.md
+// To do:
+// Store/retrieve embeddings to/from an external source (sqlite?)
+// Filter by provider for list view
 
 import (
 	"context"
@@ -32,6 +34,7 @@ import (
 type BleveDatabase struct {
 	Database
 	uri        string
+	dimensions int
 	index      bleve.Index
 	batch      *bleve.Batch
 	batch_size int
@@ -93,8 +96,15 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		_, err = os.Stat(path_index)
 
 		if err != nil {
+
+			idx_config := map[string]interface{}{
+				"forceSegmentType":    "zap",
+				"forceSegmentVersion": 16, // 16 required for vector search
+				"initialMmapSize":     512 * 1024 * 1024,
+			}
+
 			idx_mapping := defaultMappings(dimensions)
-			index, err = bleve.New(path_index, idx_mapping)
+			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", idx_config)
 		} else {
 			index, err = bleve.Open(path_index)
 		}
@@ -110,8 +120,9 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	db := &BleveDatabase{
 		uri:        uri,
 		index:      index,
+		dimensions: dimensions,
 		batch:      batch,
-		batch_size: 500,
+		batch_size: 200,
 		mu:         mu,
 	}
 
@@ -173,7 +184,7 @@ func (db *BleveDatabase) AddBatchedRecords(ctx context.Context) error {
 	t1 := time.Now()
 
 	defer func() {
-		slog.Info("Time to flush batch", "time", time.Since(t1))
+		slog.Debug("Time to flush batch", "time", time.Since(t1))
 	}()
 
 	err := db.index.Batch(db.batch)
@@ -198,7 +209,7 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 	rsp, err := db.index.Search(bl_req)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to execute search, %w", err)
+		return nil, fmt.Errorf("Failed to execute search to get record, %w", err)
 	}
 
 	if rsp.Total != 1 {
@@ -219,6 +230,12 @@ func (db *BleveDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Rem
 func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
+
+	if len(req.Embeddings) != db.dimensions {
+		logger := slog.Default()
+		logger.Warn("Invalid embeddings", "dimensions", len(req.Embeddings))
+		return results, nil
+	}
 
 	k := 10
 
@@ -250,13 +267,14 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 
 	search_req := bleve.NewSearchRequest(filterQuery)
 	search_req.AddKNN("embeddings", req.Embeddings, int64(k), 1.0)
+	search_req.SortBy([]string{"_score"})
 	search_req.Size = k
 	search_req.Fields = []string{"*"}
 
 	rsp, err := db.index.Search(search_req)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to execute search request, %w", err)
+		return nil, fmt.Errorf("Failed to execute search request to find similar, %w", err)
 	}
 
 	for _, hit := range rsp.Hits {
@@ -513,8 +531,9 @@ func (db *BleveDatabase) batchRecord(ctx context.Context, rec *embeddingsdb.Reco
 	id := rec.Key()
 
 	db.batch.Index(id, rec)
+	return nil
 
-	return db.storeEmbeddings(ctx, rec.Key(), rec.Embeddings)
+	// return db.storeEmbeddings(ctx, rec.Key(), rec.Embeddings)
 }
 
 func (db *BleveDatabase) inflateRecordWithMatch(ctx context.Context, doc *search.DocumentMatch) (*embeddingsdb.Record, error) {
@@ -551,18 +570,20 @@ func (db *BleveDatabase) inflateRecordWithMatch(ctx context.Context, doc *search
 			case "created":
 				rec.Created = int64(v.(float64))
 			default:
-				slog.Info("Unsupported key", "k", k, "v", v)
+				slog.Warn("Unsupported key", "k", k, "v", v)
 			}
 		}
 	}
 
-	e, err := db.getEmbeddings(ctx, doc.ID)
+	/*
+		e, err := db.getEmbeddings(ctx, doc.ID)
 
-	if err != nil {
-		return nil, err
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	rec.Embeddings = e
+		rec.Embeddings = e
+	*/
 
 	return rec, nil
 }
@@ -606,18 +627,20 @@ func (db *BleveDatabase) inflateRecordWithDocument(ctx context.Context, doc inde
 				f64 := math.Float64frombits(bits)
 				rec.Created = int64(f64)
 			default:
-				slog.Info("Unsupported key", "k", k, "v", v)
+				slog.Warn("Unsupported key", "k", k, "v", v)
 			}
 		}
 	})
 
-	e, err := db.getEmbeddings(ctx, doc.ID())
+	/*
+		e, err := db.getEmbeddings(ctx, doc.ID())
 
-	if err != nil {
-		return nil, err
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	rec.Embeddings = e
+		rec.Embeddings = e
+	*/
 
 	return rec, nil
 }
@@ -661,24 +684,50 @@ func defaultMappings(dimensions int) *mapping.IndexMappingImpl {
 	kw_mapping.Store = true
 	kw_mapping.Index = true
 	kw_mapping.DocValues = true
+	kw_mapping.IncludeTermVectors = false
+	kw_mapping.IncludeInAll = false
+
+	txt_mapping := bleve.NewTextFieldMapping()
+	txt_mapping.Store = true
+	txt_mapping.Index = true
+	txt_mapping.DocValues = false
+	txt_mapping.IncludeTermVectors = false
+	txt_mapping.IncludeInAll = false
 
 	num_mapping := bleve.NewNumericFieldMapping()
 	num_mapping.Store = true
 	num_mapping.Index = true
 	num_mapping.DocValues = true
+	num_mapping.IncludeInAll = false
 
 	vec_mapping := bleve.NewVectorFieldMapping()
 	vec_mapping.Dims = dimensions
 	vec_mapping.Similarity = "l2_norm"
-	vec_mapping.Store = true
+	vec_mapping.Store = false
 	vec_mapping.Index = true
-	vec_mapping.DocValues = true
+	vec_mapping.DocValues = false
+	vec_mapping.IncludeInAll = false
+
+	sf_mapping := bleve.NewTextFieldMapping()
+	sf_mapping.Store = true
+
+	map_mapping := bleve.NewDocumentMapping()
+	map_mapping.Dynamic = true
+	map_mapping.DefaultAnalyzer = "keyword"
+	map_mapping.AddFieldMapping(sf_mapping)
 
 	idx_mapping := bleve.NewIndexMapping()
+	idx_mapping.DefaultMapping.Enabled = true
+	idx_mapping.DefaultMapping.Dynamic = false
+
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("model", kw_mapping)
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("provider", kw_mapping)
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("subject_id", txt_mapping)
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("depiction_id", txt_mapping)
 	idx_mapping.DefaultMapping.AddFieldMappingsAt("created", num_mapping)
+
+	idx_mapping.DefaultMapping.AddSubDocumentMapping("attributes", map_mapping)
 
 	return idx_mapping
 }

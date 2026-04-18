@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/aaronland/go-http/v4/server"
 	"github.com/sfomuseum/go-embeddings"
@@ -34,11 +37,26 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	logger := slog.Default()
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
 	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create new client, %w", err)
 	}
+
+	cl_closefunc := func() {
+
+		ctx := context.Background()
+		err := cl.Close(ctx)
+
+		if err != nil {
+			slog.Error("Failed to close", "error", err)
+		}
+	}
+
+	defer cl_closefunc()
 
 	t, err := html.LoadTemplates(ctx)
 
