@@ -39,29 +39,6 @@ func init() {
 	}
 }
 
-func defaultMappings(dimensions int) *mapping.IndexMappingImpl {
-
-	kw_mapping := bleve.NewTextFieldMapping()
-	kw_mapping.Analyzer = "keyword"
-	kw_mapping.Store = false
-	kw_mapping.Index = true
-	kw_mapping.DocValues = true
-
-	vec_mapping := bleve.NewVectorFieldMapping()
-	vec_mapping.Dims = dimensions
-	vec_mapping.Similarity = "l2_norm"
-	vec_mapping.Store = true
-	vec_mapping.Index = true
-	vec_mapping.DocValues = true
-
-	idx_mapping := bleve.NewIndexMapping()
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("model", kw_mapping)
-	idx_mapping.DefaultMapping.AddFieldMappingsAt("provider", kw_mapping)
-
-	return idx_mapping
-}
-
 // Create a new [BleveDatabase] instance for managing embeddings using the Bleve document store derived from 'uri' which is expected to take the form of:
 //
 //	bleve://{PATH}?{QUERY_PARAMETERS}
@@ -449,4 +426,27 @@ func (db *BleveDatabase) getInternal(id string) (*embeddingsdb.Record, error) {
 	}
 
 	return rec, nil
+}
+
+func defaultMappings(dimensions int) *mapping.IndexMappingImpl {
+
+	kw_mapping := bleve.NewTextFieldMapping()
+	kw_mapping.Analyzer = "keyword"
+	kw_mapping.Store = false
+	kw_mapping.Index = true
+	kw_mapping.DocValues = true
+
+	vec_mapping := bleve.NewVectorFieldMapping()
+	vec_mapping.Dims = dimensions
+	vec_mapping.Similarity = "l2_norm"
+	vec_mapping.Store = true
+	vec_mapping.Index = true
+	vec_mapping.DocValues = true
+
+	idx_mapping := bleve.NewIndexMapping()
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("embeddings", vec_mapping)
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("model", kw_mapping)
+	idx_mapping.DefaultMapping.AddFieldMappingsAt("provider", kw_mapping)
+
+	return idx_mapping
 }

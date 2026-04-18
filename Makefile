@@ -25,6 +25,9 @@ cli:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-export cmd/parquet-export/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-import cmd/parquet-import/main.go
 
+cli-bleve:
+	@make cli TAGS=sqlite,vectors,bleve LDFLAGS='-s -w -r /usr/local/lib'
+
 wasmjs:
 	GOOS=js GOARCH=wasm \
 		go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -tags wasmjs \
