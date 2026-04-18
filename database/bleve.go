@@ -128,31 +128,29 @@ func (db *BleveDatabase) Export(ctx context.Context, uri string) error {
 
 func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
 
-	id := rec.Key()
-
-	db.batch.Index(id, rec)
-
-	raw, err := json.Marshal(rec)
+	err := db.batchRecord(ctx, rec)
 
 	if err != nil {
-		return true, err
+		return false, err
 	}
-
-	db.batch.SetInternal([]byte(id), raw)
 
 	if db.batch.Size() >= db.batch_size {
 
 		err := db.AddBatchedRecords(ctx)
 
 		if err != nil {
-			return true, err
+			return false, err
 		}
 	}
 
-	return true, err
+	return true, nil
 }
 
 func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context) int {
+	
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	
 	return db.batch.Size()
 }
 
@@ -476,9 +474,6 @@ func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
 
 func (db *BleveDatabase) Close(ctx context.Context) error {
 
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
 	logger := slog.Default()
 	logger.Debug("Close database")
 
@@ -504,6 +499,25 @@ func (db *BleveDatabase) Close(ctx context.Context) error {
 	}()
 
 	return db.index.Close()
+}
+
+func (db *BleveDatabase) batchRecord(ctx context.Context, rec *embeddingsdb.Record) error {
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	
+	id := rec.Key()
+
+	db.batch.Index(id, rec)
+
+	raw, err := json.Marshal(rec)
+
+	if err != nil {
+		return err
+	}
+
+	db.batch.SetInternal([]byte(id), raw)
+	return nil
 }
 
 func (db *BleveDatabase) getInternal(id string) (*embeddingsdb.Record, error) {
