@@ -280,9 +280,42 @@ $> sudo make -C build install
 $> sudo cp build/c_api/libfaiss_c.dylib /usr/local/lib
 ```
 
-_For build instructions for Linux and Windows please consult the [Bleve documentation](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#setup-instructions)._
+_Note that I had to use a completely different set of instructions to get `libfaiss` to compile on an Intel Mac. I don't know. For build instructions for Linux and Windows please consult the [Bleve documentation](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#setup-instructions)._
 
-This also means you need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
+#### Building (Bleve)
+
+If that weren't enough the current versioned Bleve release (2.5.7) is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from a [go.work](https://go.dev/doc/tutorial/workspaces) file. This is not ideal but it's less less-ideal than the alternatives.
+
+```
+$> cd /usr/local/src/
+$> git clone https://github.com/blevesearch/bleve.git /usr/local/src/bleve
+$> cd /usr/local/src/bleve
+```
+
+At this point edit the `go.mod` file to ensure that the `go.etcd.io/bbolt` dependency is `v1.4.3 or higher. The run:
+
+```
+$> go mod tidy && go mod vendor
+```
+
+Now come back to _this_ repository and run:
+
+```
+$> go work init
+```
+
+Edit the `go.work` file to look like this (adjusting for wherever you are keeping your copy of the Bleve source code:
+
+```
+go 1.26.2
+
+use (
+    ./
+    /usr/local/src/bleve
+)    
+```
+
+Remember that you also need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
 
 ```
 $> make cli TAGS=sqlite,bleve,vectors LDFLAGS='-s -w -r /usr/local/lib'
@@ -290,7 +323,9 @@ go build -tags=sqlite,bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/
 ...and so on
 ```
 
-If that weren't enough the current versioned Bleve release (2.5.7) is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from a [go.work](https://go.dev/doc/tutorial/workspaces) file. This is not ideal but it's less less-ideal than the alternatives.
+#### Other "known knowns"
+
+I have observed that under some conditions importing large datasets (using the `parquet-import` tool for example) data corruption can occur. This problem _seems_ to be related to memory-mapping and the `go.etcd.io/bbolt` package but I am not certain. These problems seem to have been resolved on Apple Silicon Macs but I continue to experience them on older Intel-based Macs. I am not confident that I have even diagnosed the problem correctly.
 
 ## Servers
 
