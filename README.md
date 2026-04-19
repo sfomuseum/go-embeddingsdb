@@ -290,11 +290,6 @@ If that weren't enough the current versioned Bleve release (2.5.7) is not curren
 $> cd /usr/local/src/
 $> git clone https://github.com/blevesearch/bleve.git /usr/local/src/bleve
 $> cd /usr/local/src/bleve
-```
-
-At this point edit the `go.mod` file to ensure that the `go.etcd.io/bbolt` dependency is `v1.4.3 or higher. The run:
-
-```
 $> go mod tidy && go mod vendor
 ```
 
@@ -325,7 +320,9 @@ go build -tags=sqlite,bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/
 
 #### Other "known knowns"
 
-I have observed that under some conditions importing large datasets (using the `parquet-import` tool for example) data corruption can occur. This problem _seems_ to be related to memory-mapping and the `go.etcd.io/bbolt` package but I am not certain. These problems seem to have been resolved on Apple Silicon Macs but I continue to experience them on older Intel-based Macs. I am not confident that I have even diagnosed the problem correctly.
+I have observed that under some conditions importing large datasets (using the `parquet-import` tool for example) data corruption can occur. This problem _seems_ to be related to memory-mapping and the `go.etcd.io/bbolt` package but I am not certain. These problems seem to have been resolved on Apple Silicon Macs but I continue to experience them on older Intel-based Macs. The Bleve source code specifies `bbolt` v1.4.0 even though the last release is 1.4.3 but even that was in 2025 and there have been lots of updates to the source code. I've tried both specifying v1.4.3 and using a `go.work` file to use the most recent code but database corruption and the occassional race condition still manifest on Intel-based Macs.
+
+That said, I am not confident that I have even diagnosed the problem correctly.
 
 ## Servers
 
