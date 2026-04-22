@@ -905,9 +905,7 @@ func (b *BitSet) DifferenceCardinality(compare *BitSet) uint {
 		l = b.wordCount()
 	}
 	cnt := uint64(0)
-	if l > 0 {
-		cnt += popcntMaskSlice(b.set[:l], compare.set[:l])
-	}
+	cnt += popcntMaskSlice(b.set[:l], compare.set[:l])
 	cnt += popcntSlice(b.set[l:])
 	return uint(cnt)
 }
@@ -962,9 +960,6 @@ func (b *BitSet) Intersection(compare *BitSet) (result *BitSet) {
 func (b *BitSet) IntersectionCardinality(compare *BitSet) uint {
 	panicIfNull(b)
 	panicIfNull(compare)
-	if b.length == 0 || compare.length == 0 {
-		return 0
-	}
 	b, compare = sortByLength(b, compare)
 	cnt := popcntAndSlice(b.set, compare.set)
 	return uint(cnt)
@@ -1021,10 +1016,7 @@ func (b *BitSet) UnionCardinality(compare *BitSet) uint {
 	panicIfNull(b)
 	panicIfNull(compare)
 	b, compare = sortByLength(b, compare)
-	cnt := uint64(0)
-	if len(b.set) > 0 {
-		cnt += popcntOrSlice(b.set, compare.set)
-	}
+	cnt := popcntOrSlice(b.set, compare.set)
 	if len(compare.set) > len(b.set) {
 		cnt += popcntSlice(compare.set[len(b.set):])
 	}
@@ -1079,10 +1071,7 @@ func (b *BitSet) SymmetricDifferenceCardinality(compare *BitSet) uint {
 	panicIfNull(b)
 	panicIfNull(compare)
 	b, compare = sortByLength(b, compare)
-	cnt := uint64(0)
-	if len(b.set) > 0 {
-		cnt += popcntXorSlice(b.set, compare.set)
-	}
+	cnt := popcntXorSlice(b.set, compare.set)
 	if len(compare.set) > len(b.set) {
 		cnt += popcntSlice(compare.set[len(b.set):])
 	}
@@ -1484,7 +1473,7 @@ func (b *BitSet) ShiftLeft(bits uint) {
 	dst := b.set
 
 	// not using extendSet() to avoid unneeded data copying
-	nsize := wordsNeeded(top + bits + 1)
+	nsize := wordsNeeded(top + bits)
 	if len(b.set) < nsize {
 		dst = make([]uint64, nsize)
 	}
@@ -1531,7 +1520,7 @@ func (b *BitSet) ShiftRight(bits uint) {
 		return
 	}
 
-	if bits > top {
+	if bits >= top {
 		b.set = make([]uint64, wordsNeeded(b.length))
 		return
 	}

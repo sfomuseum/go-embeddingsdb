@@ -37,18 +37,8 @@ func init() {
 	reflectStaticSizeSegmentBase = int(unsafe.Sizeof(sb))
 }
 
-// OpenUsing returns a zap impl of a segment which tracks some config values during
-// the its lifetime.
-func (z *ZapPlugin) OpenUsing(path string, config map[string]interface{}) (segment.Segment, error) {
-	return z.open(path, config)
-}
-
 // Open returns a zap impl of a segment
-func (z *ZapPlugin) Open(path string) (segment.Segment, error) {
-	return z.open(path, nil)
-}
-
-func (*ZapPlugin) open(path string, config map[string]interface{}) (segment.Segment, error) {
+func (*ZapPlugin) Open(path string) (segment.Segment, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -66,7 +56,6 @@ func (*ZapPlugin) open(path string, config map[string]interface{}) (segment.Segm
 			fieldsMap:      make(map[string]uint16),
 			fieldDvReaders: make(map[uint16]*docValueReader),
 			fieldFSTs:      make(map[uint16]*vellum.FST),
-			config:         config,
 		},
 		f:    f,
 		mm:   mm,
@@ -115,8 +104,6 @@ type SegmentBase struct {
 
 	m         sync.Mutex
 	fieldFSTs map[uint16]*vellum.FST
-
-	config map[string]interface{} // config for the segment
 }
 
 func (sb *SegmentBase) Size() int {

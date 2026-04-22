@@ -29,6 +29,7 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/index/scorch"
 	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/blevesearch/bleve/v2/search"
 	"github.com/blevesearch/bleve/v2/search/query"
@@ -64,6 +65,11 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	// {PersisterNapTimeMSec:1 PersisterNapUnderNumFiles:1000 MemoryPressurePauseThreshold:18446744073709551615 NumPersisterWorkers:1 MaxSizeInMemoryMergePerWorker:0}"
+
+	scorch.DefaultPersisterNapTimeMSec = 100
+	scorch.DefaultPersisterNapUnderNumFiles = 5000
 }
 
 // Create a new [BleveDatabase] instance for managing embeddings using the Bleve document store derived from 'uri' which is expected to take the form of:
@@ -119,20 +125,21 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		tmp_embeddings = true
 	default:
 
+		idx_config := map[string]interface{}{
+			"forceSegmentType":    "zap",
+			"forceSegmentVersion": 16, // 16 required for vector search
+			"unsafe_batch":        true,
+			"initialMmapSize":     512 * 1024 * 1024,
+		}
+
 		_, err = os.Stat(path_index)
 
 		if err != nil {
 
-			idx_config := map[string]interface{}{
-				"forceSegmentType":    "zap",
-				"forceSegmentVersion": 16, // 16 required for vector search
-				"initialMmapSize":     512 * 1024 * 1024,
-			}
-
 			idx_mapping := bleveMappings(dimensions)
 			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", idx_config)
 		} else {
-			index, err = bleve.Open(path_index)
+			index, err = bleve.OpenUsing(path_index, idx_config)
 		}
 
 		path_embeddings = filepath.Join(path_index, "embeddingsdb")
@@ -206,7 +213,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		embeddings_tbl:   emb_t,
 		embeddings_appdr: emb_appender,
 		batch:            batch,
-		batch_size:       200,
+		batch_size:       100,
 		mu:               mu,
 	}
 

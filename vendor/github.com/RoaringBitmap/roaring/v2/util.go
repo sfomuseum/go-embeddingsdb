@@ -1,10 +1,9 @@
 package roaring
 
 import (
-	"cmp"
 	"math"
 	"math/rand"
-	"slices"
+	"sort"
 )
 
 const (
@@ -124,7 +123,7 @@ func combineLoHi16(lob uint16, hob uint16) uint32 {
 }
 
 func combineLoHi32(lob uint32, hob uint32) uint32 {
-	return lob | (hob << 16)
+	return uint32(lob) | (hob << 16)
 }
 
 const maxLowBit = 0xFFFF
@@ -265,13 +264,19 @@ type ph struct {
 	rand int
 }
 
+type pha []ph
+
+func (p pha) Len() int           { return len(p) }
+func (p pha) Less(i, j int) bool { return p[i].rand < p[j].rand }
+func (p pha) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
 func getRandomPermutation(n int) []int {
 	r := make([]ph, n)
 	for i := 0; i < n; i++ {
 		r[i].orig = i
 		r[i].rand = rand.Intn(1 << 29)
 	}
-	slices.SortFunc(r, func(a, b ph) int { return cmp.Compare(a.rand, b.rand) })
+	sort.Sort(pha(r))
 	m := make([]int, n)
 	for i := range m {
 		m[i] = r[i].orig

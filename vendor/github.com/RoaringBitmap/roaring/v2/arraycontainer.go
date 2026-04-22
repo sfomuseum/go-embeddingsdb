@@ -11,7 +11,6 @@ type arrayContainer struct {
 
 var (
 	ErrArrayIncorrectSort = errors.New("incorrectly sorted array")
-	ErrEmptyArray         = errors.New("empty array")
 	ErrArrayInvalidSize   = errors.New("invalid array size")
 )
 
@@ -60,10 +59,6 @@ func (ac *arrayContainer) getReverseIterator() shortIterable {
 
 func (ac *arrayContainer) getManyIterator() manyIterable {
 	return &shortIterator{ac.content, 0}
-}
-
-func (ac *arrayContainer) getUnsetIterator() shortPeekable {
-	return newArrayContainerUnsetIterator(ac.content)
 }
 
 func (ac *arrayContainer) minimum() uint16 {
@@ -422,10 +417,8 @@ func (ac *arrayContainer) iorArray(value2 *arrayContainer) container {
 func (ac *arrayContainer) iorBitmap(bc2 *bitmapContainer) container {
 	bc1 := ac.toBitmapContainer()
 	bc1.iorBitmap(bc2)
-	// DO NOT DO THIS:
-	// *ac = *newArrayContainerFromBitmap(bc1)
-	// This will create gigantic array containers in the case of repeated calls to iorBitmap.
-	return bc1
+	*ac = *newArrayContainerFromBitmap(bc1)
+	return ac
 }
 
 func (ac *arrayContainer) iorRun16(rc *runContainer16) container {
@@ -626,30 +619,6 @@ func (ac *arrayContainer) xor(a container) container {
 		return x.xorArray(ac)
 	}
 	panic("unsupported container type")
-}
-
-func (ac *arrayContainer) ixor(a container) container {
-	switch x := a.(type) {
-	case *arrayContainer:
-		return ac.ixorArray(x)
-	case *bitmapContainer:
-		return ac.ixorBitmap(x)
-	case *runContainer16:
-		return ac.ixorRun16(x)
-	}
-	panic("unsupported container type")
-}
-
-func (ac *arrayContainer) ixorArray(value2 *arrayContainer) container {
-	return ac.xorArray(value2)
-}
-
-func (ac *arrayContainer) ixorBitmap(value2 *bitmapContainer) container {
-	return value2.ixor(ac)
-}
-
-func (ac *arrayContainer) ixorRun16(value2 *runContainer16) container {
-	return value2.ixor(ac)
 }
 
 func (ac *arrayContainer) xorArray(value2 *arrayContainer) container {
@@ -993,12 +962,12 @@ func (ac *arrayContainer) resetTo(a container) {
 		x.fillArray(ac.content)
 
 	case *runContainer16:
-		card := x.getCardinality()
+		card := int(x.getCardinality())
 		ac.realloc(card)
 		cur := 0
 		for _, r := range x.iv {
-			for val := int(r.start); val <= int(r.last()); val++ {
-				ac.content[cur] = uint16(val)
+			for val := r.start; val <= r.last(); val++ {
+				ac.content[cur] = val
 				cur++
 			}
 		}
@@ -1320,7 +1289,7 @@ func (ac *arrayContainer) validate() error {
 	cardinality := ac.getCardinality()
 
 	if cardinality <= 0 {
-		return ErrEmptyArray
+		return ErrArrayInvalidSize
 	}
 
 	if cardinality > arrayDefaultMaxSize {

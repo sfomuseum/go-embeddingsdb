@@ -39,9 +39,7 @@ type container interface {
 	not(start, final int) container        // range is [firstOfRange,lastOfRange)
 	inot(firstOfRange, endx int) container // i stands for inplace, range is [firstOfRange,endx)
 	xor(r container) container
-	ixor(r container) container // i stands for inplace
 	getShortIterator() shortPeekable
-	getUnsetIterator() shortPeekable
 	iterate(cb func(x uint16) bool) bool
 	getReverseIterator() shortIterable
 	getManyIterator() manyIterable
@@ -110,7 +108,7 @@ func rangeOfOnes(start, last int) container {
 	if last < 0 {
 		panic("rangeOfOnes called with last < 0")
 	}
-	return newRunContainer16Range(uint16(start), uint16(last)).toEfficientContainer()
+	return newRunContainer16Range(uint16(start), uint16(last))
 }
 
 type roaringArray struct {
@@ -590,7 +588,7 @@ func (ra *roaringArray) readFrom(stream internal.ByteInput, cookieHeader ...byte
 	var isRunBitmap []byte
 
 	if cookie&0x0000FFFF == serialCookie {
-		size = cookie>>16 + 1
+		size = uint32(cookie>>16 + 1)
 		// create is-run-container bitmap
 		isRunBitmapSize := (int(size) + 7) / 8
 		isRunBitmap, err = stream.Next(isRunBitmapSize)

@@ -81,8 +81,13 @@ func (v *vectorIndexWrapper) Search(qVector []float32, k int64,
 }
 
 func (v *vectorIndexWrapper) SearchWithFilter(qVector []float32, k int64,
-	eligibleList index.EligibleDocumentList, params json.RawMessage) (
+	eligibleDocIDs []uint64, params json.RawMessage) (
 	segment.VecPostingsList, error) {
+	// If every element in the index is eligible (full selectivity),
+	// then this can basically be considered unfiltered kNN.
+	if len(eligibleDocIDs) == int(v.sb.numDocs) {
+		return v.Search(qVector, k, params)
+	}
 	// 1. returned postings list (of type PostingsList) has two types of information - docNum and its score.
 	// 2. both the values can be represented using roaring bitmaps.
 	// 3. the Iterator (of type PostingsIterator) returned would operate in terms of VecPostings.
@@ -97,31 +102,9 @@ func (v *vectorIndexWrapper) SearchWithFilter(qVector []float32, k int64,
 		// vector index not found or dimensionality mismatched
 		return rv, nil
 	}
-	if eligibleList == nil {
-		// no eligible documents
-		return rv, nil
-	}
-	numEligible := eligibleList.Count()
 	// Check and proceed only if non-zero documents eligible per the filter query.
-	if numEligible == 0 {
-		// no eligible documents
+	if len(eligibleDocIDs) == 0 {
 		return rv, nil
-	}
-	// If every element in the index is eligible (full selectivity),
-	// then this can basically be considered unfiltered kNN.
-	if numEligible == v.sb.numDocs {
-		// all documents eligible, no filtering needed
-		return v.Search(qVector, k, params)
-	}
-	eligibleDocIDs := make([]uint32, 0, numEligible)
-	// get eligible iterator
-	eligibleItr := eligibleList.Iterator()
-	for {
-		docID, ok := eligibleItr.Next()
-		if !ok {
-			break
-		}
-		eligibleDocIDs = append(eligibleDocIDs, uint32(docID))
 	}
 
 	// vector IDs corresponding to the local doc numbers to be
@@ -145,10 +128,6 @@ func (v *vectorIndexWrapper) SearchWithFilter(qVector []float32, k int64,
 	if len(vectorIDsToInclude) == 0 {
 		return rv, nil
 	}
-	// If all vectors are eligible, treat as unfiltered search.
-	if len(vectorIDsToInclude) == len(v.vecDocIDMap) {
-		return v.Search(qVector, k, params)
-	}
 	// If the index is not an IVF index, then the search can be
 	// performed directly, using the Flat index.
 	if !v.vecIndex.IsIVFIndex() {
@@ -162,18 +141,10 @@ func (v *vectorIndexWrapper) SearchWithFilter(qVector []float32, k int64,
 		v.addIDsToPostingsList(rv, rs)
 		return rv, nil
 	}
-	// Getting the nprobe value set at index time.
-	nprobe, nlist := v.vecIndex.IVFParams()
-	// include selector for the vector IDs to be considered
-	includeSelector, err := v.getSelector(vectorIDsToInclude, true)
-	if err != nil {
-		return nil, err
-	}
-	defer includeSelector.Delete()
 	// Determining which clusters, identified by centroid ID,
 	// have at least one eligible vector and hence, ought to be
 	// probed.
-	clusterVectorCounts, err := v.vecIndex.ObtainClusterVectorCountsFromIVFIndex(includeSelector, nlist)
+	clusterVectorCounts, err := v.vecIndex.ObtainClusterVectorCountsFromIVFIndex(vectorIDsToInclude)
 	if err != nil {
 		return nil, err
 	}
@@ -214,64 +185,35 @@ func (v *vectorIndexWrapper) SearchWithFilter(qVector []float32, k int64,
 	// Ordering the retrieved centroid IDs by increasing order
 	// of distance i.e. decreasing order of proximity to query vector.
 	centroidIDs := make([]int64, 0, len(clusterVectorCounts))
-	for centroidID, vectorCount := range clusterVectorCounts {
-		// Only centroids with at least one eligible vector are considered.
-		if vectorCount > 0 {
-			// since we are adding only unique centroid IDs, this is simply an increment
-			// and we can avoid a population count at the end
-			centroidIDs = append(centroidIDs, int64(centroidID))
-		}
+	for centroidID := range clusterVectorCounts {
+		centroidIDs = append(centroidIDs, centroidID)
 	}
-	if len(centroidIDs) == 0 {
-		// no eligible centroids found
-		return rv, nil
-	}
-	// get centroid selector
-	centroidSelector, err := v.getSelector(centroidIDs, true)
+	closestCentroidIDs, centroidDistances, err :=
+		v.vecIndex.ObtainClustersWithDistancesFromIVFIndex(qVector, centroidIDs)
 	if err != nil {
 		return nil, err
 	}
-	defer centroidSelector.Delete()
-
-	eligibleCentroidIDs, centroidDistances, err :=
-		v.vecIndex.ObtainClustersWithDistancesFromIVFIndex(qVector, centroidSelector, int64(len(centroidIDs)))
-	if err != nil {
-		return nil, err
-	}
+	// Getting the nprobe value set at index time.
+	nprobe := int(v.vecIndex.GetNProbe())
 	// Determining the minimum number of centroids to be probed
 	// to ensure that at least 'k' vectors are collected while
 	// examining at least 'nprobe' centroids.
 	// centroidsToProbe range: [nprobe, number of eligible centroids]
 	var eligibleVecsTillNow int64
-	var eligibleCentroidsTillNow int
-	centroidsToProbe := len(eligibleCentroidIDs)
-	for i, centroidID := range eligibleCentroidIDs {
-		// if we get a -1 somehow here, it means no more centroids
-		// need to reslice the eligibleCentroidIDs and distances
-		// accordingly, just a safeguard check as this does not
-		// really happen. FAISS can pad with -1s if there are not enough
-		// eligible centroids, but we have already counted the cardinality so
-		// we should not see -1s here.
-		if centroidID == -1 {
-			centroidsToProbe = i
-			// reslice to only valid centroids
-			eligibleCentroidIDs = eligibleCentroidIDs[:centroidsToProbe]
-			centroidDistances = centroidDistances[:centroidsToProbe]
-			break
-		}
+	centroidsToProbe := len(closestCentroidIDs)
+	for i, centroidID := range closestCentroidIDs {
 		eligibleVecsTillNow += clusterVectorCounts[centroidID]
-		eligibleCentroidsTillNow = i + 1
 		// Stop once we've examined at least 'nprobe' centroids and
 		// collected at least 'k' vectors.
-		if eligibleVecsTillNow >= k && eligibleCentroidsTillNow >= nprobe {
-			centroidsToProbe = eligibleCentroidsTillNow
+		if eligibleVecsTillNow >= k && i+1 >= nprobe {
+			centroidsToProbe = i + 1
 			break
 		}
 	}
-	// Search the clusters specified by 'eligibleCentroidIDs' for
+	// Search the clusters specified by 'closestCentroidIDs' for
 	// vectors whose IDs are present in 'vectorIDsToInclude'
 	rs, err := v.searchClustersFromIVFIndex(
-		ids, include, eligibleCentroidIDs, centroidsToProbe,
+		ids, include, closestCentroidIDs, centroidsToProbe,
 		k, qVector, centroidDistances, params)
 	if err != nil {
 		return nil, err
@@ -414,16 +356,7 @@ func (v *vectorIndexWrapper) searchWithoutIDs(qVector []float32, k int64, exclud
 	resultSet, error) {
 	return v.docSearch(k, v.sb.numDocs,
 		func() ([]float32, []int64, error) {
-			var sel faiss.Selector
-			var err error
-			if len(exclude) > 0 {
-				sel, err = v.getSelector(exclude, false)
-				if err != nil {
-					return nil, nil, err
-				}
-				defer sel.Delete()
-			}
-			return v.vecIndex.SearchWithOptions(qVector, k, sel, params)
+			return v.vecIndex.SearchWithoutIDs(qVector, k, exclude, params)
 		},
 		func(numIter int, labels []int64) bool {
 			// if this is the first loop iteration and we have < k unique docIDs,
@@ -451,15 +384,7 @@ func (v *vectorIndexWrapper) searchWithIDs(qVector []float32, k int64, include [
 	var includeSet map[int64]struct{}
 	return v.docSearch(k, v.sb.numDocs,
 		func() ([]float32, []int64, error) {
-			// build the selector based on whatever ids is as of now
-			selector, err := v.getSelector(include, true)
-			if err != nil {
-				return nil, nil, err
-			}
-			// once the main search is done we must free the selector
-			defer selector.Delete()
-
-			return v.vecIndex.SearchWithOptions(qVector, k, selector, params)
+			return v.vecIndex.SearchWithIDs(qVector, k, include, params)
 		},
 		func(numIter int, labels []int64) bool {
 			// if this is the first loop iteration and we have < k unique docIDs,
@@ -516,8 +441,8 @@ func (v *vectorIndexWrapper) searchClustersFromIVFIndex(ids []int64, include boo
 			}
 			// once the main search is done we must free the selector
 			defer selector.Delete()
-			return v.vecIndex.SearchClustersFromIVFIndex(eligibleCentroidIDs, centroidDis,
-				centroidsToProbe, x, k, selector, params)
+			return v.vecIndex.SearchClustersFromIVFIndex(selector, eligibleCentroidIDs,
+				centroidsToProbe, k, x, centroidDis, params)
 		},
 		func(numIter int, labels []int64) bool {
 			// if this is the first loop iteration and we have < k unique docIDs,
@@ -538,12 +463,12 @@ func (v *vectorIndexWrapper) searchClustersFromIVFIndex(ids []int64, include boo
 			// and still have not found enough unique docIDs, we increase
 			// the number of centroids to probe for the next iteration
 			// to try and find more vectors/documents
-			if numIter >= nprobeIncreaseThreshold && centroidsToProbe < totalEligibleCentroids {
+			if numIter >= nprobeIncreaseThreshold && centroidsToProbe < len(eligibleCentroidIDs) {
 				// Calculate how much to increase: increase by 50% of the remaining centroids to probe,
 				// but at least by 1 to ensure progress.
 				increaseAmount := max((totalEligibleCentroids-centroidsToProbe)/2, 1)
 				// Update centroidsToProbe, ensuring it does not exceed the total eligible centroids
-				centroidsToProbe = min(centroidsToProbe+increaseAmount, totalEligibleCentroids)
+				centroidsToProbe = min(centroidsToProbe+increaseAmount, len(eligibleCentroidIDs))
 			}
 			// prepare the exclude/include list for the next iteration
 			if include {
@@ -577,7 +502,7 @@ func (v *vectorIndexWrapper) getSelector(ids []int64, include bool) (selector fa
 	if include {
 		selector, err = faiss.NewIDSelectorBatch(ids)
 	} else {
-		selector, err = faiss.NewIDSelectorBatchNot(ids)
+		selector, err = faiss.NewIDSelectorNot(ids)
 	}
 	if err != nil {
 		return nil, err
