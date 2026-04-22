@@ -79,6 +79,10 @@ func (db *NullDatabase) LastUpdate(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
+func (db *NullDatabase) Dimensions() []int {
+	return []int{0}
+}
+
 func (db *NullDatabase) URI() string {
 	return "null://"
 }

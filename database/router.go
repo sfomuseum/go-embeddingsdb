@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"sync"
 	"net/url"
+	"slices"
 	"strconv"
-	
+	"sync"
+	"sync/atomic"
+
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"
+	//	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -70,7 +72,7 @@ func NewRouterDatabase(ctx context.Context, uri string) (Database, error) {
 	for _, target_uri := range db_uris {
 
 		wg.Go(func() {
-		
+
 			db_u, err := url.Parse(target_uri)
 
 			if err != nil {
@@ -141,25 +143,33 @@ func (db *RouterDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 
 func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
 
-	d := db.getAllDimensionsFromOptions(ctx)
-	count := len(d)
+	dims := db.getAllDimensionsFromOptions(ctx)
 
-	switch {
-	case count == 0:
-		return 0, fmt.Errorf("Missing dimensions option")
-	case count > 1:
-		return 0, fmt.Errorf("Multiple dimensions specified")
-	default:
-		// pass
+	if len(dims) == 0 {
+		dims = db.Dimensions()
 	}
 
-	target_db, err := db.loadDatabase(ctx, d[0])
+	total := int32(0)
+
+	cb := func(ctx context.Context, target_db Database) error {
+
+		c, err := target_db.BatchedRecordsCount(ctx)
+
+		if err != nil {
+			return err
+		}
+
+		atomic.AddInt32(&total, int32(c))
+		return nil
+	}
+
+	err := db.exec(ctx, cb)
 
 	if err != nil {
-		return 0, err
+		return int(total), err
 	}
 
-	return target_db.BatchedRecordsCount(ctx)
+	return int(total), nil
 }
 
 func (db *RouterDatabase) AddBatchedRecord(ctx context.Context) error {
@@ -167,18 +177,15 @@ func (db *RouterDatabase) AddBatchedRecord(ctx context.Context) error {
 	dims := db.getAllDimensionsFromOptions(ctx)
 
 	if len(dims) == 0 {
-	   	     dims = db.Dimensions()
-        }
-
-	// Do all...
-	
-	target_db, err := db.loadDatabase(ctx, dims[0])
-
-	if err != nil {
-		return nil, err
+		dims = db.Dimensions()
 	}
 
-	return target_db.AddBatchedRecords(ctx)
+	cb := func(ctx context.Context, target_db Database) error {
+		return target_db.AddBatchedRecords(ctx)
+	}
+
+	return db.exec(ctx, cb, dims...)
+
 }
 
 func (db *RouterDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
@@ -203,13 +210,13 @@ func (db *RouterDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 	d, err := db.getDimensionFromOptions(ctx)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	target_db, err := db.loadDatabase(ctx, d)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	return target_db.RemoveRecord(ctx, req)
@@ -233,13 +240,13 @@ func (db *RouterDatabase) ListRecords(ctx context.Context, opts pagination.Optio
 	d, err := db.getDimensionFromOptions(ctx)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	target_db, err := db.loadDatabase(ctx, d)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return target_db.ListRecords(ctx, opts, filters...)
@@ -247,20 +254,25 @@ func (db *RouterDatabase) ListRecords(ctx context.Context, opts pagination.Optio
 
 func (db *RouterDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
 
-	d := -1
+	dimensions := db.Dimensions()
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
-		target_db, err := db.LoadDatabase(ctx, d)
+		for _, d := range dimensions {
 
-		if err != nil {
-			yield(nil, err)
-		}
+			target_db, err := db.loadDatabase(ctx, d)
 
-		for rec, err := range target_db.IterateRecords(ctx) {
+			if err != nil {
+				if !yield(nil, err) {
+					continue
+				}
+			}
 
-			if !yield(rec, err) {
-				return
+			for rec, err := range target_db.IterateRecords(ctx) {
+
+				if !yield(rec, err) {
+					return
+				}
 			}
 		}
 	}
@@ -268,19 +280,40 @@ func (db *RouterDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 func (db *RouterDatabase) LastUpdate(ctx context.Context) (int64, error) {
 
-	d, err := db.getDimensionFromOptions(ctx)
+	dims := db.getAllDimensionsFromOptions(ctx)
 
-	if err != nil {
-		return 0, err
+	if len(dims) == 0 {
+		dims = db.Dimensions()
 	}
 
-	target_db, err := db.loadDatabase(ctx, d)
+	lastupdate := int64(0)
+	mu := new(sync.RWMutex)
+
+	cb := func(ctx context.Context, target_db Database) error {
+
+		target_lastupdate, err := target_db.LastUpdate(ctx)
+
+		if err != nil {
+			return err
+		}
+
+		mu.Lock()
+
+		if target_lastupdate > lastupdate {
+			lastupdate = target_lastupdate
+		}
+
+		mu.Unlock()
+		return nil
+	}
+
+	err := db.exec(ctx, cb, dims...)
 
 	if err != nil {
-	   return 0, nil
+		return lastupdate, err
 	}
-	
-	return 0, nil
+
+	return lastupdate, nil
 }
 
 func (db *RouterDatabase) URI() string {
@@ -288,25 +321,115 @@ func (db *RouterDatabase) URI() string {
 }
 
 func (db *RouterDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+
+	dims := db.getAllDimensionsFromOptions(ctx)
+
+	if len(dims) == 0 {
+		dims = db.Dimensions()
+	}
+
 	models := make([]string, 0)
+	mu := new(sync.RWMutex)
+
+	cb := func(ctx context.Context, target_db Database) error {
+
+		target_models, err := target_db.Models(ctx, providers...)
+
+		if err != nil {
+			return err
+		}
+
+		mu.Lock()
+
+		for _, m := range target_models {
+			if !slices.Contains(models, m) {
+				models = append(models, m)
+			}
+		}
+
+		mu.Unlock()
+		return nil
+
+	}
+
+	err := db.exec(ctx, cb, dims...)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return models, nil
 }
 
 func (db *RouterDatabase) Providers(ctx context.Context) ([]string, error) {
+
+	dims := db.getAllDimensionsFromOptions(ctx)
+
+	if len(dims) == 0 {
+		dims = db.Dimensions()
+	}
+
 	providers := make([]string, 0)
+	mu := new(sync.RWMutex)
+
+	cb := func(ctx context.Context, target_db Database) error {
+
+		target_providers, err := target_db.Providers(ctx)
+
+		if err != nil {
+			return err
+		}
+
+		mu.Lock()
+
+		for _, p := range target_providers {
+
+			if !slices.Contains(providers, p) {
+				providers = append(providers, p)
+			}
+		}
+		mu.Unlock()
+		return nil
+
+	}
+
+	err := db.exec(ctx, cb, dims...)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return providers, nil
+}
+
+func (db *RouterDatabase) Dimensions() []int {
+
+	dimensions := make([]int, 0)
+
+	db.databases.Range(func(k, v any) bool {
+		dimensions = append(dimensions, v.(int))
+		return true
+	})
+
+	return dimensions
 }
 
 func (db *RouterDatabase) Close(ctx context.Context) error {
 
-     cb := func(ctx context.Context, target_db Database) error {
-     	erturn target_db.Close(ctx)
-     }
+	dims := db.Dimensions()
 
-     return db.exec(ctx, db)
+	cb := func(ctx context.Context, target_db Database) error {
+		return target_db.Close(ctx)
+	}
+
+	return db.exec(ctx, cb, dims...)
 }
 
 func (db *RouterDatabase) exec(ctx context.Context, cb execCallbackFunc, dimensions ...int) error {
+
+	if len(dimensions) == 0 {
+		dimensions = db.Dimensions()
+	}
 
 	wg := new(sync.WaitGroup)
 
@@ -364,12 +487,13 @@ func (db *RouterDatabase) loadDatabase(ctx context.Context, d int) (Database, er
 		return nil, fmt.Errorf("Database not registered")
 	}
 
-	return v.(Database)
+	return v.(Database), nil
 }
 
-func (db *RouterDatabase) getDimensionFromOptions(ctx context.Context, opts ...Option) (int, error){
+func (db *RouterDatabase) getDimensionFromOptions(ctx context.Context, opts ...Option) (int, error) {
 
 	dims := db.getAllDimensionsFromOptions(ctx)
+	count := len(dims)
 
 	switch {
 	case count == 0:
@@ -377,7 +501,7 @@ func (db *RouterDatabase) getDimensionFromOptions(ctx context.Context, opts ...O
 	case count > 1:
 		return 0, fmt.Errorf("Multiple dimensions specified")
 	default:
-		return dims[0]
+		return dims[0], nil
 	}
 
 }
@@ -388,10 +512,12 @@ func (db *RouterDatabase) getAllDimensionsFromOptions(ctx context.Context, opts 
 
 	for _, o := range opts {
 
-		if o.Type() == DimensionsOptions {
+		if o.Type() == DimensionsOptionType {
 
-			if !slices.Contains(dimensions, o.Value()) {
-				dimensions = append(dimensions, o.Value())
+			v := o.(*DimensionsOption).Dimensions()
+
+			if !slices.Contains(dimensions, v) {
+				dimensions = append(dimensions, v)
 			}
 		}
 	}

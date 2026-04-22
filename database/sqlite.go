@@ -651,6 +651,10 @@ func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
 	return providers, nil
 }
 
+func (db *SQLiteDatabase) Dimensions() []int {
+	return []int{db.dimensions}
+}
+
 // Close performs and terminating functions required by the SQLite database.
 func (db *SQLiteDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()

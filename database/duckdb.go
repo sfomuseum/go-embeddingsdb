@@ -556,6 +556,10 @@ func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
 	return providers, nil
 }
 
+func (db *DuckDBDatabase) Dimensions() []int {
+	return []int{db.dimensions}
+}
+
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }

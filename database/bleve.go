@@ -596,6 +596,10 @@ func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
 	return providers, nil
 }
 
+func (db *BleveDatabase) Dimensions() []int {
+	return []int{db.dimensions}
+}
+
 func (db *BleveDatabase) Close(ctx context.Context) error {
 
 	logger := slog.Default()
