@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/duckdb/duckdb-go/v2"
-
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/blevesearch/bleve/v2"
@@ -34,8 +32,10 @@ import (
 	"github.com/blevesearch/bleve/v2/search"
 	"github.com/blevesearch/bleve/v2/search/query"
 	"github.com/blevesearch/bleve_index_api"
+	"github.com/duckdb/duckdb-go/v2"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 //go:embed bleve_*_schema.txt
@@ -55,6 +55,8 @@ type BleveDatabase struct {
 	batch            *bleve.Batch
 	batch_size       int
 	mu               *sync.RWMutex
+	max_results      int32
+	max_distance     float32
 }
 
 func init() {
@@ -93,6 +95,8 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	q := u.Query()
 
 	dimensions := 512
+	max_distance := float32(1.0)
+	max_results := int32(10)
 
 	if q.Has("dimensions") {
 
@@ -104,6 +108,32 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 		dimensions = v
 		slog.Debug("Reassign dimensions", "value", dimensions)
+	}
+
+	dimensions := 512
+
+	if q.Has("max-distance") {
+
+		v, err := strconv.ParseFloat(q.Get("max-distance"), 64)
+
+		if err != nil {
+			return nil, fmt.Errorf("Invalid ?max-distance= parameter, %w", err)
+		}
+
+		max_distance = float32(v)
+		slog.Debug("Reassign max distance", "value", max_distance)
+	}
+
+	if q.Has("max-results") {
+
+		v, err := strconv.Atoi(q.Get("max-results"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Invalid ?max-results= parameter, %w", err)
+		}
+
+		max_results = int32(v)
+		slog.Debug("Reassign max results", "value", max_results)
 	}
 
 	var index bleve.Index
@@ -215,12 +245,14 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		batch:            batch,
 		batch_size:       100,
 		mu:               mu,
+		max_results:      max_results,
+		max_distance:     max_distance,
 	}
 
 	return db, nil
 }
 
-func (db *BleveDatabase) Export(ctx context.Context, uri string) error {
+func (db *BleveDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
 	return nil
 }
 
@@ -244,7 +276,7 @@ func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 	return true, nil
 }
 
-func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -288,7 +320,7 @@ func (db *BleveDatabase) AddBatchedRecords(ctx context.Context) error {
 	return nil
 }
 
-func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	id := req.Key()
 
@@ -312,13 +344,13 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 	return db.inflateRecordWithMatch(ctx, first)
 }
 
-func (db *BleveDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+func (db *BleveDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	id := req.Key()
 	return db.index.Delete(id)
 }
 
-func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 
@@ -328,10 +360,16 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 		return results, nil
 	}
 
-	k := 10
+	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
-	if req.MaxResults != nil {
-		k = int(*req.MaxResults)
+	if max_results == nil {
+		*max_results = db.max_results
+	}
+
+	if max_distance == nil {
+		*max_distance = db.max_distance
 	}
 
 	var filters []query.Query
@@ -340,8 +378,8 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	model_q.SetField("model")
 	filters = append(filters, model_q)
 
-	if req.SimilarProvider != nil && *req.SimilarProvider != "" {
-		provider_q := bleve.NewMatchQuery(*req.SimilarProvider)
+	if similar_provider != nil && *similar_provider != "" {
+		provider_q := bleve.NewMatchQuery(*similar_provider)
 		provider_q.Analyzer = "keyword"
 		provider_q.SetField("provider")
 		filters = append(filters, provider_q)
@@ -359,7 +397,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	// See the way we're assigning the filter to the KNN search? That's important.
 
 	search_req := bleve.NewSearchRequest(bleve.NewMatchNoneQuery())
-	search_req.AddKNNWithFilter("embeddings", req.Embeddings, int64(k), 1.0, filter_q)
+	search_req.AddKNNWithFilter("embeddings", req.Embeddings, int64(*max_results), 1.0, filter_q)
 
 	search_req.SortBy([]string{"-_score"})
 	search_req.Size = k
@@ -375,7 +413,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 
 		dist := float32(hit.Score)
 
-		if req.MaxDistance != nil && dist > *req.MaxDistance {
+		if dist > *max_distance {
 			continue
 		}
 
@@ -397,7 +435,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	return results, nil
 }
 
-func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	records := make([]*embeddingsdb.Record, 0)
 
@@ -405,6 +443,8 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	from := int(countable.PageFromOptions(pg_opts))
 
 	var q query.Query
+
+	filters := GetAllFiltersFromOptions(ctx, opts...)
 
 	if len(filters) > 0 {
 
@@ -451,7 +491,7 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	return records, pg_rsp, nil
 }
 
-func (db *BleveDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *BleveDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
@@ -505,7 +545,7 @@ func (db *BleveDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddin
 	}
 }
 
-func (db *BleveDatabase) LastUpdate(ctx context.Context) (int64, error) {
+func (db *BleveDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := bleve.NewMatchAllQuery()
 
@@ -538,7 +578,9 @@ func (db *BleveDatabase) URI() string {
 	return db.uri
 }
 
-func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+func (db *BleveDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
+
+	// handle providers here
 
 	count, err := db.index.DocCount()
 
@@ -567,7 +609,7 @@ func (db *BleveDatabase) Models(ctx context.Context, providers ...string) ([]str
 	return models, nil
 }
 
-func (db *BleveDatabase) Providers(ctx context.Context) ([]string, error) {
+func (db *BleveDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	count, err := db.index.DocCount()
 

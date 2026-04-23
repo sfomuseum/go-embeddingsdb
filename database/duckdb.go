@@ -24,6 +24,7 @@ import (
 	"github.com/aaronland/go-pagination"
 	pagination_sql "github.com/aaronland/go-pagination-sql"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type DuckDBDatabase struct {
@@ -157,7 +158,7 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 	return db, nil
 }
 
-func (db *DuckDBDatabase) Export(ctx context.Context, uri string) error {
+func (db *DuckDBDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
 
 	// There does not appear to be any way to use query placeholders for this.
 	// Note: Export directory does not need to exist before calling EXPORT...
@@ -201,7 +202,7 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return false, nil
 }
 
-func (db *DuckDBDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+func (db *DuckDBDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 	return 0, nil
 }
 
@@ -209,7 +210,7 @@ func (db *DuckDBDatabase) AddBatchedRecord(ctx context.Context) error {
 	return nil
 }
 
-func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
@@ -217,7 +218,7 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return InflateDuckDBRecord(ctx, row)
 }
 
-func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	q := "DELETE FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
 
@@ -225,7 +226,7 @@ func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 	return err
 }
 
-func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 
@@ -235,15 +236,16 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		return nil, fmt.Errorf("Failed to serialize query, %w", err)
 	}
 
-	max_results := db.max_results
-	max_distance := db.max_distance
+	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
-	if req.MaxResults != nil {
-		max_results = *req.MaxResults
+	if max_results == nil {
+		*max_results = db.max_results
 	}
 
-	if req.MaxDistance != nil {
-		max_distance = *req.MaxDistance
+	if max_distance == nil {
+		*max_distance = db.max_distance
 	}
 
 	conditions := make([]string, 0)
@@ -252,9 +254,9 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		string(embeddings),
 	}
 
-	if req.SimilarProvider != nil {
+	if similar_provider != nil {
 		conditions = append(conditions, "provider = ?")
-		args = append(args, &req.SimilarProvider)
+		args = append(args, *similar_provider)
 	}
 
 	count_exclude := len(req.Exclude)
@@ -327,7 +329,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	return results, nil
 }
 
-func (db *DuckDBDatabase) LastUpdate(ctx context.Context) (int64, error) {
+func (db *DuckDBDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := "SELECT lastmodified FROM embeddings ORDER BY lastmodified DESC LIMIT 1"
 
@@ -348,18 +350,20 @@ func (db *DuckDBDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	filters := GetAllFiltersFromOptions(ctx, opts...)
+	args := make([]any, len(filters))
 
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings"
-	args := make([]any, len(filters))
 
 	if len(filters) > 0 {
 
 		where := make([]string, len(filters))
 
 		for i, f := range filters {
-			where[i] = fmt.Sprintf("%s = ?", f.Column)
-			args[i] = f.Value
+			where[i] = fmt.Sprintf("%s = ?", f.Key())
+			args[i] = f.Value()
 		}
 
 		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
@@ -406,7 +410,7 @@ func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return records, pg, nil
 }
 
-func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *DuckDBDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
@@ -454,9 +458,11 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 
 }
 
-func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+func (db *DuckDBDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	logger := slog.Default()
+
+	providers := GetAllProvidersFromOptions(ctx, opts...)
 	count_providers := len(providers)
 
 	q := "SELECT DISTINCT(model) AS model FROM embeddings WHERE model != ''"
@@ -515,7 +521,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, providers ...string) ([]st
 	return models, nil
 }
 
-func (db *DuckDBDatabase) Providers(ctx context.Context) ([]string, error) {
+func (db *DuckDBDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	q := "SELECT DISTINCT(provider) AS provider FROM embeddings WHERE provider != '' ORDER BY provider ASC"
 

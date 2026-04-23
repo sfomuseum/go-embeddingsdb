@@ -17,6 +17,7 @@ import (
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
 	embeddingsdb_grpc "github.com/sfomuseum/go-embeddingsdb/grpc"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -178,13 +179,15 @@ func (e *GrpcClient) AddRecord(ctx context.Context, record *embeddingsdb.Record)
 }
 
 // GetRecord retrieves the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
-func (e *GrpcClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+func (e *GrpcClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	grpc_req := &embeddingsdb_grpc.GetRecordRequest{
 		Provider:    req.Provider,
 		DepictionId: req.DepictionId,
 		Model:       req.Model,
 	}
+
+	// opts here...
 
 	rsp, err := e.client.GetRecord(ctx, grpc_req)
 
@@ -197,13 +200,15 @@ func (e *GrpcClient) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordR
 	return record, nil
 }
 
-func (e *GrpcClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+func (e *GrpcClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	grpc_req := &embeddingsdb_grpc.RemoveRecordRequest{
 		Provider:    req.Provider,
 		DepictionId: req.DepictionId,
 		Model:       req.Model,
 	}
+
+	// opts here...
 
 	_, err := e.client.RemoveRecord(ctx, grpc_req)
 
@@ -214,27 +219,18 @@ func (e *GrpcClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveR
 	return nil
 }
 
-func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	grpc_pg := &embeddingsdb_grpc.PaginationOptions{
 		Page:    countable.PageFromOptions(pg_opts),
 		PerPage: pg_opts.PerPage(),
 	}
 
-	grpc_filters := make([]*embeddingsdb_grpc.ListRecordsFilter, len(filters))
-
-	for i, f := range filters {
-
-		grpc_filters[i] = &embeddingsdb_grpc.ListRecordsFilter{
-			Column: f.Column,
-			Value:  fmt.Sprintf("%v", f.Value),
-		}
-	}
-
 	grpc_req := &embeddingsdb_grpc.ListRecordsRequest{
-		Filters:    grpc_filters,
 		Pagination: grpc_pg,
 	}
+
+	// opts here...
 
 	grpc_rsp, err := e.client.ListRecords(ctx, grpc_req)
 
@@ -258,7 +254,7 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 }
 
 // SimilarRecords retrieves records with embeddings similar to those defined in 'req' from a gRPC-backed embeddings database.
-func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsRequest{
 		Model:           req.Model,
@@ -279,7 +275,7 @@ func (e *GrpcClient) SimilarRecords(ctx context.Context, req *embeddingsdb.Simil
 }
 
 // SimilarRecordsById retrieves records with embeddings similar to those for the record matching 'provider', 'depiction_id' and 'model' from a gRPC-backed embeddings database.
-func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.SimilarRecordsByIdRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	grpc_req := &embeddingsdb_grpc.SimilarRecordsByIdRequest{
 		Provider:        req.Provider,
@@ -300,11 +296,13 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.S
 	return results, nil
 }
 
-func (e *GrpcClient) Models(ctx context.Context, providers ...string) ([]string, error) {
+func (e *GrpcClient) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	req := &embeddingsdb_grpc.GetModelsRequest{
-		Provider: providers,
+		// 		Provider: providers,
 	}
+
+	// opts here...
 
 	rsp, err := e.client.GetModels(ctx, req)
 
@@ -315,9 +313,11 @@ func (e *GrpcClient) Models(ctx context.Context, providers ...string) ([]string,
 	return rsp.Model, nil
 }
 
-func (e *GrpcClient) Providers(ctx context.Context) ([]string, error) {
+func (e *GrpcClient) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	req := &embeddingsdb_grpc.GetProvidersRequest{}
+
+	// opts here...
 
 	rsp, err := e.client.GetProviders(ctx, req)
 

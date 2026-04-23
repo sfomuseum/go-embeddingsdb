@@ -9,6 +9,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 	"google.golang.org/grpc/peer"
 )
 
@@ -122,17 +123,13 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 	pg_opts.PerPage(req.Pagination.PerPage)
 	pg_opts.Pointer(req.Pagination.Page)
 
-	filters := make([]*database.ListRecordsFilter, len(req.Filters))
+	opts := make([]options.Option, len(req.Filters))
 
 	for i, f := range req.Filters {
-
-		filters[i] = &database.ListRecordsFilter{
-			Column: f.Column,
-			Value:  f.Value,
-		}
+		opts[i] = options.NewFilterOption(f.Column, f.Value)
 	}
 
-	db_records, pg_rsp, err := s.db.ListRecords(ctx, pg_opts, filters...)
+	db_records, pg_rsp, err := s.db.ListRecords(ctx, pg_opts, opts...)
 
 	if err != nil {
 		logger.Error("Failed to list records", "error", err)
@@ -244,7 +241,13 @@ func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest)
 	t1 := time.Now()
 	defer logger.Debug("Time to list models", "time", time.Since(t1))
 
-	models, err := s.db.Models(ctx, req.Provider...)
+	opts := make([]options.Option, len(req.Provider))
+
+	for i, p := range req.Provider {
+		opts[i] = options.NewProviderOption(p)
+	}
+
+	models, err := s.db.Models(ctx, opts...)
 
 	if err != nil {
 		logger.Error("Failed to list models", "error", err)

@@ -13,44 +13,39 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
-
-type ListRecordsFilter struct {
-	Column string
-	Value  any
-	// Operator
-}
 
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
 	AddRecord(context.Context, *embeddingsdb.Record) (bool, error)
 	// The number of batched records currently waiting to be added.
-	BatchedRecordsCount(context.Context) (int, error)
+	BatchedRecordsCount(context.Context, ...options.Option) (int, error)
 	// Add the pending batched records
 	AddBatchedRecords(context.Context) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
-	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest, ...options.Option) (*embeddingsdb.Record, error)
 	// Remove a record from an EmbeddingsDB instance.
-	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest, ...options.Option) error
 	// ListRecords returns a pagination list of records stored in the database.
-	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
+	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
 	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
-	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
+	IterateRecords(context.Context, ...options.Option) iter.Seq2[*embeddingsdb.Record, error]
 	// Find similar records for a given model and record instance.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
 	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
-	Export(context.Context, string) error
+	Export(context.Context, string, ...options.Option) error
 	// Return the Unix timestamp of the last update to the Database instance.
-	LastUpdate(context.Context) (int64, error)
+	LastUpdate(context.Context, ...options.Option) (int64, error)
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
 	// ...
 	Dimensions() []int
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
-	Models(context.Context, ...string) ([]string, error)
+	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)
+	Providers(context.Context, ...options.Option) ([]string, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
@@ -88,6 +83,43 @@ func ensureDatabaseRoster() error {
 	}
 
 	return nil
+}
+
+func NewDatabaseFromURIs(ctx context.Context, uris ...string) (Database, error) {
+
+	count := len(uris)
+
+	switch count {
+	case 0:
+		return nil, fmt.Errorf("At least one URI is required.")
+	case 1:
+		return NewDatabase(ctx, uris[0])
+	default:
+		db_uri := NewDatabaseURIFromURIs(uris...)
+		return NewDatabase(ctx, db_uri)
+	}
+}
+
+func NewDatabaseURIFromURIs(uris ...string) string {
+
+	count := len(uris)
+
+	switch count {
+	case 0:
+		return ""
+	case 1:
+		return uris[0]
+	default:
+
+		q := url.Values{}
+		q["database-uri}"] = uris
+
+		u := new(url.URL)
+		u.Scheme = "roster"
+		u.RawQuery = q.Encode()
+
+		return u.String()
+	}
 }
 
 // NewDatabase returns a new `Database` instance configured by 'uri'. The value of 'uri' is parsed

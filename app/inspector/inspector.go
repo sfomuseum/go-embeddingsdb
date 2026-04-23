@@ -40,7 +40,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		return fmt.Errorf("Failed to create new client, %w", err)

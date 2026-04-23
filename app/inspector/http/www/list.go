@@ -12,6 +12,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type ListHandlerOptions struct {
@@ -32,9 +33,9 @@ type ListHandlerVars struct {
 	URIs            *inspector_http.URIs
 }
 
-func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
+func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 
-	t := opts.Templates.Lookup("list")
+	t := list_opts.Templates.Lookup("list")
 
 	if t == nil {
 		return nil, fmt.Errorf("Failed to load 'list' template")
@@ -45,7 +46,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		models, err := opts.Client.Models(ctx)
+		models, err := list_opts.Client.Models(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -53,7 +54,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := opts.Client.Providers(ctx)
+		providers, err := list_opts.Client.Providers(ctx)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)
@@ -84,7 +85,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			pg_opts.Pointer(page)
 		}
 
-		filters := make([]*client.ListRecordsFilter, 0)
+		opts := make([]options.Option, 0)
 
 		model, err := sanitize.GetString(req, "model")
 
@@ -95,13 +96,8 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		}
 
 		if model != "" {
-
-			f := &client.ListRecordsFilter{
-				Column: "model",
-				Value:  model,
-			}
-
-			filters = append(filters, f)
+			o := options.NewFilterOption("model", model)
+			opts = append(opts, o)
 		}
 
 		provider, err := sanitize.GetString(req, "provider")
@@ -113,16 +109,11 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		}
 
 		if provider != "" {
-
-			f := &client.ListRecordsFilter{
-				Column: "provider",
-				Value:  provider,
-			}
-
-			filters = append(filters, f)
+			o := options.NewFilterOption("provider", provider)
+			opts = append(opts, o)
 		}
 
-		records, pg_rsp, err := opts.Client.ListRecords(ctx, pg_opts, filters...)
+		records, pg_rsp, err := list_opts.Client.ListRecords(ctx, pg_opts, opts...)
 
 		if err != nil {
 			logger.Error("Failed to list records", "error", err)
@@ -137,8 +128,8 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			CurrentModel:    model,
 			CurrentProvider: provider,
 			Providers:       providers,
-			EnableUploads:   opts.EnableUploads,
-			URIs:            opts.URIs,
+			EnableUploads:   list_opts.EnableUploads,
+			URIs:            list_opts.URIs,
 		}
 
 		err = t.Execute(rsp, vars)

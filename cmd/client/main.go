@@ -17,6 +17,7 @@ import (
 	_ "github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -71,17 +72,21 @@ func usage() {
 func record(args []string) {
 
 	var client_uri string
+	var database_uris multi.MultiString
 	var provider string
 	var depiction_id string
 	var model string
+	var dimensions multi.MultiInt
 	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&database_uris, "database-uri", "...")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve.")
+	fs.Var(&dimensions, "dimensions", "...")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
@@ -103,7 +108,7 @@ func record(args []string) {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
@@ -128,7 +133,14 @@ func record(args []string) {
 		Model:       model,
 	}
 
-	rsp, err := cl.GetRecord(ctx, req)
+	opts := make([]options.Option, 0)
+
+	for _, d := range dimensions {
+		o := options.NewDimensionsOption(d)
+		opts = append(opts, o)
+	}
+
+	rsp, err := cl.GetRecord(ctx, req, opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)
@@ -141,17 +153,21 @@ func record(args []string) {
 func remove(args []string) {
 
 	var client_uri string
+	var database_uris multi.MultiString
 	var provider string
 	var depiction_id string
 	var model string
+	var dimensions multi.MultiInt
 	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&database_uris, "database-uri", "...")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve.")
+	fs.Var(&dimensions, "dimensions", "...")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
@@ -170,7 +186,7 @@ func remove(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
@@ -182,7 +198,14 @@ func remove(args []string) {
 		Model:       model,
 	}
 
-	err = cl.RemoveRecord(ctx, req)
+	opts := make([]options.Option, 0)
+
+	for _, d := range dimensions {
+		o := options.NewDimensionsOption(d)
+		opts = append(opts, o)
+	}
+
+	err = cl.RemoveRecord(ctx, req, opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to remove record, %v", err)
@@ -192,6 +215,7 @@ func remove(args []string) {
 func listRecords(args []string) {
 
 	var client_uri string
+	var database_uris multi.MultiString
 	var start_page int64
 	var end_page int64
 	var per_page int64
@@ -200,7 +224,7 @@ func listRecords(args []string) {
 	fs := flagset.NewFlagSet("list")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-
+	fs.Var(&database_uris, "database-uri", "...")
 	fs.Int64Var(&start_page, "start-page", 1, "The initial page of results to emit.")
 	fs.Int64Var(&end_page, "end-page", -1, "The maximum page number of results to emit. If -1 then this flag will be ignored and all the results (remaining after -start-page * -per-page) will be returned.")
 	fs.Int64Var(&per_page, "per-page", 10, "The number of records to include in each paginated result set.")
@@ -222,7 +246,7 @@ func listRecords(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
@@ -252,6 +276,7 @@ func listRecords(args []string) {
 func similarById(args []string) {
 
 	var client_uri string
+	var database_uris multi.MultiString
 	var provider string
 	var depiction_id string
 	var model string
@@ -264,6 +289,7 @@ func similarById(args []string) {
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&database_uris, "database-uri", "...")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve to establish embeddings to compare.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve to establish embeddings to compare.")
@@ -289,7 +315,7 @@ func similarById(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
@@ -301,21 +327,26 @@ func similarById(args []string) {
 		Model:       model,
 	}
 
+	opts := make([]options.Option, 0)
+
 	if similar_provider != "" {
-		req.SimilarProvider = &similar_provider
+		o := options.NewSimilarProviderOption(similar_provider)
+		opts = append(opts, o)
 	}
 
 	if max_distance > 0 {
 		d := float32(max_distance)
-		req.MaxDistance = &d
+		o := options.NewMaxDistanceOption(d)
+		opts = append(opts, o)
 	}
 
 	if max_results > 0 {
 		r := int32(max_results)
-		req.MaxResults = &r
+		o := options.NewMaxResultsOption(r)
+		opts = append(opts, o)
 	}
 
-	rsp, err := cl.SimilarRecordsById(ctx, req)
+	rsp, err := cl.SimilarRecordsById(ctx, req, opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to get record, %v", err)
@@ -328,14 +359,18 @@ func similarById(args []string) {
 func models(args []string) {
 
 	var client_uri string
+	var database_uris multi.MultiString
 	var providers multi.MultiString
+	var dimensions multi.MultiInt
 
 	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&database_uris, "database-uri", "...")
 	fs.Var(&providers, "provider", "Zero or more providers to limit model selection by.")
+	fs.Var(&dimensions, "dimensions", "...")
 
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
@@ -355,13 +390,23 @@ func models(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	models, err := cl.Models(ctx, providers...)
+	opts := make([]options.Option, 0)
+
+	for _, p := range providers {
+		opts = append(opts, options.NewProviderOption(p))
+	}
+
+	for _, d := range dimensions {
+		opts = append(opts, options.NewDimensionsOption(d))
+	}
+
+	models, err := cl.Models(ctx, opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to get models, %v", err)
@@ -374,11 +419,15 @@ func models(args []string) {
 func providers(args []string) {
 
 	var client_uri string
+	var database_uris multi.MultiString
+	var dimensions multi.MultiInt
 	var verbose bool
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&database_uris, "database-uri", "...")
+	fs.Var(&dimensions, "dimensions", "...")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
@@ -397,13 +446,19 @@ func providers(args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClient(ctx, client_uri)
+	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)
 	}
 
-	providers, err := cl.Providers(ctx)
+	opts := make([]options.Option, 0)
+
+	for _, d := range dimensions {
+		opts = append(opts, options.NewDimensionsOption(d))
+	}
+
+	providers, err := cl.Providers(ctx, opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to get models, %v", err)

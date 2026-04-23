@@ -13,6 +13,7 @@ import (
 	"github.com/aaronland/go-pagination"
 	//	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type RouterDatabase struct {
@@ -126,8 +127,8 @@ func NewRouterDatabase(ctx context.Context, uri string) (Database, error) {
 	return db, nil
 }
 
-func (db *RouterDatabase) Export(ctx context.Context, uri string) error {
-	return nil
+func (db *RouterDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
+	return fmt.Errorf("Not implemented")
 }
 
 func (db *RouterDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
@@ -141,9 +142,9 @@ func (db *RouterDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return target_db.AddRecord(ctx, rec)
 }
 
-func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 
-	dims := db.getAllDimensionsFromOptions(ctx)
+	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
 		dims = db.Dimensions()
@@ -163,7 +164,7 @@ func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context) (int, error) 
 		return nil
 	}
 
-	err := db.exec(ctx, cb)
+	err := db.exec(ctx, cb, dims...)
 
 	if err != nil {
 		return int(total), err
@@ -172,9 +173,9 @@ func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context) (int, error) 
 	return int(total), nil
 }
 
-func (db *RouterDatabase) AddBatchedRecord(ctx context.Context) error {
+func (db *RouterDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
 
-	dims := db.getAllDimensionsFromOptions(ctx)
+	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
 		dims = db.Dimensions()
@@ -188,9 +189,9 @@ func (db *RouterDatabase) AddBatchedRecord(ctx context.Context) error {
 
 }
 
-func (db *RouterDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+func (db *RouterDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
-	d, err := db.getDimensionFromOptions(ctx)
+	d, err := DeriveModelDimensions(ctx, req.Model, opts...)
 
 	if err != nil {
 		return nil, err
@@ -205,9 +206,9 @@ func (db *RouterDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return target_db.GetRecord(ctx, req)
 }
 
-func (db *RouterDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+func (db *RouterDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
-	d, err := db.getDimensionFromOptions(ctx)
+	d, err := GetDimensionFromOptions(ctx, opts...)
 
 	if err != nil {
 		return err
@@ -222,7 +223,7 @@ func (db *RouterDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 	return target_db.RemoveRecord(ctx, req)
 }
 
-func (db *RouterDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (db *RouterDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	d := len(req.Embeddings)
 
@@ -232,12 +233,12 @@ func (db *RouterDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		return nil, err
 	}
 
-	return target_db.SimilarRecords(ctx, req)
+	return target_db.SimilarRecords(ctx, req, opts...)
 }
 
-func (db *RouterDatabase) ListRecords(ctx context.Context, opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
+func (db *RouterDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	d, err := db.getDimensionFromOptions(ctx)
+	d, err := GetDimensionFromOptions(ctx, opts...)
 
 	if err != nil {
 		return nil, nil, err
@@ -249,16 +250,20 @@ func (db *RouterDatabase) ListRecords(ctx context.Context, opts pagination.Optio
 		return nil, nil, err
 	}
 
-	return target_db.ListRecords(ctx, opts, filters...)
+	return target_db.ListRecords(ctx, pg_opts, opts...)
 }
 
-func (db *RouterDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *RouterDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
-	dimensions := db.Dimensions()
+	dims := GetAllDimensionsFromOptions(ctx, opts...)
+
+	if len(dims) == 0 {
+		dims = db.Dimensions()
+	}
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
-		for _, d := range dimensions {
+		for _, d := range dims {
 
 			target_db, err := db.loadDatabase(ctx, d)
 
@@ -278,9 +283,9 @@ func (db *RouterDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 	}
 }
 
-func (db *RouterDatabase) LastUpdate(ctx context.Context) (int64, error) {
+func (db *RouterDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
-	dims := db.getAllDimensionsFromOptions(ctx)
+	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
 		dims = db.Dimensions()
@@ -320,9 +325,9 @@ func (db *RouterDatabase) URI() string {
 	return db.uri
 }
 
-func (db *RouterDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+func (db *RouterDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	dims := db.getAllDimensionsFromOptions(ctx)
+	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
 		dims = db.Dimensions()
@@ -333,7 +338,7 @@ func (db *RouterDatabase) Models(ctx context.Context, providers ...string) ([]st
 
 	cb := func(ctx context.Context, target_db Database) error {
 
-		target_models, err := target_db.Models(ctx, providers...)
+		target_models, err := target_db.Models(ctx, opts...)
 
 		if err != nil {
 			return err
@@ -361,9 +366,9 @@ func (db *RouterDatabase) Models(ctx context.Context, providers ...string) ([]st
 	return models, nil
 }
 
-func (db *RouterDatabase) Providers(ctx context.Context) ([]string, error) {
+func (db *RouterDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	dims := db.getAllDimensionsFromOptions(ctx)
+	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
 		dims = db.Dimensions()
@@ -374,7 +379,7 @@ func (db *RouterDatabase) Providers(ctx context.Context) ([]string, error) {
 
 	cb := func(ctx context.Context, target_db Database) error {
 
-		target_providers, err := target_db.Providers(ctx)
+		target_providers, err := target_db.Providers(ctx, opts...)
 
 		if err != nil {
 			return err
@@ -488,39 +493,4 @@ func (db *RouterDatabase) loadDatabase(ctx context.Context, d int) (Database, er
 	}
 
 	return v.(Database), nil
-}
-
-func (db *RouterDatabase) getDimensionFromOptions(ctx context.Context, opts ...Option) (int, error) {
-
-	dims := db.getAllDimensionsFromOptions(ctx)
-	count := len(dims)
-
-	switch {
-	case count == 0:
-		return 0, fmt.Errorf("Missing dimensions option")
-	case count > 1:
-		return 0, fmt.Errorf("Multiple dimensions specified")
-	default:
-		return dims[0], nil
-	}
-
-}
-
-func (db *RouterDatabase) getAllDimensionsFromOptions(ctx context.Context, opts ...Option) []int {
-
-	dimensions := make([]int, 0)
-
-	for _, o := range opts {
-
-		if o.Type() == DimensionsOptionType {
-
-			v := o.(*DimensionsOption).Dimensions()
-
-			if !slices.Contains(dimensions, v) {
-				dimensions = append(dimensions, v)
-			}
-		}
-	}
-
-	return dimensions
 }

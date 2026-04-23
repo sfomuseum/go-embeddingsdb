@@ -23,6 +23,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 //go:embed sqlite_*_schema.txt
@@ -206,7 +207,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	return db, nil
 }
 
-func (db *SQLiteDatabase) Export(ctx context.Context, uri string) error {
+func (db *SQLiteDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
 	return nil
 }
 
@@ -264,7 +265,7 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return false, nil
 }
 
-func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context) (int, error) {
+func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 	return 0, nil
 }
 
@@ -273,7 +274,7 @@ func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context) error {
 }
 
 // Return the [embeddingsdb.Record] record matching 'provider', 'depiction_id' and 'model'.
-func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error) {
+func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	id, err := db.uidForRecord(ctx, req.Provider, req.DepictionId, req.Model)
 
@@ -294,22 +295,23 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return rec, nil
 }
 
-func (db *SQLiteDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest) error {
+func (db *SQLiteDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 	return fmt.Errorf("Not implemented")
 }
 
 // Find similar records for a given model and record instance.
-func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error) {
+func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
-	max_distance := db.max_distance
-	max_results := db.max_results
+	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
-	if req.MaxDistance != nil && *req.MaxDistance <= max_distance {
-		max_distance = *req.MaxDistance
+	if max_results == nil {
+		*max_results = db.max_results
 	}
 
-	if req.MaxResults != nil && *req.MaxResults <= max_results {
-		max_results = *req.MaxResults
+	if max_distance == nil {
+		*max_distance = db.max_distance
 	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)
@@ -355,9 +357,11 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	conditions = append(conditions, fmt.Sprintf("v.distance <= %f", max_distance))
 	conditions = append(conditions, fmt.Sprintf("k=%d", max_results))
 
-	if req.SimilarProvider != nil {
+	// replace with ProviderOptions
+
+	if similar_provider != nil {
 		conditions = append(conditions, "r.provider = ?")
-		args = append(args, *req.SimilarProvider)
+		args = append(args, *similar_provider)
 	}
 
 	count_exclude := len(req.Exclude)
@@ -436,7 +440,7 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 }
 
 // Return the Unix timestamp of the last update to the SQLite database.
-func (db *SQLiteDatabase) LastUpdate(ctx context.Context) (int64, error) {
+func (db *SQLiteDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := fmt.Sprintf("SELECT lastmodified FROM %s ORDER BY lastmodified DESC LIMIT 1", db.records_table.Name())
 
@@ -461,11 +465,12 @@ func (db *SQLiteDatabase) URI() string {
 	return db.db_uri
 }
 
-func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, filters ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error) {
-
-	args := make([]any, len(filters))
+func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r. attributes FROM %s r, %s v WHERE r.id=v.rowid", db.records_table.Name(), db.vec_table.Name())
+
+	filters := GetAllFiltersFromOptions(ctx, opts...)
+	args := make([]any, len(filters))
 
 	if len(filters) > 0 {
 
@@ -520,7 +525,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return records, pg, nil
 }
 
-func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddingsdb.Record, error] {
+func (db *SQLiteDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
@@ -568,11 +573,14 @@ func (db *SQLiteDatabase) IterateRecords(ctx context.Context) iter.Seq2[*embeddi
 }
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
-func (db *SQLiteDatabase) Models(ctx context.Context, providers ...string) ([]string, error) {
+func (db *SQLiteDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	models := make([]string, 0)
 
 	q := fmt.Sprintf("SELECT DISTINCT(model) FROM %s ORDER BY model ASC", db.records_table.Name())
+
+	// handle providers here
+
 	rows, err := db.vec_db.QueryContext(ctx, q)
 
 	if err != nil {
@@ -610,7 +618,7 @@ func (db *SQLiteDatabase) Models(ctx context.Context, providers ...string) ([]st
 }
 
 // Return the unique list of providers across all the embeddings.
-func (db *SQLiteDatabase) Providers(ctx context.Context) ([]string, error) {
+func (db *SQLiteDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	providers := make([]string, 0)
 
