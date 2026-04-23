@@ -8,15 +8,15 @@ import (
 	"slices"
 	"strconv"
 	"sync"
-	"sync/atomic"
 
 	"github.com/aaronland/go-pagination"
-	//	"github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
-type RouterDatabase struct {
+const MultiDatabaseScheme string = "multi"
+
+type MultiDatabase struct {
 	Database
 	uri       string
 	databases *sync.Map
@@ -27,14 +27,14 @@ type execCallbackFunc func(context.Context, Database) error
 func init() {
 
 	ctx := context.Background()
-	err := RegisterDatabase(ctx, "router", NewRouterDatabase)
+	err := RegisterDatabase(ctx, MultiDatabaseScheme, NewMultiDatabase)
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-func NewRouterDatabase(ctx context.Context, uri string) (Database, error) {
+func NewMultiDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
 
@@ -120,18 +120,25 @@ func NewRouterDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, fmt.Errorf("...")
 	}
 
-	db := &RouterDatabase{
+	db := &MultiDatabase{
 		uri:       uri,
 		databases: db_map,
 	}
 	return db, nil
 }
 
-func (db *RouterDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
-	return fmt.Errorf("Not implemented")
+// Return the URI string used to instantiate the Database instance.
+func (db *MultiDatabase) URI() string {
+	return db.uri
 }
 
-func (db *RouterDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
+// Export the contents of the database. This is current a no/op for this Database implementation.
+func (db *MultiDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
+	return nil
+}
+
+// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+func (db *MultiDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
 	target_db, err := db.loadDatabase(ctx, len(rec.Embeddings))
 
@@ -142,7 +149,8 @@ func (db *RouterDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return target_db.AddRecord(ctx, rec)
 }
 
-func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
+// The number of batched records currently waiting to be added.
+func (db *MultiDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
@@ -150,17 +158,21 @@ func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context, opts ...optio
 		dims = db.Dimensions()
 	}
 
-	total := int32(0)
+	total := 0
+
+	mu := new(sync.RWMutex)
 
 	cb := func(ctx context.Context, target_db Database) error {
 
-		c, err := target_db.BatchedRecordsCount(ctx)
+		count, err := target_db.BatchedRecordsCount(ctx)
 
 		if err != nil {
 			return err
 		}
 
-		atomic.AddInt32(&total, int32(c))
+		mu.Lock()
+		total += count
+		mu.Unlock()
 		return nil
 	}
 
@@ -170,10 +182,11 @@ func (db *RouterDatabase) BatchedRecordsCount(ctx context.Context, opts ...optio
 		return int(total), err
 	}
 
-	return int(total), nil
+	return total, nil
 }
 
-func (db *RouterDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
+// Add the pending batched records.
+func (db *MultiDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
@@ -189,7 +202,10 @@ func (db *RouterDatabase) AddBatchedRecord(ctx context.Context, opts ...options.
 
 }
 
-func (db *RouterDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
+// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
+// The `MultiDatabase` implementation requires a minimum of (1) [options.Option] implementing [option.DimensionsOption]
+// in order to determine which underlying embeddings database to query.
+func (db *MultiDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	d, err := DeriveModelDimensions(ctx, req.Model, opts...)
 
@@ -206,12 +222,16 @@ func (db *RouterDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return target_db.GetRecord(ctx, req)
 }
 
-func (db *RouterDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
+// Remove a record from an EmbeddingsDB instance.
+// The `MultiDatabase` implementation requires a minimum of (1) [options.Option] implementing [option.DimensionsOption]
+//
+//	in order to determine which underlying embeddings database to update.
+func (db *MultiDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
-	d, err := GetDimensionFromOptions(ctx, opts...)
+	d, err := DeriveModelDimensions(ctx, req.Model, opts...)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to derive model dimensions, %w", err)
 	}
 
 	target_db, err := db.loadDatabase(ctx, d)
@@ -223,7 +243,8 @@ func (db *RouterDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 	return target_db.RemoveRecord(ctx, req)
 }
 
-func (db *RouterDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
+// Find similar records for a given model and record instance.
+func (db *MultiDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	d := len(req.Embeddings)
 
@@ -236,7 +257,11 @@ func (db *RouterDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	return target_db.SimilarRecords(ctx, req, opts...)
 }
 
-func (db *RouterDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
+// ListRecords returns a paginated list of records stored in the database.
+// The `MultiDatabase` implementation requires a minimum of (1) [options.Option] implementing [option.DimensionsOption]
+//
+//	in order to determine which underlying embeddings database to update.
+func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	d, err := GetDimensionFromOptions(ctx, opts...)
 
@@ -253,7 +278,8 @@ func (db *RouterDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return target_db.ListRecords(ctx, pg_opts, opts...)
 }
 
-func (db *RouterDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
+// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+func (db *MultiDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
@@ -283,7 +309,8 @@ func (db *RouterDatabase) IterateRecords(ctx context.Context, opts ...options.Op
 	}
 }
 
-func (db *RouterDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
+// Return the Unix timestamp of the last update to the Database instance.
+func (db *MultiDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
@@ -299,7 +326,7 @@ func (db *RouterDatabase) LastUpdate(ctx context.Context, opts ...options.Option
 		target_lastupdate, err := target_db.LastUpdate(ctx)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to determine last update for %s, %w", target_db.URI(), err)
 		}
 
 		mu.Lock()
@@ -315,17 +342,14 @@ func (db *RouterDatabase) LastUpdate(ctx context.Context, opts ...options.Option
 	err := db.exec(ctx, cb, dims...)
 
 	if err != nil {
-		return lastupdate, err
+		return lastupdate, fmt.Errorf("Failed to issue last update commands, %w", err)
 	}
 
 	return lastupdate, nil
 }
 
-func (db *RouterDatabase) URI() string {
-	return db.uri
-}
-
-func (db *RouterDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
+// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
+func (db *MultiDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
@@ -341,7 +365,7 @@ func (db *RouterDatabase) Models(ctx context.Context, opts ...options.Option) ([
 		target_models, err := target_db.Models(ctx, opts...)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to determine models for %s, %w", target_db.URI(), err)
 		}
 
 		mu.Lock()
@@ -360,13 +384,14 @@ func (db *RouterDatabase) Models(ctx context.Context, opts ...options.Option) ([
 	err := db.exec(ctx, cb, dims...)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to execute models commands, %w", err)
 	}
 
 	return models, nil
 }
 
-func (db *RouterDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
+// Return the unique list of providers across all the embeddings.
+func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
@@ -382,7 +407,7 @@ func (db *RouterDatabase) Providers(ctx context.Context, opts ...options.Option)
 		target_providers, err := target_db.Providers(ctx, opts...)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to determine providers for %s, %w", target_db.URI(), err)
 		}
 
 		mu.Lock()
@@ -401,13 +426,14 @@ func (db *RouterDatabase) Providers(ctx context.Context, opts ...options.Option)
 	err := db.exec(ctx, cb, dims...)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to execute providers commands, %w", err)
 	}
 
 	return providers, nil
 }
 
-func (db *RouterDatabase) Dimensions() []int {
+// Return the list of dimensions supported by this Database implementation.
+func (db *MultiDatabase) Dimensions() []int {
 
 	dimensions := make([]int, 0)
 
@@ -419,7 +445,8 @@ func (db *RouterDatabase) Dimensions() []int {
 	return dimensions
 }
 
-func (db *RouterDatabase) Close(ctx context.Context) error {
+// Close performs and terminating functions required by the database.
+func (db *MultiDatabase) Close(ctx context.Context) error {
 
 	dims := db.Dimensions()
 
@@ -430,10 +457,10 @@ func (db *RouterDatabase) Close(ctx context.Context) error {
 	return db.exec(ctx, cb, dims...)
 }
 
-func (db *RouterDatabase) exec(ctx context.Context, cb execCallbackFunc, dimensions ...int) error {
+func (db *MultiDatabase) exec(ctx context.Context, cb execCallbackFunc, dimensions ...int) error {
 
 	if len(dimensions) == 0 {
-		dimensions = db.Dimensions()
+		return fmt.Errorf("At least one dimension needs to be specified")
 	}
 
 	wg := new(sync.WaitGroup)
@@ -460,7 +487,7 @@ func (db *RouterDatabase) exec(ctx context.Context, cb execCallbackFunc, dimensi
 		target_db, err := db.loadDatabase(ctx, d)
 
 		if err != nil {
-			errors = append(errors, err)
+			errors = append(errors, fmt.Errorf("Failed to load database for %d dimensions, %w", d, err))
 			continue
 		}
 
@@ -469,7 +496,7 @@ func (db *RouterDatabase) exec(ctx context.Context, cb execCallbackFunc, dimensi
 			err = cb(ctx, target_db)
 
 			if err != nil {
-				err_ch <- err
+				err_ch <- fmt.Errorf("Failed to execute callback for %s, %w", target_db.URI(), err)
 			}
 		})
 	}
@@ -484,12 +511,12 @@ func (db *RouterDatabase) exec(ctx context.Context, cb execCallbackFunc, dimensi
 	return nil
 }
 
-func (db *RouterDatabase) loadDatabase(ctx context.Context, d int) (Database, error) {
+func (db *MultiDatabase) loadDatabase(ctx context.Context, d int) (Database, error) {
 
 	v, exists := db.databases.Load(d)
 
 	if !exists {
-		return nil, fmt.Errorf("Database not registered")
+		return nil, fmt.Errorf("Database not registered for %d embeddings", d)
 	}
 
 	return v.(Database), nil

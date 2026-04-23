@@ -212,7 +212,7 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string, opts ...option
 }
 
 // Add adds a [embeddingsdb.Record] instance to the SQLite database.
-func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
+func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
 	id, err := db.uidForRecord(ctx, rec.Provider, rec.DepictionId, rec.Model)
 
@@ -269,7 +269,7 @@ func (db *SQLiteDatabase) BatchedRecordsCount(ctx context.Context, opts ...optio
 	return 0, nil
 }
 
-func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context) error {
+func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
 	return nil
 }
 
@@ -354,7 +354,7 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	}
 
 	conditions = append(conditions, "v.distance > 0")
-	conditions = append(conditions, fmt.Sprintf("v.distance <= %f", max_distance))
+	conditions = append(conditions, fmt.Sprintf("v.distance <= %f", *max_distance))
 	conditions = append(conditions, fmt.Sprintf("k=%d", max_results))
 
 	// replace with ProviderOptions

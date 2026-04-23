@@ -10,6 +10,7 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
@@ -95,7 +96,7 @@ func NewClientWithDatabaseURIs(ctx context.Context, uri string, db_uris ...strin
 	}
 
 	db_u := url.URL{}
-	db_u.Scheme = "roster"
+	db_u.Scheme = database.MultiDatabaseScheme
 
 	db_q := url.Values{}
 	db_q["database-uri"] = db_uris

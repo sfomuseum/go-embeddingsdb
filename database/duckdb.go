@@ -27,6 +27,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
+const DuckDBDatabaseScheme string = "duckdb"
+
 type DuckDBDatabase struct {
 	Database
 	// The underlying SQLite database used to store and query embeddings.
@@ -44,7 +46,7 @@ type DuckDBDatabase struct {
 func init() {
 
 	ctx := context.Background()
-	err := RegisterDatabase(ctx, "duckdb", NewDuckDBDatabase)
+	err := RegisterDatabase(ctx, DuckDBDatabaseScheme, NewDuckDBDatabase)
 
 	if err != nil {
 		panic(err)
@@ -158,6 +160,12 @@ func NewDuckDBDatabase(ctx context.Context, uri string) (Database, error) {
 	return db, nil
 }
 
+// Return the URI string used to instantiate the Database instance.
+func (db *DuckDBDatabase) URI() string {
+	return db.db_uri
+}
+
+// Export the contents of the database. This method will export the DuckDB database to 'uri'.
 func (db *DuckDBDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
 
 	// There does not appear to be any way to use query placeholders for this.
@@ -168,7 +176,8 @@ func (db *DuckDBDatabase) Export(ctx context.Context, uri string, opts ...option
 	return err
 }
 
-func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
+// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
 	provider := rec.Provider
 	depiction_id := rec.DepictionId
@@ -202,14 +211,17 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return false, nil
 }
 
+// The number of batched records currently waiting to be added.
 func (db *DuckDBDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 	return 0, nil
 }
 
-func (db *DuckDBDatabase) AddBatchedRecord(ctx context.Context) error {
+// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+func (db *DuckDBDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
 	return nil
 }
 
+// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	q := "SELECT provider, depiction_id, subject_id, model, vec, created, attributes FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
@@ -218,6 +230,7 @@ func (db *DuckDBDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 	return InflateDuckDBRecord(ctx, row)
 }
 
+// Remove a record from an EmbeddingsDB instance.
 func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	q := "DELETE FROM embeddings WHERE provider = ? AND depiction_id = ? AND model = ?"
@@ -226,6 +239,7 @@ func (db *DuckDBDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.Re
 	return err
 }
 
+// Find similar records for a given model and record instance.
 func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
@@ -329,6 +343,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	return results, nil
 }
 
+// Return the Unix timestamp of the last update to the Database instance.
 func (db *DuckDBDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := "SELECT lastmodified FROM embeddings ORDER BY lastmodified DESC LIMIT 1"
@@ -346,10 +361,7 @@ func (db *DuckDBDatabase) LastUpdate(ctx context.Context, opts ...options.Option
 	return lastmod, nil
 }
 
-func (db *DuckDBDatabase) URI() string {
-	return db.db_uri
-}
-
+// ListRecords returns a paginated list of records stored in the database.
 func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	filters := GetAllFiltersFromOptions(ctx, opts...)
@@ -410,6 +422,7 @@ func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return records, pg, nil
 }
 
+// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 func (db *DuckDBDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
@@ -458,6 +471,7 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context, opts ...options.Op
 
 }
 
+// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *DuckDBDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	logger := slog.Default()
@@ -521,6 +535,7 @@ func (db *DuckDBDatabase) Models(ctx context.Context, opts ...options.Option) ([
 	return models, nil
 }
 
+// Return the unique list of providers across all the embeddings.
 func (db *DuckDBDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	q := "SELECT DISTINCT(provider) AS provider FROM embeddings WHERE provider != '' ORDER BY provider ASC"
@@ -562,10 +577,12 @@ func (db *DuckDBDatabase) Providers(ctx context.Context, opts ...options.Option)
 	return providers, nil
 }
 
+// Return the list of dimensions supported by this Database  implementation.
 func (db *DuckDBDatabase) Dimensions() []int {
 	return []int{db.dimensions}
 }
 
+// Close performs and terminating functions required by the database.
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
 }

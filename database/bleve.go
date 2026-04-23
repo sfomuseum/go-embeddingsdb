@@ -2,8 +2,6 @@
 
 package database
 
-// To do:
-// Store/retrieve embeddings to/from an external source (sqlite? duckdb since it's already loaded?)
 // Filter by provider for list view
 
 import (
@@ -59,10 +57,12 @@ type BleveDatabase struct {
 	max_distance     float32
 }
 
+const BleveDatabaseScheme string = "bleve"
+
 func init() {
 
 	ctx := context.Background()
-	err := RegisterDatabase(ctx, "bleve", NewBleveDatabase)
+	err := RegisterDatabase(ctx, BleveDatabaseScheme, NewBleveDatabase)
 
 	if err != nil {
 		panic(err)
@@ -250,11 +250,13 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	return db, nil
 }
 
-func (db *BleveDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
-	return nil
+// Return the URI string used to instantiate the Database instance.
+func (db *BleveDatabase) URI() string {
+	return db.uri
 }
 
-func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record) (bool, error) {
+// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
 	err := db.batchRecord(ctx, rec)
 
@@ -274,6 +276,7 @@ func (db *BleveDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 	return true, nil
 }
 
+// The number of batched records currently waiting to be added.
 func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
 
 	db.mu.Lock()
@@ -282,7 +285,8 @@ func (db *BleveDatabase) BatchedRecordsCount(ctx context.Context, opts ...option
 	return db.batch.Size(), nil
 }
 
-func (db *BleveDatabase) AddBatchedRecords(ctx context.Context) error {
+// Add the pending batched records.
+func (db *BleveDatabase) AddBatchedRecords(ctx context.Context, opts ...options.Option) error {
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -318,6 +322,7 @@ func (db *BleveDatabase) AddBatchedRecords(ctx context.Context) error {
 	return nil
 }
 
+// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	id := req.Key()
@@ -342,12 +347,14 @@ func (db *BleveDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRec
 	return db.inflateRecordWithMatch(ctx, first)
 }
 
+// Remove a record from an EmbeddingsDB instance.
 func (db *BleveDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	id := req.Key()
 	return db.index.Delete(id)
 }
 
+// Find similar records for a given model and record instance.
 func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
@@ -433,6 +440,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	return results, nil
 }
 
+// ListRecords returns a paginated list of records stored in the database.
 func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	records := make([]*embeddingsdb.Record, 0)
@@ -489,6 +497,7 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	return records, pg_rsp, nil
 }
 
+// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 func (db *BleveDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
@@ -543,6 +552,7 @@ func (db *BleveDatabase) IterateRecords(ctx context.Context, opts ...options.Opt
 	}
 }
 
+// Return the Unix timestamp of the last update to the Database instance.
 func (db *BleveDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := bleve.NewMatchAllQuery()
@@ -572,10 +582,7 @@ func (db *BleveDatabase) LastUpdate(ctx context.Context, opts ...options.Option)
 	return rec.Created, nil
 }
 
-func (db *BleveDatabase) URI() string {
-	return db.uri
-}
-
+// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *BleveDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	// handle providers here
@@ -607,6 +614,7 @@ func (db *BleveDatabase) Models(ctx context.Context, opts ...options.Option) ([]
 	return models, nil
 }
 
+// Return the unique list of providers across all the embeddings.
 func (db *BleveDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
 	count, err := db.index.DocCount()
@@ -636,10 +644,17 @@ func (db *BleveDatabase) Providers(ctx context.Context, opts ...options.Option) 
 	return providers, nil
 }
 
+// Return the list of dimensions supported by the [BleveDatabase] implementation.
 func (db *BleveDatabase) Dimensions() []int {
 	return []int{db.dimensions}
 }
 
+// Export the contents of the database. This is currently a no/op for the [BleveDatabase] implementation.
+func (db *BleveDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
+	return nil
+}
+
+// Close performs and terminating functions required by the database.
 func (db *BleveDatabase) Close(ctx context.Context) error {
 
 	logger := slog.Default()

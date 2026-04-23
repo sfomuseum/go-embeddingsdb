@@ -1,7 +1,5 @@
 package database
 
-// This is all up for debate. Just testing things right now.
-
 import (
 	"context"
 	"fmt"
@@ -18,17 +16,19 @@ import (
 
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
+	// Return the URI string used to instantiate the Database instance.
+	URI() string
 	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
-	AddRecord(context.Context, *embeddingsdb.Record) (bool, error)
+	AddRecord(context.Context, *embeddingsdb.Record, ...options.Option) (bool, error)
 	// The number of batched records currently waiting to be added.
 	BatchedRecordsCount(context.Context, ...options.Option) (int, error)
-	// Add the pending batched records
-	AddBatchedRecords(context.Context) error
+	// Add the pending batched records.
+	AddBatchedRecords(context.Context, ...options.Option) error
 	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 	GetRecord(context.Context, *embeddingsdb.GetRecordRequest, ...options.Option) (*embeddingsdb.Record, error)
 	// Remove a record from an EmbeddingsDB instance.
 	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest, ...options.Option) error
-	// ListRecords returns a pagination list of records stored in the database.
+	// ListRecords returns a paginated list of records stored in the database.
 	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
 	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 	IterateRecords(context.Context, ...options.Option) iter.Seq2[*embeddingsdb.Record, error]
@@ -38,9 +38,7 @@ type Database interface {
 	Export(context.Context, string, ...options.Option) error
 	// Return the Unix timestamp of the last update to the Database instance.
 	LastUpdate(context.Context, ...options.Option) (int64, error)
-	// Return the URI string used to instantiate the Database instance.
-	URI() string
-	// ...
+	// Return the list of dimensions supported by this Database  implementation.
 	Dimensions() []int
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...options.Option) ([]string, error)
@@ -115,7 +113,7 @@ func NewDatabaseURIFromURIs(uris ...string) string {
 		q["database-uri}"] = uris
 
 		u := new(url.URL)
-		u.Scheme = "roster"
+		u.Scheme = MultiDatabaseScheme
 		u.RawQuery = q.Encode()
 
 		return u.String()
