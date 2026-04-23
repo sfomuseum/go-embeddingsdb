@@ -110,8 +110,6 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		slog.Debug("Reassign dimensions", "value", dimensions)
 	}
 
-	dimensions := 512
-
 	if q.Has("max-distance") {
 
 		v, err := strconv.ParseFloat(q.Get("max-distance"), 64)
@@ -400,7 +398,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	search_req.AddKNNWithFilter("embeddings", req.Embeddings, int64(*max_results), 1.0, filter_q)
 
 	search_req.SortBy([]string{"-_score"})
-	search_req.Size = k
+	search_req.Size = int(*max_results)
 	search_req.Fields = []string{"*"}
 
 	rsp, err := db.index.Search(search_req)
@@ -451,8 +449,8 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		conjuncts := make([]query.Query, len(filters))
 
 		for i, f := range filters {
-			mq := bleve.NewMatchQuery(fmt.Sprintf("%v", f.Value))
-			mq.SetField(f.Column)
+			mq := bleve.NewMatchQuery(fmt.Sprintf("%v", f.Value()))
+			mq.SetField(f.Key())
 			conjuncts[i] = mq
 		}
 

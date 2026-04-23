@@ -477,8 +477,8 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 		where := make([]string, len(filters))
 
 		for i, f := range filters {
-			where[i] = fmt.Sprintf("r.%s = ?", f.Column)
-			args[i] = f.Value
+			where[i] = fmt.Sprintf("r.%s = ?", f.Key())
+			args[i] = f.Value()
 		}
 
 		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
