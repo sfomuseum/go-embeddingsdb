@@ -14,11 +14,11 @@ import (
 )
 
 type RecordHandlerOptions struct {
-	Client        client.Client
-	Templates     *template.Template
-	MaxResults    int32
-	EnableUploads bool
-	URIs          *inspector_http.URIs
+	Client       client.Client
+	Templates    *template.Template
+	MaxResults   int32
+	EnableSearch bool
+	URIs         *inspector_http.URIs
 }
 
 type RecordHandlerVars struct {
@@ -27,7 +27,7 @@ type RecordHandlerVars struct {
 	Models          []string
 	Providers       []string
 	SimilarProvider string
-	EnableUploads   bool
+	EnableSearch    bool
 	URIs            *inspector_http.URIs
 }
 
@@ -118,7 +118,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			Models:          models,
 			Providers:       providers,
 			SimilarProvider: similar_provider,
-			EnableUploads:   opts.EnableUploads,
+			EnableSearch:    opts.EnableSearch,
 			URIs:            opts.URIs,
 		}
 

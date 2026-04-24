@@ -11,7 +11,7 @@ import (
 var server_uri string
 var client_uri string
 
-var enable_uploads bool
+var enable_search bool
 
 var embeddings_client_uri string
 var max_upload_size int64
@@ -31,8 +31,8 @@ func DefaultFlagSet() *flag.FlagSet {
 
 	fs.StringVar(&uri_prefix, "uri-prefix", "", "An optional prefix (location) to serve the application from.")
 
-	fs.BoolVar(&enable_uploads, "enable-uploads", false, "Enable search by upload functionality.")
-	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "A registered go-embeddings.Client URI. This is required if the -enable-uploads flag is true.")
+	fs.BoolVar(&enable_search, "enable-search", false, "Enable search functionality.")
+	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "A registered go-embeddings.Client URI. This is required if the -enable-search flag is true.")
 
 	// https://github.com/gangleri/humanbytes/blob/master/humanbytes.go
 	fs.Int64Var(&max_upload_size, "max-upload-size", 10*1024*1024, "The maximum size (in bytes) for uploads.")

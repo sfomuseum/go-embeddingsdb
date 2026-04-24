@@ -11,10 +11,10 @@ type URIs struct {
 	List                  string
 	Record                string
 	RecordWithVars        string
-	Upload                string
+	Search                string
 	APIEmbeddings         string
 	APIEmbeddingsWithVars string
-	APIUpload             string
+	APISearch             string
 }
 
 func DefaultURIs(prefix string) (*URIs, error) {
@@ -25,10 +25,10 @@ func DefaultURIs(prefix string) (*URIs, error) {
 		List:                  "/",
 		RecordWithVars:        "/record/{provider}/{depiction_id}/",
 		Record:                "/record/",
-		Upload:                "/upload/",
+		Search:                "/search/",
 		APIEmbeddings:         "/api/embeddings/",
 		APIEmbeddingsWithVars: "/api/embeddings/{provider}/{depiction_id}/",
-		APIUpload:             "/api/upload/",
+		APISearch:             "/api/search/",
 	}
 
 	if prefix != "" {
@@ -52,10 +52,10 @@ func DefaultURIs(prefix string) (*URIs, error) {
 			&u.List,
 			&u.Record,
 			&u.RecordWithVars,
-			&u.Upload,
+			&u.Search,
 			&u.APIEmbeddings,
 			&u.APIEmbeddingsWithVars,
-			&u.APIUpload,
+			&u.APISearch,
 		}
 
 		for _, ptr := range fields {

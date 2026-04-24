@@ -720,9 +720,9 @@ Valid options are:
   -client-uri string
     	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
   -embeddings-client-uri string
-    	A registered go-embeddings.Client URI. This is required if the -enable-uploads flag is true.
-  -enable-uploads
-    	Enable search by upload functionality.
+    	A registered go-embeddings.Client URI. This is required if the -enable-search flag is true.
+  -enable-search
+    	Enable search functionality.
   -max-results int
     	The maximum number of similar results to return. (default 20)
   -max-upload-size int
@@ -743,7 +743,7 @@ go run -tags=sqlite -mod vendor \
 		cmd/inspector/main.go \
 		-verbose \
 		-client-uri 'grpc://localhost:8081' \
-		-enable-uploads \
+		-enable-search \
 		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
 		-server-uri http://localhost:8082
 2026/03/30 12:42:01 DEBUG Verbose logging enabled
@@ -778,9 +778,9 @@ Conceptually, the `embeddingsdb-inspector` is a _client_ (as described above) of
 1. You will need to have an `embeddingsdb` server instance running somewhere which will broker communications with the underlying database; for example the `grpc://localhost:8081` URI above.
 2. You will need to specify a `database://` client URI appropriate to your setup; for example, to interact directly with a local DuckDB database your client URI would be something like `database://?database-uri=duckdb:///usr/local/data/embeddings`.
 
-##### search by upload
+##### search 
 
-In order for the "search by upload" functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
+In order for the search functionality to work you will need to instantiate an instance of the [sfomuseum/go-embeddings](https://github.com/sfomuseum/go-embeddings) `Client` interface. The `go-embeddingsdb` package only supports storing, indexing and querying vector embeddings. It does handle _creating_ them. This is handled by the `go-embeddings` package which supports [a number of different implementations](https://github.com/sfomuseum/go-embeddings?tab=readme-ov-file#implementations) for generating vector embeddings.
 
 ##### importing records
 

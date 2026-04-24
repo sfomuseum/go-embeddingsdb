@@ -15,10 +15,10 @@ import (
 )
 
 type ListHandlerOptions struct {
-	Client        client.Client
-	Templates     *template.Template
-	EnableUploads bool
-	URIs          *inspector_http.URIs
+	Client       client.Client
+	Templates    *template.Template
+	EnableSearch bool
+	URIs         *inspector_http.URIs
 }
 
 type ListHandlerVars struct {
@@ -28,7 +28,7 @@ type ListHandlerVars struct {
 	Providers       []string
 	CurrentModel    string
 	CurrentProvider string
-	EnableUploads   bool
+	EnableSearch    bool
 	URIs            *inspector_http.URIs
 }
 
@@ -137,7 +137,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			CurrentModel:    model,
 			CurrentProvider: provider,
 			Providers:       providers,
-			EnableUploads:   opts.EnableUploads,
+			EnableSearch:    opts.EnableSearch,
 			URIs:            opts.URIs,
 		}
 

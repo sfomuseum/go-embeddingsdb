@@ -19,14 +19,14 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
-type UploadHandlerOptions struct {
+type SearchHandlerOptions struct {
 	Client           client.Client
 	EmbeddingsClient embeddings.Embedder[float32]
 	MaxUploadSize    int64
 	MaxResults       int32
 }
 
-func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
+func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
 
@@ -88,7 +88,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		logger.Debug("Process upload", "search by", search_by, "model", model)
+		logger.Debug("Process search", "search by", search_by, "model", model)
 
 		var similar_embeddings []float32
 		max_distance := float32(0.0)
