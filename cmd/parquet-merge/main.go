@@ -22,7 +22,7 @@ func main() {
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "...\n")
+		fmt.Fprintf(os.Stderr, "Merge two or more go-embeddingsdb Parquet files in to a new Parquet file.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] parquet_file(N) parquet_file(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
@@ -46,16 +46,20 @@ func main() {
 
 	uris := fs.Args()
 
+	if len(uris) < 2 {
+		log.Fatalf("A minimum of two files to merge are required")
+	}
+
 	count, err := parquet.Merge(ctx, wr, uris...)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to merge files, %v", err)
 	}
 
 	err = wr.Close()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to close new file after writing, %v", err)
 	}
 
 	logger.Info("Merged records", "count", count)

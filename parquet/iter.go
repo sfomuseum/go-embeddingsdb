@@ -18,147 +18,135 @@ import (
 )
 
 // To do: Add filtering mechanism
+// To do: Support reading from remote storage using gocloud.dev/blob
 
 func Iterate(ctx context.Context, uri string) iter.Seq2[*embeddingsdb.Record, error] {
+
+	logger := slog.Default()
+	logger = logger.With("uri", uri)
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
 		switch {
 		case strings.HasPrefix(uri, "http"):
 
-			u, err := url.Parse(uri)
+			_, err := url.Parse(uri)
 
 			if err != nil {
-				yield(nil, err)
+				logger.Error("Failed to parse URI", "error", err)
+				yield(nil, fmt.Errorf("Failed to parse URI, %w", err))
 				return
 			}
 
-			for row, err := range IterateRemote(ctx, u) {
-				if !yield(row, err) {
+			db, err := sql.Open("duckdb", "")
+
+			if err != nil {
+				logger.Error("Failed to open DuckDB", "error", err)
+				yield(nil, fmt.Errorf("Failed to open DuckDB, %w", err))
+				return
+			}
+
+			defer db.Close()
+
+			q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, model, embeddings, created, CAST(TO_JSON(attributes) AS VARCHAR) AS attributes FROM read_parquet('%s')`, uri)
+
+			rows, err := db.QueryContext(ctx, q)
+
+			if err != nil {
+				logger.Error("Failed to query Parquet file", "error", err)
+				yield(nil, fmt.Errorf("Failed to query Parquet file, %w", err))
+				return
+			}
+
+			defer rows.Close()
+
+			for rows.Next() {
+
+				select {
+				case <-ctx.Done():
+					logger.Debug("Context signaled done, exiting")
 					return
+				default:
+
+					rec, err := database.InflateDuckDBRecord(ctx, rows)
+
+					if err != nil {
+						logger.Error("Failed to inflate record", "error", err)
+					}
+
+					if !yield(rec, err) {
+						return
+					}
 				}
+			}
+
+			err = rows.Close()
+
+			if err != nil {
+				logger.Error("Failed to close database rows", "error", err)
+				yield(nil, fmt.Errorf("Failed to close database rows, %w", err))
+				return
+			}
+
+			err = rows.Err()
+
+			if err != nil {
+				logger.Error("Database returned an error", "error", err)
+				yield(nil, fmt.Errorf("Database returned an error, %w", err))
 			}
 
 		default:
 
+			batch_size := 100
+
 			abs_path, err := filepath.Abs(uri)
 
 			if err != nil {
-				yield(nil, err)
+				logger.Error("Failed to derive absolute path for URI", "error", err)
+				yield(nil, fmt.Errorf("Failed to derive absolute path for URI, %w", err))
 				return
 			}
 
 			r, err := os.Open(abs_path)
 
 			if err != nil {
-				yield(nil, err)
+				logger.Error("Failed to open URI", "path", abs_path, "error", err)
+				yield(nil, fmt.Errorf("Failed to open URI for reading, %w", err))
 				return
 			}
 
 			defer r.Close()
 
-			for row, err := range IterateReader(ctx, r) {
+			parquet_r := parquet_go.NewGenericReader[*embeddingsdb.Record](r)
+			buf := make([]*embeddingsdb.Record, batch_size)
 
-				if !yield(row, err) {
+			for {
+
+				select {
+				case <-ctx.Done():
+					logger.Debug("Context signaled done, exiting")
 					return
-				}
-			}
-		}
-	}
-}
+				default:
 
-func IterateReader(ctx context.Context, r io.ReaderAt) iter.Seq2[*embeddingsdb.Record, error] {
+					n, err := parquet_r.Read(buf)
 
-	logger := slog.Default()
-
-	batch_size := 100
-
-	return func(yield func(*embeddingsdb.Record, error) bool) {
-
-		parquet_r := parquet_go.NewGenericReader[*embeddingsdb.Record](r)
-		buf := make([]*embeddingsdb.Record, batch_size)
-
-		for {
-
-			select {
-			case <-ctx.Done():
-				logger.Debug("Context signaled done, exiting")
-				return
-			default:
-
-				n, err := parquet_r.Read(buf)
-
-				switch {
-				case err == io.EOF:
-					return
-				case err != nil:
-					yield(nil, err)
-					return
-				}
-
-				for _, rec := range buf[:n] {
-					if !yield(rec, nil) {
+					switch {
+					case err == io.EOF:
 						return
+					case err != nil:
+						logger.Error("Parquet reader failed", "error", err)
+						yield(nil, fmt.Errorf("Parquet reader failed, %w", err))
+						return
+					}
+
+					for _, rec := range buf[:n] {
+						if !yield(rec, nil) {
+							return
+						}
 					}
 				}
 			}
+
 		}
 	}
-}
-
-func IterateRemote(ctx context.Context, uri *url.URL) iter.Seq2[*embeddingsdb.Record, error] {
-
-	logger := slog.Default()
-
-	return func(yield func(*embeddingsdb.Record, error) bool) {
-
-		db, err := sql.Open("duckdb", "")
-
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		defer db.Close()
-
-		q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, model, embeddings, created, CAST(TO_JSON(attributes) AS VARCHAR) AS attributes FROM read_parquet('%s')`, uri.String())
-
-		rows, err := db.QueryContext(ctx, q)
-
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		defer rows.Close()
-
-		for rows.Next() {
-
-			select {
-			case <- ctx.Done():
-				logger.Debug("Context signaled done, exiting")
-				return
-			default:
-				row, err := database.InflateDuckDBRecord(ctx, rows)
-				
-				if !yield(row, err) {
-					return
-				}
-			}
-		}
-
-		err = rows.Close()
-
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		err = rows.Err()
-
-		if err != nil {
-			yield(nil, err)
-		}
-	}
-
 }

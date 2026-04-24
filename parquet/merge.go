@@ -71,5 +71,4 @@ func Merge(ctx context.Context, wr *ParquetWriter, uris ...string) (int64, error
 	logger.Debug("Finished iterating all", "total", total)
 
 	return total, nil
-
 }
