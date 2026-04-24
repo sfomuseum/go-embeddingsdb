@@ -1,10 +1,14 @@
 window.addEventListener('load', function(e){
 
-    // To do: Merge code, where applicable, with search.init.js
-    
     const main = document.querySelector("#main");
     const record_uri = main.getAttribute("data-record-uri");    
     const api_upload_uri = main.getAttribute("data-api-upload-uri");
+
+    const search_by = document.querySelector("#search-by");
+    const query = document.querySelector("#query");
+
+    const query_wrapper = document.querySelector("#query-wrapper");
+    const upload_wrapper = document.querySelector("#upload-wrapper");        
     
     const target = document.querySelector("#upload-similar");
     const upload_image = document.querySelector("#upload-image");
@@ -15,6 +19,26 @@ window.addEventListener('load', function(e){
     const spinner = document.querySelector("#upload-spinner-svg");        
     const submit = document.querySelector("#submit");
 
+    search_by.addEventListener('change', function(){
+
+	const v = search_by.value;
+
+	switch (search_by.value) {
+	    case "upload":
+		query_wrapper.style.display = "none";
+		upload_wrapper.style.display = "block";		
+		break;
+	    case "query":
+		query_wrapper.style.display = "block";
+		upload_wrapper.style.display = "none";		
+		break;
+	    default:
+		console.error("Unsupported search by value", search_by.value);
+	}
+	
+	return false;
+    });
+    
     upload_input.addEventListener('change', function(){
 	
 	const file = this.files[0];

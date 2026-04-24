@@ -66,14 +66,6 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		q, err := sanitize.PostString(req, "query")
-
-		if err != nil {
-			logger.Error("Failed to derive search from query", "error", err)
-			http.Error(rsp, "Bad request", http.StatusBadRequest)
-			return
-		}
-
 		model, err := sanitize.PostString(req, "model")
 
 		if err != nil {
@@ -88,14 +80,31 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		logger.Debug("Process upload", "model", model)
+		search_by, err := sanitize.PostString(req, "search-by")
+
+		if err != nil {
+			logger.Error("Failed to derive searby_by from query", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		logger.Debug("Process upload", "search by", search_by, "model", model)
 
 		var similar_embeddings []float32
 		max_distance := float32(0.0)
 
 		// To do: "fused" embeddings
 
-		if q != "" {
+		switch search_by {
+		case "query":
+
+			q, err := sanitize.PostString(req, "query")
+
+			if err != nil {
+				logger.Error("Failed to derive search from query", "error", err)
+				http.Error(rsp, "Bad request", http.StatusBadRequest)
+				return
+			}
 
 			// Hack...
 			emb_model := strings.Replace(model, "apple/mobileclip_", "", 1)
@@ -118,7 +127,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			similar_embeddings = emb_rsp.Embeddings()
 			max_distance = 5.0
 
-		} else {
+		case "upload":
 
 			r, _, err := req.FormFile("upload")
 
@@ -173,6 +182,13 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			}
 
 			similar_embeddings = emb_rsp.Embeddings()
+
+		default:
+
+			logger.Error("Unsupported search by type", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+
 		}
 
 		//

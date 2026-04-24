@@ -9,6 +9,14 @@
         to { transform: rotate(-360deg); }
 }
 
+label {
+	font-weight: 700;
+}
+
+#upload-wrapper {
+	display: none;
+}
+
 #upload-spinner {
         animation: rotate 5s linear infinite;
         transform-origin: center;
