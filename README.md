@@ -400,11 +400,12 @@ The easiest way to build the included tools is to run the handy `cli` Makefile t
 
 ```
 $> make cli
-go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
-go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
-go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
-go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
-go build -tags=duckdb,sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
+go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
+go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
+go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
+go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
+go build -tags=sqlite -mod readonly -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
 ```
 
 ### DuckDB
@@ -738,7 +739,7 @@ For example:
 
 ```
 $> make inspector
-go run -tags=duckdb,sqlite -mod vendor \
+go run -tags=sqlite -mod vendor \
 		cmd/inspector/main.go \
 		-verbose \
 		-client-uri 'grpc://localhost:8081' \
@@ -876,6 +877,34 @@ D SELECT COUNT(depiction_id) FROM read_parquet('export.parquet');
 │       235200        │
 └─────────────────────┘
 ```
+
+### parquet-merge
+
+Merge two or more go-embeddingsdb Parquet files in to a new Parquet file.
+
+```
+$> ./bin/parquet-merge -h
+Merge two or more go-embeddingsdb Parquet files in to a new Parquet file.
+Usage:
+	./bin/parquet-merge [options] parquet_file(N) parquet_file(N)
+Valid options are:
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT. (default "-")
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/parquet-merge \
+	-verbose \
+	-output merged.parquet \
+	../go-embeddings-harvest/sfomuseum-collection-siglip2-naflex.parquet \
+	../go-embeddings-harvest/sfomuseum-ig-siglip2-naflex.parquet
+```
+
+If an input URI (to merge) starts with `http(s)://` then that file will be read over the wire using DuckDB's `read_parquet` functionality.
 
 ## DuckDB
 

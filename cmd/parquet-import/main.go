@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
@@ -61,49 +59,20 @@ func main() {
 		err := cl.Close(ctx)
 
 		if err != nil {
-			slog.Error("Failed to close", "error", err)
+			logger.Error("Failed to close", "error", err)
 			log.Fatalf("Failed to close client, %v", err)
 		}
 	}
 
 	defer cl_closefunc()
 
-	for _, path := range fs.Args() {
+	uris := fs.Args()
 
-		switch {
-		case strings.HasPrefix(path, "http"):
+	count, err := parquet.Import(ctx, cl, uris...)
 
-			uri, err := url.Parse(path)
-
-			if err != nil {
-				log.Fatalf("Failed to parse %s as URL, %v", path, err)
-			}
-
-			logger.Debug("Import remote data", "url", uri.String())
-
-			_, err = parquet.ImportRemote(ctx, cl, uri)
-
-			if err != nil {
-				log.Fatalf("Failed to import remote data from %s, %v", uri.String(), err)
-			}
-
-		default:
-
-			r, err := os.Open(path)
-
-			if err != nil {
-				log.Fatalf("Failed to open %s for reading, %v", path, err)
-			}
-
-			defer r.Close()
-
-			logger.Debug("Import data", "path", path)
-			_, err = parquet.Import(ctx, cl, r)
-
-			if err != nil {
-				log.Fatalf("Failed to import Parquet data for %s, %v", path, err)
-			}
-		}
+	if err != nil {
+		log.Fatal(err)
 	}
 
+	logger.Info("Imported all records", "count", count)
 }

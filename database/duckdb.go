@@ -188,6 +188,12 @@ func (db *DuckDBDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	now := time.Now()
 	lastmod := now.Unix()
 
+	dims := len(rec.Embeddings)
+
+	if dims != db.dimensions {
+		return false, fmt.Errorf("Embeddings have wrong dimension: %d (expected %d)", dims, db.dimensions)
+	}
+
 	embeddings, err := json.Marshal(rec.Embeddings)
 
 	if err != nil {
