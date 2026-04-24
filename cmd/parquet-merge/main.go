@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net/url"
 	"os"
-	"strings"
 
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
@@ -46,42 +44,12 @@ func main() {
 		log.Fatalf("Failed to create new parquet writer, %v", err)
 	}
 
-	for _, path := range fs.Args() {
+	uris := fs.Args()
 
-		switch {
-		case strings.HasPrefix(path, "http"):
+	count, err := parquet.Merge(ctx, wr, uris...)
 
-			uri, err := url.Parse(path)
-
-			if err != nil {
-				log.Fatalf("Failed to parse %s as URL, %v", path, err)
-			}
-
-			logger.Debug("Merge remote data", "url", uri.String())
-
-			_, err = parquet.MergeRemote(ctx, wr, uri)
-
-			if err != nil {
-				log.Fatalf("Failed to merge remote data from %s, %v", uri.String(), err)
-			}
-
-		default:
-
-			r, err := os.Open(path)
-
-			if err != nil {
-				log.Fatalf("Failed to open %s for reading, %v", path, err)
-			}
-
-			defer r.Close()
-
-			logger.Debug("Merge data", "path", path)
-			_, err = parquet.Merge(ctx, wr, r)
-
-			if err != nil {
-				log.Fatalf("Failed to merge Parquet data for %s, %v", path, err)
-			}
-		}
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	err = wr.Close()
@@ -89,4 +57,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	logger.Info("Merged records", "count", count)
 }

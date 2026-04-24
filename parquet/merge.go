@@ -2,63 +2,74 @@ package parquet
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log/slog"
-	"time"
 
-	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
-// Merge [*embeddingsdb.Record] records stored in a Parquet file and adds them to 'wr'
-func Merge(ctx context.Context, wr *ParquetWriter, r io.ReaderAt) (int64, error) {
+// To do: Add filtering mechanism
+
+func Merge(ctx context.Context, wr *ParquetWriter, uris ...string) (int64, error) {
+
+	defer wr.Flush()
 
 	logger := slog.Default()
-	parquet_r := parquet_go.NewGenericReader[*embeddingsdb.Record](r)
 
-	rows := make([]*embeddingsdb.Record, 0, 1000)
+	rows := make([]*embeddingsdb.Record, 0)
+	batch_size := 500
+	total := int64(0)
 
-	ticker := time.NewTicker(60 * time.Second)
-	done_ch := make(chan bool)
+	for _, uri := range uris {
 
-	count := int64(0)
+		count := int64(0)
 
-	defer func() {
-		ticker.Stop()
-		done_ch <- true
-	}()
+		for row, err := range Iterate(ctx, uri) {
 
-	go func() {
-
-		for {
-			select {
-			case <-done_ch:
-				logger.Debug("Records imported", "count", count)
-				return
-			case <-ticker.C:
-				logger.Debug("Records imported", "count", count)
-			}
-		}
-	}()
-
-	for {
-
-		n, err := parquet_r.Read(rows[:cap(rows)])
-
-		if err != nil {
-
-			if err == io.EOF {
-				break
+			if err != nil {
+				logger.Error("Iterator yielded an error", "uri", uri, "error", err)
+				return total, err
 			}
 
-			return count, fmt.Errorf("Failed to read record, %w", err)
+			rows = append(rows, row)
+
+			if len(rows) >= batch_size {
+
+				_, err := wr.Write(rows)
+
+				if err != nil {
+					logger.Error("Failed to write rows", "uri", uri, "error", err)
+					return total, err
+				}
+
+				rows = make([]*embeddingsdb.Record, 0)
+			}
+
+			count += 1
+			total += 1
 		}
 
-		rows = rows[:n]
-		wr.Write(rows)
+		logger.Debug("Finished iterating uri", "uri", uri, "count", count, "total", total, "pending", len(rows))
 	}
 
-	return count, nil
+	logger.Debug("Remaining rows", "count", len(rows))
+
+	if len(rows) > 0 {
+
+		_, err := wr.Write(rows)
+
+		if err != nil {
+			logger.Error("Failed to write rows", "error", err)
+			return total, err
+		}
+
+		logger.Debug("Wrote pending rows", "count", len(rows))
+		wr.Flush()
+
+		total += int64(len(rows))
+	}
+
+	logger.Debug("Finished iterating all", "total", total)
+
+	return total, nil
 
 }
