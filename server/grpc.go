@@ -3,14 +3,15 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/url"
-	"os"
-	"os/signal"
+	_ "os"
+	_ "os/signal"
 	"strings"
-	"syscall"
+	_ "syscall"
 	"time"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -114,30 +115,36 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 
 func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
-	slog.Debug("Set up database")
+	logger := slog.Default()
+
+	logger.Debug("Set up database")
 
 	db_u, err := url.Parse(s.db_uri)
 
 	if err != nil {
+		logger.Error("Failed to parse database URI", "error", err)
 		return fmt.Errorf("Failed to parse database URI, %w", err)
 	}
 
-	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
-	defer cancel()
+	// ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	// defer cancel()
 
 	db, err := database.NewDatabase(ctx, s.db_uri)
 
 	if err != nil {
+		logger.Error("Failed to create database", "error", err)
 		return fmt.Errorf("Failed to create database, %w", err)
 	}
 
 	db_closefunc := func() {
 
+		logger.Debug("Received signal handler, shutting down database")
+
 		ctx := context.Background()
 		err := db.Close(ctx)
 
 		if err != nil {
-			slog.Error("Failed to close database", "error", err)
+			logger.Error("Failed to close database", "error", err)
 		}
 	}
 
@@ -147,7 +154,8 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 	if db_path != "" {
 
-		slog.Debug("Set up database export timer", "path", db_path)
+		interval := 60
+		logger.Debug("Set up database export timer", "path", db_path, "interval", interval)
 
 		export_db := func() {
 
@@ -155,18 +163,18 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 			switch {
 			case err != nil:
-				slog.Warn("Failed to derive batched records count", "error", err)
+				logger.Warn("Failed to derive batched records count", "error", err)
 			case count > 0:
 
-				slog.Debug("Add batched records", "count", count)
+				logger.Debug("Batched record count", "count", count)
 				err := db.AddBatchedRecords(ctx)
 
 				if err != nil {
-					slog.Error("Failed to add batched records", "error", err)
+					logger.Error("Failed to add batched records", "error", err)
 				}
 			}
 
-			slog.Debug("Export database")
+			logger.Debug("Export database")
 			err = db.Export(ctx, db_path)
 
 			if err != nil {
@@ -175,7 +183,6 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 		}
 
-		interval := 60
 		ticker := time.NewTicker(time.Duration(interval) * time.Second)
 
 		defer func() {
@@ -191,25 +198,39 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 					last_update, err := db.LastUpdate(ctx)
 
-					if err != nil {
+					if err != nil && err != sql.ErrNoRows {
 						slog.Warn("Failed to determine last update from database", "error", err)
 						break
 					}
 
-					now := t.Unix()
-					diff := now - last_update
+					do_export := false
 
-					if diff < int64(interval) {
+					if last_update == 0 {
+
+						do_export = true
+
+					} else {
+
+						now := t.Unix()
+						diff := now - last_update
+
+						if diff < int64(interval) {
+							do_export = true
+						}
+					}
+
+					if do_export {
+						logger.Debug("Export database")
 						export_db()
 					}
+
 				}
 			}
 		}()
 	}
 
-	slog.Debug("Set up listener")
-
 	addr := fmt.Sprintf("%s:%s", s.host, s.port)
+	logger.Debug("Set up listener")
 
 	lis, err := net.Listen("tcp", addr)
 
@@ -217,7 +238,7 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 		return err
 	}
 
-	slog.Debug("Set up server")
+	logger.Debug("Set up server")
 
 	svc := &grpcService{
 		db: db,
@@ -226,15 +247,15 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 	opts := []grpc.ServerOption{}
 
 	if s.token != nil {
-		slog.Debug("Set up token interceptor")
+		logger.Debug("Set up token interceptor")
 		opts = append(opts, grpc.UnaryInterceptor(s.ensureValidToken))
 	}
 
 	if s.cert != nil {
-		slog.Debug("Set up TLS")
+		logger.Debug("Set up TLS")
 		opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(s.cert)))
 	} else {
-		slog.Debug("Allow insecure connections")
+		logger.Debug("Allow insecure connections")
 		// opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		// opts = append(opts, grpc.WithInsecure())
 	}
@@ -243,10 +264,12 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 	embeddings_grpc.RegisterEmbeddingsDBServiceServer(svr, svc)
 
-	slog.Info("Server listening", "address", addr)
+	logger.Info("Server listening", "address", addr)
+
 	err = svr.Serve(lis)
 
 	if err != nil {
+		logger.Error("Failed to serve requests", "error", err)
 		return err
 	}
 
