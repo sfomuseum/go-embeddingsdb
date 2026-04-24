@@ -12,6 +12,7 @@ var server_uri string
 var client_uri string
 
 var enable_uploads bool
+
 var embeddings_client_uri string
 var max_upload_size int64
 

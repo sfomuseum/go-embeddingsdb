@@ -1,5 +1,7 @@
 window.addEventListener('load', function(e){
 
+    // To do: Merge code, where applicable, with search.init.js
+    
     const main = document.querySelector("#main");
     const record_uri = main.getAttribute("data-record-uri");    
     const api_upload_uri = main.getAttribute("data-api-upload-uri");

@@ -66,6 +66,14 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		q, err := sanitize.PostString(req, "query")
+
+		if err != nil {
+			logger.Error("Failed to derive search from query", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
 		model, err := sanitize.PostString(req, "model")
 
 		if err != nil {
@@ -82,64 +90,101 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 
 		logger.Debug("Process upload", "model", model)
 
-		r, _, err := req.FormFile("upload")
+		var similar_embeddings []float32
+		max_distance := float32(0.0)
 
-		if err != nil {
-			logger.Error("Failed to read upload", "error", err)
-			http.Error(rsp, "Bad request", http.StatusBadRequest)
-			return
-		}
+		// To do: "fused" embeddings
 
-		defer r.Close()
+		if q != "" {
 
-		im_body, err := io.ReadAll(r)
+			// Hack...
+			emb_model := strings.Replace(model, "apple/mobileclip_", "", 1)
 
-		if err != nil {
-			logger.Error("Failed to read upload body", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+			logger.Debug("Generate embeddings", "model", emb_model, "query", q)
 
-		logger.Debug("Handle image body", "length", len(im_body))
+			emb_req := &embeddings.EmbeddingsRequest{
+				Body:  []byte(q),
+				Model: emb_model,
+			}
 
-		// Make sure this is an image
+			emb_rsp, err := opts.EmbeddingsClient.TextEmbeddings(ctx, emb_req)
 
-		im_r := bytes.NewReader(im_body)
+			if err != nil {
+				logger.Error("Failed to derive embeddings for search", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
 
-		_, _, err = image.Decode(im_r)
+			similar_embeddings = emb_rsp.Embeddings()
+			max_distance = 5.0
 
-		if err != nil {
-			logger.Error("Failed to parse upload as image", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		} else {
 
-		// Generate embeddings for image body
+			r, _, err := req.FormFile("upload")
 
-		// Hack...
-		emb_model := strings.Replace(model, "apple/mobileclip_", "", 1)
+			if err != nil {
+				logger.Error("Failed to read upload", "error", err)
+				http.Error(rsp, "Bad request", http.StatusBadRequest)
+				return
+			}
 
-		logger.Debug("Generate embeddings", "model", emb_model, "body", len(im_body))
+			defer r.Close()
 
-		emb_req := &embeddings.EmbeddingsRequest{
-			Body:  im_body,
-			Model: emb_model,
-		}
+			im_body, err := io.ReadAll(r)
 
-		emb_rsp, err := opts.EmbeddingsClient.ImageEmbeddings(ctx, emb_req)
+			if err != nil {
+				logger.Error("Failed to read upload body", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
 
-		if err != nil {
-			logger.Error("Failed to derive embeddings for upload", "error", err)
-			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
+			logger.Debug("Handle image body", "length", len(im_body))
+
+			// Make sure this is an image
+
+			im_r := bytes.NewReader(im_body)
+
+			_, _, err = image.Decode(im_r)
+
+			if err != nil {
+				logger.Error("Failed to parse upload as image", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			// Generate embeddings for image body
+
+			// Hack...
+			emb_model := strings.Replace(model, "apple/mobileclip_", "", 1)
+
+			logger.Debug("Generate embeddings", "model", emb_model, "body", len(im_body))
+
+			emb_req := &embeddings.EmbeddingsRequest{
+				Body:  im_body,
+				Model: emb_model,
+			}
+
+			emb_rsp, err := opts.EmbeddingsClient.ImageEmbeddings(ctx, emb_req)
+
+			if err != nil {
+				logger.Error("Failed to derive embeddings for upload", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			similar_embeddings = emb_rsp.Embeddings()
 		}
 
 		//
 
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
-			Embeddings: emb_rsp.Embeddings(),
+			Embeddings: similar_embeddings,
 			Model:      model,
 			MaxResults: &opts.MaxResults,
+		}
+
+		if max_distance > 0 {
+			similar_req.MaxDistance = &max_distance
 		}
 
 		similar_provider, err := sanitize.PostString(req, "similar-provider")
@@ -161,7 +206,7 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			similar_req.SimilarProvider = &similar_provider
 		}
 
-		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(emb_rsp.Embeddings()))
+		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(similar_embeddings))
 
 		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
 
