@@ -88,14 +88,6 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		max_dist, err := sanitize.PostFloat64(req, "max-distance")
-
-		if err != nil {
-			logger.Error("Failed to derive max distance from query", "error", err)
-			http.Error(rsp, "Bad request", http.StatusBadRequest)
-			return
-		}
-		
 		logger.Debug("Process search", "search by", search_by, "model", model)
 
 		var similar_embeddings []float32
@@ -190,7 +182,6 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			similar_embeddings = emb_rsp.Embeddings()
 
 		default:
-
 			logger.Error("Unsupported search by type", "error", err)
 			http.Error(rsp, "Bad request", http.StatusBadRequest)
 			return
@@ -205,7 +196,24 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			MaxResults: &opts.MaxResults,
 		}
 
-		if max_dist > 0 {
+		custom_max_dist, err := sanitize.PostBool(req, "custom-max-distance")
+
+		if err != nil {
+			logger.Error("Failed to derive custom max distance from query", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if custom_max_dist {
+
+			max_dist, err := sanitize.PostFloat64(req, "max-distance")
+
+			if err != nil {
+				logger.Error("Failed to derive max distance from query", "error", err)
+				http.Error(rsp, "Bad request", http.StatusBadRequest)
+				return
+			}
+
 			max32 := float32(max_dist)
 			similar_req.MaxDistance = &max32
 		}
@@ -229,7 +237,7 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			similar_req.SimilarProvider = &similar_provider
 		}
 
-		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(similar_embeddings))
+		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(similar_embeddings), "max distance", similar_req.MaxDistance)
 
 		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
 

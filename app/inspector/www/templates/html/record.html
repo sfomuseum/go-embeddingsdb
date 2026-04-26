@@ -3,26 +3,6 @@
 {{ $root := . }}
 
 <div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
-
-    <div class="row" id="similar-controls">
-
-	<div class="mb-3">
-	    <label for="model-provider" class="form-label">Filter similar records by provider</label>
-	    <select class="form-select" id="model-provider">
-		<option value="">All providers</option>
-		{{ range $i, $p := .Providers -}}
-		<option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
-		{{ end -}}
-	    </select>
-	</div>
-
-	<div class="mb-3">
-	    <label for="max-distance">Max distance between results</label>
-	    <input type="range" class="form-control" id="max-distance" name="max-distance" min="0" max="20" step="0.01" value="{{ .MaxDistance }}" />
-	    <small>Current value is <code id="max-distance-value">0.0</code></small>
-	</div>
-	
-    </div>
     
     <div class="row record-grid">
 
@@ -40,16 +20,7 @@
 		<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
 		<tr><th>Depiction&nbsp;ID</th><td>{{ .Record.DepictionId }}</td></tr>
 		<tr><th>Subject&nbsp;ID</th><td>{{ .Record.SubjectId }}</td></tr>
-		<tr><th>Model</th>
-		    <td>
-			<span id="model-current">{{ .Record.Model }}</span>
-			<select class="form-select" id="model-select">
-			    {{ range $i, $m := .Models -}}
-			    <option value="{{ $m }}" {{ if eq $m $.Record.Model }}selected="selected"{{ end }}>{{ $m }}</option>
-			    {{ end -}}
-			</select>
-		    </td>
-		</tr>
+		<tr><th>Model</th><td><span id="model-current">{{ .Record.Model }}</span></td></tr>
 		<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
 		<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
 		<tr>
@@ -63,11 +34,51 @@
 		    </td>
 		</tr>
 	    </table>
+
+	    <div id="similar-controls">
+	    <form class="form">
+
+		<div class="mb-3">
+		    <label for="model-provider" class="form-label">Filter similar records by provider</label>
+		    <select class="form-select" id="model-provider">
+			<option value="">All providers</option>
+			{{ range $i, $p := .Providers -}}
+			<option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
+			{{ end -}}
+		    </select>
+		</div>
+		
+		<div class="mb-3">
+		    <label for="model-select" class="form-label">Filter similar records by model</label>		
+		    <select class="form-select" id="model-select">
+			{{ range $i, $m := .Models -}}
+			<option value="{{ $m }}" {{ if eq $m $.Record.Model }}selected="selected"{{ end }}>{{ $m }}</option>
+			{{ end -}}
+		    </select>
+		</div>
+
+		<div class="mb-3">
+
+		    <div class="form-check form-switch">
+			<label for="custom-max-distance">Override maximum distance between results</label>			
+			<input type="checkbox" class="form-check-input" id="custom-max-distance" name="custom-max-distance" value="true" />			
+		    </div>
+		</div>
+
+		<div class="mb-3" id="max-distance-wrapper">		
+		    <label for="max-distance">Maximum distance between results (0-50)</label>
+		    <input type="range" class="form-control" id="max-distance" name="max-distance" min="0" max="50" step="0.01" value="0" />
+		    <small>Higher values (10 or above) are often better for text queries. Current value is <code id="max-distance-value">0.0</code></small>
+		</div>
+		
+		<button class="btn btn-primary" id="refine" name="refine">Update similar results</button>
+	    </form>
+	    </div>
 	    
 	</div>
 	<div class="record-similar">
 	  {{ if eq (len .Similar) 0 -}}
-	  No similar records found.
+	  No similar records found. Maybe try setting a custom max distance parameter?
 	  {{ else -}}
 	    {{ range $i, $s := .Similar -}}
 	    {{ $oe := $s.OEmbeddingsOrNil -}}    

@@ -20,15 +20,15 @@ func GetSimilarRecordsFromRequest(req *net_http.Request, cl client.Client) ([]*e
 	}
 
 	// We assume that we have validated model above
-	
+
 	model, _ := sanitize.GetString(req, "model")
 
-		max_dist, err := sanitize.PostFloat64(req, "max-distance")
+	max_dist, err := sanitize.PostFloat64(req, "max-distance")
 
-		if err != nil {
-			return nil, fmt.Errorf("Failed to derive max distance from query, %w", err)
-		}
-	
+	if err != nil {
+		return nil, fmt.Errorf("Failed to derive max distance from query, %w", err)
+	}
+
 	similar_req := &embeddingsdb.SimilarRecordsRequest{
 		Embeddings: record.Embeddings,
 		Model:      model,
@@ -41,7 +41,7 @@ func GetSimilarRecordsFromRequest(req *net_http.Request, cl client.Client) ([]*e
 		max32 := float32(max_dist)
 		similar_req.MaxDistance = &max32
 	}
-	
+
 	similar, err := cl.SimilarRecords(ctx, similar_req)
 
 	if err != nil {

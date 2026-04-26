@@ -34,23 +34,33 @@
 		    </select>	    
 		</div>
 
-		
-		<div class="mb-3">
-		    <label for="max-distance">Max distance between results</label>
-		    <input type="range" class="form-control" id="max-distance" name="max-distance" min="0" max="50" step="0.01" value="0" />
-		    <small>Higher values (10 or above) are often better for text queries. Current value is <code id="max-distance-value">0.0</code></small>
-		</div>
-		
+				
 		<div class="mb-3">
 		    <label for="upload-provider-select" class="form-label">Filter results by provider (optional)</label>	
 		    <select class="form-select" id="upload-provider-select" name="similar-provider">
-			<option value="">Any providers</option>
+			<option value="">Any provider</option>
 			{{ range $i, $p := .Providers -}}
 			<option value="{{ $p }}">{{ $p }}</option>
 			{{ end -}}
 		    </select>	    
 		</div>
+
+		<div class="mb-3">
+
+		    <div class="form-check form-switch">
+			<label for="custom-max-distance">Override maximum distance between results</label>			
+			<input type="checkbox" class="form-check-input" id="custom-max-distance" name="custom-max-distance" value="true" />			
+		    </div>
+		</div>
+
+		<div class="mb-3" id="max-distance-wrapper">		
+		    <label for="max-distance">Maximum distance between results (0-50)</label>
+		    <input type="range" class="form-control" id="max-distance" name="max-distance" min="0" max="50" step="0.01" value="0" />
+		    <small>Higher values (10 or above) are often better for text queries. A value of <code>0.0</code> will disable max distance filtering. Current value is <code id="max-distance-value">0.0</code></small>
+		</div>
+		
 		<button type="submit" class="btn btn-primary" id="submit" disabled="disbled">Search</button>
+		
 		<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#666" class="bi bi-arrow-clockwise" viewBox="0 0 16 16" id="upload-spinner-svg"><g id="upload-spinner"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></g></svg>
 		<progress id="progress" max="100" value="0"></progress>	    
 	    </form>

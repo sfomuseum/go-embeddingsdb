@@ -13,6 +13,10 @@ label {
 	font-weight: 700;
 }
 
+#max-distance-wrapper {
+	display: none;
+}
+
 #upload-wrapper {
 	display: none;
 }
@@ -163,10 +167,6 @@ label {
 
 #list-controls {
 	margin-bottom: 2rem;
-	display:none;
-}
-
-#model-select {
 	display:none;
 }
 

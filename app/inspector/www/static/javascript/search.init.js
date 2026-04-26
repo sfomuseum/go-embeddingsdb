@@ -20,7 +20,20 @@ window.addEventListener('load', function(e){
     const submit = document.querySelector("#submit");
 
     const max_distance = document.querySelector("#max-distance");
+    const max_distance_wrapper = document.querySelector("#max-distance-wrapper");
+    const custom_max_distance = document.querySelector("#custom-max-distance");    
 
+    custom_max_distance.addEventListener("change", function(){
+
+	if (custom_max_distance.checked){
+	    max_distance_wrapper.style.display = "block";
+	} else {
+	    max_distance_wrapper.style.display = "none";
+	}
+	
+	return false;	
+    });
+    
     max_distance.addEventListener("input", function() {
 	const el = document.querySelector("#max-distance-value");
 	el.textContent = max_distance.value;	
