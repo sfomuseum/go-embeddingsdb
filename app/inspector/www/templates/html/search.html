@@ -33,6 +33,14 @@
 			{{ end -}}
 		    </select>	    
 		</div>
+
+		
+		<div class="mb-3">
+		    <label for="max-distance">Max distance between results</label>
+		    <input type="range" class="form-control" id="max-distance" name="max-distance" min="0" max="50" step="0.01" value="0" />
+		    <small>Higher values (10 or above) are often better for text queries. Current value is <code id="max-distance-value">0.0</code></small>
+		</div>
+		
 		<div class="mb-3">
 		    <label for="upload-provider-select" class="form-label">Filter results by provider (optional)</label>	
 		    <select class="form-select" id="upload-provider-select" name="similar-provider">

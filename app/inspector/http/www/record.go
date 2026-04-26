@@ -27,6 +27,7 @@ type RecordHandlerVars struct {
 	Models          []string
 	Providers       []string
 	SimilarProvider string
+	MaxDistance float32
 	EnableSearch    bool
 	URIs            *inspector_http.URIs
 }
@@ -104,6 +105,21 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			similar_req.SimilarProvider = &similar_provider
 		}
 
+		max_dist := float32(0.0)
+		
+		max64, err := sanitize.GetFloat64(req, "max-distance")
+
+		if err != nil {
+			logger.Error("Failed to derive max-distance", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if max64 > 0 {
+			max_dist = float32(max64)
+			similar_req.MaxDistance = &max_dist
+		}
+		
 		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
 
 		if err != nil {
@@ -118,6 +134,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			Models:          models,
 			Providers:       providers,
 			SimilarProvider: similar_provider,
+			MaxDistance: max_dist,
 			EnableSearch:    opts.EnableSearch,
 			URIs:            opts.URIs,
 		}

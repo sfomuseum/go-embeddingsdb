@@ -19,6 +19,13 @@ window.addEventListener('load', function(e){
     const spinner = document.querySelector("#upload-spinner-svg");        
     const submit = document.querySelector("#submit");
 
+    const max_distance = document.querySelector("#max-distance");
+
+    max_distance.addEventListener("input", function() {
+	const el = document.querySelector("#max-distance-value");
+	el.textContent = max_distance.value;	
+    });
+        
     search_by.addEventListener('change', function(){
 
 	const v = search_by.value;

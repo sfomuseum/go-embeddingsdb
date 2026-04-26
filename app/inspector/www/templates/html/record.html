@@ -5,19 +5,22 @@
 <div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
 
     <div class="row" id="similar-controls">
-	
-	<label for="model-provider" class="form-label">Filter similar records by provider</label>
-	<select class="form-select" id="model-provider">
-	    <option value="">All providers</option>
-	    {{ range $i, $p := .Providers -}}
-	    <option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
-	    {{ end -}}
-	</select>
-	
-	<!--
-	     <label for="max-distance" class="form-label">Max Distance</label>
-	     <input type="range" class="form-range" min="0" max="5.0" id="max-distance">
-	-->
+
+	<div class="mb-3">
+	    <label for="model-provider" class="form-label">Filter similar records by provider</label>
+	    <select class="form-select" id="model-provider">
+		<option value="">All providers</option>
+		{{ range $i, $p := .Providers -}}
+		<option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>
+		{{ end -}}
+	    </select>
+	</div>
+
+	<div class="mb-3">
+	    <label for="max-distance">Max distance between results</label>
+	    <input type="range" class="form-control" id="max-distance" name="max-distance" min="0" max="20" step="0.01" value="{{ .MaxDistance }}" />
+	    <small>Current value is <code id="max-distance-value">0.0</code></small>
+	</div>
 	
     </div>
     

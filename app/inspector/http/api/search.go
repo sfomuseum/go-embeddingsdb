@@ -88,10 +88,17 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		max_dist, err := sanitize.PostFloat64(req, "max-distance")
+
+		if err != nil {
+			logger.Error("Failed to derive max distance from query", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+		
 		logger.Debug("Process search", "search by", search_by, "model", model)
 
 		var similar_embeddings []float32
-		max_distance := float32(0.0)
 
 		// To do: "fused" embeddings
 
@@ -125,7 +132,6 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			}
 
 			similar_embeddings = emb_rsp.Embeddings()
-			max_distance = 5.0
 
 		case "upload":
 
@@ -199,8 +205,9 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			MaxResults: &opts.MaxResults,
 		}
 
-		if max_distance > 0 {
-			similar_req.MaxDistance = &max_distance
+		if max_dist > 0 {
+			max32 := float32(max_dist)
+			similar_req.MaxDistance = &max32
 		}
 
 		similar_provider, err := sanitize.PostString(req, "similar-provider")

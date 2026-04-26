@@ -112,5 +112,42 @@ window.addEventListener('load', function(e){
 	return false;
     };
 
+    
+    const max_distance = document.querySelector("#max-distance");
+
+    if (max_distance){
+	
+	max_distance.addEventListener("input", function() {
+	    
+	    const max_el = document.querySelector("#max-distance-value");
+	    max_el.textContent = max_distance.value;
+
+	    const el = e.target;
+	    const v = el.value;
+	    
+	    const u = new URL("/", location);
+	    const s = new URLSearchParams();
+	    
+	    const m = model_select.value;
+	    
+	    u.pathname = record_uri + current_provider + "/" + current_depiction_id;
+	    
+	    s.set("model", model_select.value);
+	    
+	    if (v != "") {
+		s.set("similar-provider",v);
+	    }
+
+	    s.set("max-distance", max_distance.value);
+	    u.search = s
+	    const href = u.toString();
+	    
+	    location.href= href
+	    return false;
+	    
+	});
+    }
+    
+    
     similar_controls.style.display = "block";
 });
