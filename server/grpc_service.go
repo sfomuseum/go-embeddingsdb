@@ -296,6 +296,30 @@ func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRe
 	return rsp, nil
 }
 
+func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensionsRequest) (*grpc.GetDimensionsResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to list dimensions", "time", time.Since(t1))
+
+	// options...
+
+	dimensions := s.db.Dimensions(ctx)
+
+	d32 := make([]int32, len(dimensions))
+
+	for i, d := range dimensions {
+		d32[i] = int32(d)
+	}
+
+	rsp := &grpc.GetDimensionsResponse{
+		Dimensions: d32,
+	}
+
+	return rsp, nil
+}
+
 func (s *grpcService) Logger(ctx context.Context) *slog.Logger {
 
 	logger := slog.Default()

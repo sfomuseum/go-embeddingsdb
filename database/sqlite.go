@@ -659,7 +659,7 @@ func (db *SQLiteDatabase) Providers(ctx context.Context, opts ...options.Option)
 	return providers, nil
 }
 
-func (db *SQLiteDatabase) Dimensions() []int {
+func (db *SQLiteDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
 	return []int{db.dimensions}
 }
 

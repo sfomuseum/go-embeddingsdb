@@ -155,7 +155,7 @@ func (db *MultiDatabase) BatchedRecordsCount(ctx context.Context, opts ...option
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
-		dims = db.Dimensions()
+		dims = db.Dimensions(ctx)
 	}
 
 	total := 0
@@ -191,7 +191,7 @@ func (db *MultiDatabase) AddBatchedRecord(ctx context.Context, opts ...options.O
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
-		dims = db.Dimensions()
+		dims = db.Dimensions(ctx)
 	}
 
 	cb := func(ctx context.Context, target_db Database) error {
@@ -284,7 +284,7 @@ func (db *MultiDatabase) IterateRecords(ctx context.Context, opts ...options.Opt
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
-		dims = db.Dimensions()
+		dims = db.Dimensions(ctx)
 	}
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
@@ -315,7 +315,7 @@ func (db *MultiDatabase) LastUpdate(ctx context.Context, opts ...options.Option)
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
-		dims = db.Dimensions()
+		dims = db.Dimensions(ctx)
 	}
 
 	lastupdate := int64(0)
@@ -354,7 +354,7 @@ func (db *MultiDatabase) Models(ctx context.Context, opts ...options.Option) ([]
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
-		dims = db.Dimensions()
+		dims = db.Dimensions(ctx)
 	}
 
 	models := make([]string, 0)
@@ -396,7 +396,7 @@ func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) 
 	dims := GetAllDimensionsFromOptions(ctx, opts...)
 
 	if len(dims) == 0 {
-		dims = db.Dimensions()
+		dims = db.Dimensions(ctx)
 	}
 
 	providers := make([]string, 0)
@@ -433,7 +433,7 @@ func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) 
 }
 
 // Return the list of dimensions supported by this Database implementation.
-func (db *MultiDatabase) Dimensions() []int {
+func (db *MultiDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
 
 	dimensions := make([]int, 0)
 
@@ -448,7 +448,7 @@ func (db *MultiDatabase) Dimensions() []int {
 // Close performs and terminating functions required by the database.
 func (db *MultiDatabase) Close(ctx context.Context) error {
 
-	dims := db.Dimensions()
+	dims := db.Dimensions(ctx)
 
 	cb := func(ctx context.Context, target_db Database) error {
 		return target_db.Close(ctx)

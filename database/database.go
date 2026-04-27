@@ -39,7 +39,7 @@ type Database interface {
 	// Return the Unix timestamp of the last update to the Database instance.
 	LastUpdate(context.Context, ...options.Option) (int64, error)
 	// Return the list of dimensions supported by this Database  implementation.
-	Dimensions() []int
+	Dimensions(context.Context, ...options.Option) []int
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.

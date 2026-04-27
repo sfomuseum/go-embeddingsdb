@@ -98,7 +98,7 @@ func (db *NullDatabase) LastUpdate(ctx context.Context, opts ...options.Option) 
 }
 
 // Return the list of dimensions supported by this Database  implementation.
-func (db *NullDatabase) Dimensions() []int {
+func (db *NullDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
 	return []int{0}
 }
 
