@@ -410,11 +410,17 @@ go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/par
 go build -tags=sqlite -mod readonly -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
 ```
 
+If you are building these tools for the first time, you will need to run this first for reasons discussed below:
+
+```
+$> go mod tidy && go mod vendor
+```
+
 ### DuckDB
 
 DuckDB is a dependency regardless of build tags (described below).
 
-This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
+This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go mode tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
 
 Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#statically-linked-extensions-macos).
 
