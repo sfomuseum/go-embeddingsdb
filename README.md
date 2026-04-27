@@ -755,21 +755,23 @@ go run -tags=sqlite -mod vendor \
 
 Opening your web browser to `http://localhost:8082` you would see something like this (depending on the records you've indexed in the `embeddingsdb` databae):
 
-![](docs/images/embeddingsdb-list-2.png)
+![](docs/images/embeddingsdb-list-3.png)
 
 You can filter the list view by model and by provider (the source of embeddings). As you can see the list view needs some loving to collapse similar depictions with multiple models in a single view. Soon, I hope.
 
 Individual record pages look like this:
 
-![](docs/images/embeddingsdb-record-2.png)
+![](docs/images/embeddingsdb-record-3.png)
 
 By default record pages will show similar records for a single model across all providers. Both of these facets may be updated. The left hand panel (the record being viewed) will remain fixed but the right hand panel (containing similar records) will scroll.
 
 If enabled (with the `-enable-upload` flag) there is also an endpoint where you can upload an image of your choosing, generate embeddings on the fly for that image and then use those data to search for similar images in the `embeddingsdb` database. For example:
 
-![](docs/images/embeddingsdb-upload-2.png)
+![](docs/images/embeddingsdb-search-3.png)
 
-As with the record view, the left hand panel (the image that was uploaded) will remain fixed but the right hand panel (containing similar records) will scroll.
+As with the record view, the left hand panel (the image that was uploaded) will remain fixed but the right hand panel (containing similar records) will scroll. You can also search for images by text:
+
+![](docs/images/embeddingsdb-search-text-3.png)
 
 #### Note and caveats
 
