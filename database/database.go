@@ -110,7 +110,7 @@ func NewDatabaseURIFromURIs(uris ...string) string {
 	default:
 
 		q := url.Values{}
-		q["database-uri}"] = uris
+		q["database-uri"] = uris
 
 		u := new(url.URL)
 		u.Scheme = MultiDatabaseScheme
