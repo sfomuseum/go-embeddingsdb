@@ -82,10 +82,10 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	mux.Handle(uris.JavaScript, static_handler)
 
 	list_opts := &www.ListHandlerOptions{
-		Client:        cl,
-		Templates:     t,
-		URIs:          uris,
-		EnableUploads: enable_uploads,
+		Client:       cl,
+		Templates:    t,
+		URIs:         uris,
+		EnableSearch: enable_search,
 	}
 
 	list_handler, err := www.ListHandler(list_opts)
@@ -98,11 +98,11 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	mux.Handle(uris.List, list_handler)
 
 	record_opts := &www.RecordHandlerOptions{
-		Client:        cl,
-		Templates:     t,
-		MaxResults:    int32(max_results),
-		EnableUploads: enable_uploads,
-		URIs:          uris,
+		Client:       cl,
+		Templates:    t,
+		MaxResults:   int32(max_results),
+		EnableSearch: enable_search,
+		URIs:         uris,
 	}
 
 	record_handler, err := www.RecordHandler(record_opts)
@@ -127,7 +127,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	logger.Debug("Register API embeddings handler", "uri", uris.APIEmbeddingsWithVars)
 	mux.Handle(uris.APIEmbeddingsWithVars, api_embeddings_handler)
 
-	if enable_uploads {
+	if enable_search {
 
 		emb_cl, err := embeddings.NewEmbedder32(ctx, embeddings_client_uri)
 
@@ -135,37 +135,37 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 			return fmt.Errorf("Failed to create new embeddings client, %w", err)
 		}
 
-		upload_opts := &www.UploadHandlerOptions{
-			Client:        cl,
-			Templates:     t,
-			EnableUploads: enable_uploads,
-			URIs:          uris,
+		search_opts := &www.SearchHandlerOptions{
+			Client:       cl,
+			Templates:    t,
+			EnableSearch: enable_search,
+			URIs:         uris,
 		}
 
-		upload_handler, err := www.UploadHandler(upload_opts)
+		search_handler, err := www.SearchHandler(search_opts)
 
 		if err != nil {
-			return fmt.Errorf("Failed to create upload handler, %w", err)
+			return fmt.Errorf("Failed to create search handler, %w", err)
 		}
 
-		logger.Debug("Register upload handler", "uri", uris.Upload)
-		mux.Handle(uris.Upload, upload_handler)
+		logger.Debug("Register search handler", "uri", uris.Search)
+		mux.Handle(uris.Search, search_handler)
 
-		api_upload_opts := &api.UploadHandlerOptions{
+		api_search_opts := &api.SearchHandlerOptions{
 			Client:           cl,
 			EmbeddingsClient: emb_cl,
 			MaxResults:       int32(max_results),
 			MaxUploadSize:    max_upload_size,
 		}
 
-		api_upload_handler, err := api.UploadHandler(api_upload_opts)
+		api_search_handler, err := api.SearchHandler(api_search_opts)
 
 		if err != nil {
-			return fmt.Errorf("Failed to create API upload handler, %w", err)
+			return fmt.Errorf("Failed to create API search handler, %w", err)
 		}
 
-		logger.Debug("Register API upload handler", "uri", uris.APIUpload)
-		mux.Handle(uris.APIUpload, api_upload_handler)
+		logger.Debug("Register API search handler", "uri", uris.APISearch)
+		mux.Handle(uris.APISearch, api_search_handler)
 	}
 
 	s, err := server.NewServer(ctx, server_uri)

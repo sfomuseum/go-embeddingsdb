@@ -9,6 +9,27 @@
         to { transform: rotate(-360deg); }
 }
 
+label {
+	font-weight: 700;
+}
+
+#record-summary {
+	margin-top: 1rem;
+}
+
+#record-details {
+	margin-top:.5rem;
+	margin-bottom: 2rem;
+}
+
+#max-distance-wrapper {
+	display: none;
+}
+
+#upload-wrapper {
+	display: none;
+}
+
 #upload-spinner {
         animation: rotate 5s linear infinite;
         transform-origin: center;
@@ -155,10 +176,6 @@
 
 #list-controls {
 	margin-bottom: 2rem;
-	display:none;
-}
-
-#model-select {
 	display:none;
 }
 
