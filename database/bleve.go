@@ -317,7 +317,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 
 	if len(req.Embeddings) != db.dimensions {
 		logger := slog.Default()
-		logger.Warn("Invalid embeddings", "dimensions", len(req.Embeddings))
+		logger.Warn("Invalid embeddings dimensions", "dimensions", len(req.Embeddings), "expected", db.dimensions)
 		return results, nil
 	}
 
