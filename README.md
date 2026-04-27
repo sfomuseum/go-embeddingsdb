@@ -924,8 +924,6 @@ If you want to build a `emeddingsdb-server` binary (or any other tool that uses 
 
 After a fair amount of trial and error this is what I managed to get working. It _should_ work for you but you know how these things end up changing when you're not looking.
 
-_Note: There are [known problems with this process using recent releases of DuckDB](https://github.com/duckdb/duckdb-spatial/issues/794). I am trying to figure them out._
-
 First install both `duckdb` and `vcpkg` from source:
 
 ```
