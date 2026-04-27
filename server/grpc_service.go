@@ -171,15 +171,29 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 	}()
 
 	db_req := &embeddingsdb.SimilarRecordsRequest{
-		Model:           req.Model,
-		Embeddings:      req.Embeddings,
-		Exclude:         req.Exclude,
-		SimilarProvider: req.SimilarProvider,
-		MaxDistance:     req.MaxDistance,
-		MaxResults:      req.MaxResults,
+		Model:      req.Model,
+		Embeddings: req.Embeddings,
+		Exclude:    req.Exclude,
 	}
 
-	records, err := s.db.SimilarRecords(ctx, db_req)
+	opts := make([]options.Option, 0)
+
+	if req.SimilarProvider != nil {
+		o := options.NewSimilarProviderOption(*req.SimilarProvider)
+		opts = append(opts, o)
+	}
+
+	if req.MaxDistance != nil {
+		o := options.NewMaxDistanceOption(*req.MaxDistance)
+		opts = append(opts, o)
+	}
+
+	if req.MaxResults != nil {
+		o := options.NewMaxResultsOption(*req.MaxResults)
+		opts = append(opts, o)
+	}
+
+	records, err := s.db.SimilarRecords(ctx, db_req, opts...)
 
 	if err != nil {
 		logger.Error("Failed to retrieve similar records", "error", err)

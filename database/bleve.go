@@ -370,11 +370,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
-		*max_results = db.max_results
-	}
-
-	if max_distance == nil {
-		*max_distance = db.max_distance
+		max_results = &db.max_results
 	}
 
 	var filters []query.Query
@@ -418,8 +414,17 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 
 		dist := float32(hit.Score)
 
-		if dist > *max_distance {
-			continue
+		if max_distance == nil {
+
+			if dist > db.max_distance {
+				continue
+			}
+
+		} else {
+
+			if *max_distance != 0 && dist > *max_distance {
+				continue
+			}
 		}
 
 		rec, err := db.inflateRecordWithMatch(ctx, hit)

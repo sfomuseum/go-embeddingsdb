@@ -3,7 +3,7 @@ package options
 type OptionType uint8
 
 const (
-	UndefinedOptionType OptionType = 0 << iota
+	UndefinedOptionType OptionType = iota
 	DimensionsOptionType
 	FilterOptionType
 	ProviderOptionType
