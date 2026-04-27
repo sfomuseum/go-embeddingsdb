@@ -306,12 +306,12 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	max_results := GetMaxResultsFromOptions(ctx, opts...)
 	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
-	if max_results == nil {
-		*max_results = db.max_results
+	if req.MaxDistance != nil {
+		max_distance = req.MaxDistance
 	}
 
-	if max_distance == nil {
-		*max_distance = db.max_distance
+	if req.MaxResults != nil {
+		max_results = req.MaxResults
 	}
 
 	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)

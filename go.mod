@@ -10,14 +10,14 @@ require (
 	github.com/aaronland/gocloud v1.1.0
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
 	github.com/blevesearch/bleve/v2 v2.5.7
-	github.com/blevesearch/bleve_index_api v1.3.10
+	github.com/blevesearch/bleve_index_api v1.3.11
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/duckdb/duckdb-go/v2 v2.10502.0
 	github.com/google/jsonschema-go v0.4.2
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-database v0.0.18
-	github.com/sfomuseum/go-embeddings v0.3.0
+	github.com/sfomuseum/go-embeddings v0.4.1
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-template v1.11.0
 	golang.org/x/oauth2 v0.36.0

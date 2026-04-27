@@ -10,26 +10,26 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/client"
 )
 
-type UploadHandlerOptions struct {
-	Client        client.Client
-	Templates     *template.Template
-	EnableUploads bool
-	URIs          *inspector_http.URIs
+type SearchHandlerOptions struct {
+	Client       client.Client
+	Templates    *template.Template
+	EnableSearch bool
+	URIs         *inspector_http.URIs
 }
 
-type UploadHandlerFormVars struct {
-	Models        []string
-	Providers     []string
-	EnableUploads bool
-	URIs          *inspector_http.URIs
+type SearchHandlerFormVars struct {
+	Models       []string
+	Providers    []string
+	EnableSearch bool
+	URIs         *inspector_http.URIs
 }
 
-func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
+func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 
-	t := opts.Templates.Lookup("upload")
+	t := opts.Templates.Lookup("search")
 
 	if t == nil {
-		return nil, fmt.Errorf("Failed to load 'upload_form' template")
+		return nil, fmt.Errorf("Failed to load 'search_form' template")
 	}
 
 	fn := func(rsp http.ResponseWriter, req *http.Request) {
@@ -53,11 +53,11 @@ func UploadHandler(opts *UploadHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		vars := UploadHandlerFormVars{
-			Models:        models,
-			Providers:     providers,
-			EnableUploads: opts.EnableUploads,
-			URIs:          opts.URIs,
+		vars := SearchHandlerFormVars{
+			Models:       models,
+			Providers:    providers,
+			EnableSearch: opts.EnableSearch,
+			URIs:         opts.URIs,
 		}
 
 		err = t.Execute(rsp, vars)

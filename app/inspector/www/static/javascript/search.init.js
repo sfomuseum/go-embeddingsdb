@@ -3,6 +3,12 @@ window.addEventListener('load', function(e){
     const main = document.querySelector("#main");
     const record_uri = main.getAttribute("data-record-uri");    
     const api_upload_uri = main.getAttribute("data-api-upload-uri");
+
+    const search_by = document.querySelector("#search-by");
+    const query = document.querySelector("#query");
+
+    const query_wrapper = document.querySelector("#query-wrapper");
+    const upload_wrapper = document.querySelector("#upload-wrapper");        
     
     const target = document.querySelector("#upload-similar");
     const upload_image = document.querySelector("#upload-image");
@@ -13,6 +19,46 @@ window.addEventListener('load', function(e){
     const spinner = document.querySelector("#upload-spinner-svg");        
     const submit = document.querySelector("#submit");
 
+    const max_distance = document.querySelector("#max-distance");
+    const max_distance_wrapper = document.querySelector("#max-distance-wrapper");
+    const custom_max_distance = document.querySelector("#custom-max-distance");    
+
+    custom_max_distance.addEventListener("change", function(){
+
+	if (custom_max_distance.checked){
+	    max_distance_wrapper.style.display = "block";
+	} else {
+	    max_distance_wrapper.style.display = "none";
+	}
+	
+	return false;	
+    });
+    
+    max_distance.addEventListener("input", function() {
+	const el = document.querySelector("#max-distance-value");
+	el.textContent = max_distance.value;	
+    });
+        
+    search_by.addEventListener('change', function(){
+
+	const v = search_by.value;
+
+	switch (search_by.value) {
+	    case "upload":
+		query_wrapper.style.display = "none";
+		upload_wrapper.style.display = "block";		
+		break;
+	    case "query":
+		query_wrapper.style.display = "block";
+		upload_wrapper.style.display = "none";		
+		break;
+	    default:
+		console.error("Unsupported search by value", search_by.value);
+	}
+	
+	return false;
+    });
+    
     upload_input.addEventListener('change', function(){
 	
 	const file = this.files[0];
