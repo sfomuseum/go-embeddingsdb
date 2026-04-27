@@ -15,26 +15,41 @@
 		<div class="no-preview">No preview available</div>
 		{{ end -}}	
 	    </div>
-	    
-	    <table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
-		<tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
-		<tr><th>Depiction&nbsp;ID</th><td>{{ .Record.DepictionId }}</td></tr>
-		<tr><th>Subject&nbsp;ID</th><td>{{ .Record.SubjectId }}</td></tr>
-		<tr><th>Model</th><td><span id="model-current">{{ .Record.Model }}</span></td></tr>
-		<tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
-		<tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
-		<tr>
-		    <th>Attributes</th>
-		    <td>
-			<table class="table attributes">
-			    {{ range $k, $v := .Record.Attributes -}}
-			    <tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
-			    {{ end -}}
-			</table>
-		    </td>
-		</tr>
-	    </table>
 
+	    <div id="record-summary">
+		<table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
+		    <tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
+		    <tr><th>Depiction&nbsp;ID</th><td>{{ .Record.DepictionId }}</td></tr>
+		    <tr><th>Subject&nbsp;ID</th><td>{{ .Record.SubjectId }}</td></tr>
+		    <tr><th>Model</th><td><span id="model-current">{{ .Record.Model }}</span></td></tr>
+		</table>
+	    </div>
+	    
+	    <details id="record-details">
+		<summary>
+		    <label>Details</label>
+		</summary>
+		
+		<table class="table record-table" id="record-table" data-provider="{{ .Record.Provider }}" data-depiction-id="{{ .Record.DepictionId }}" data-model="{{ .Record.Model }}">
+		    <tr><th>Provider</th><td>{{ .Record.Provider }}</td></tr>
+		    <tr><th>Depiction&nbsp;ID</th><td>{{ .Record.DepictionId }}</td></tr>
+		    <tr><th>Subject&nbsp;ID</th><td>{{ .Record.SubjectId }}</td></tr>
+		    <tr><th>Model</th><td><span id="model-current">{{ .Record.Model }}</span></td></tr>
+		    <tr><th>Created</th><td>{{ FormatUnixTime .Record.Created "2006-01-02" }}</td></tr>	
+		    <tr><th>Embeddings</th><td><a href="{{ .URIs.APIEmbeddings }}{{ .Record.Provider }}/{{ .Record.DepictionId }}?model={{ $.Record.Model }}" target="embeddings">link</a></td></tr>	
+		    <tr>
+			<th>Attributes</th>
+			<td>
+			    <table class="table attributes">
+				{{ range $k, $v := .Record.Attributes -}}
+				<tr><th>{{ $k }}</th><td>{{ $v }}</td></tr>
+				{{ end -}}
+			    </table>
+			</td>
+		    </tr>
+		</table>
+	    </details>
+	    
 	    <div id="similar-controls">
 	    <form class="form">
 

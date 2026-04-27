@@ -15,6 +15,20 @@ window.addEventListener('load', function(e){
     const max_distance_wrapper = document.querySelector("#max-distance-wrapper");
     const custom_max_distance = document.querySelector("#custom-max-distance");    
 
+    const record_summary = document.querySelector("#record-summary");    
+    const record_details = document.querySelector("#record-details");
+
+    record_details.addEventListener("toggle", function(){
+
+	if (record_details.open){
+	    record_summary.style.display = "none";
+	} else {
+	    record_summary.style.display = "block";
+	}
+	
+	return false;
+    });
+    
     custom_max_distance.addEventListener("change", function(){
 
 	if (custom_max_distance.checked){

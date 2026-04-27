@@ -13,6 +13,15 @@ label {
 	font-weight: 700;
 }
 
+#record-summary {
+	margin-top: 1rem;
+}
+
+#record-details {
+	margin-top:.5rem;
+	margin-bottom: 2rem;
+}
+
 #max-distance-wrapper {
 	display: none;
 }
