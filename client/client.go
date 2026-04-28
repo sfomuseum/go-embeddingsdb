@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"log/slog"
+
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-roster"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -105,6 +107,7 @@ func NewClientWithDatabaseURIs(ctx context.Context, uri string, db_uris ...strin
 	cl_q.Set("database-uri", db_u.String())
 	cl_u.RawQuery = cl_q.Encode()
 
+	slog.Info("WUT", "u", cl_u.String())
 	return NewClient(ctx, cl_u.String())
 }
 

@@ -7,6 +7,7 @@ import (
 	"iter"
 	"log/slog"
 	"net/url"
+	"strconv"
 
 	"github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
@@ -53,8 +54,41 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	bucket := u.Host
 
+	if bucket == "" {
+		return nil, fmt.Errorf("Missing bucket name as host")
+	}
+
+	required := []string{
+		"region",
+		"credentials",
+		"index",
+	}
+
+	for _, k := range required {
+
+		if !q.Has(k) {
+			return nil, fmt.Errorf("Required ?%s= parameter missing", k)
+		}
+
+		if q.Get(k) == "" {
+			return nil, fmt.Errorf("Required ?%s= parameter may not be empty", k)
+		}
+	}
+
+	if q.Has("dimensions") {
+
+		v, err := strconv.Atoi(q.Get("dimensions"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?dimension= parameter, %w", err)
+		}
+
+		dimensions = v
+		slog.Info("RESET DIMENSIONS", "d", dimensions)
+	}
+
 	region := q.Get("region")
-	creds := q.Get("credetials")
+	creds := q.Get("credentials")
 	index := q.Get("index")
 
 	cfg_q := url.Values{}
@@ -102,7 +136,15 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.PutVectors
 
 	attrs := rec.Attributes
-	// need to add extra stuff here...
+
+	if attrs == nil {
+		attrs = make(map[string]string)
+	}
+
+	attrs["x-model"] = rec.Model
+	attrs["x-provider"] = rec.Provider
+	attrs["x-subject-id"] = rec.SubjectId
+	attrs["x-depiction-id"] = rec.DepictionId
 
 	meta := document.NewLazyDocument(attrs)
 
@@ -352,13 +394,14 @@ func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, buc
 
 		if errors.As(err, &notFound) {
 
-			logger.Debug("Index not found, creating")
+			logger.Debug("Index not found, creating", "dimensions", dimensions)
 
 			_, err = cl.CreateIndex(ctx, &s3vectors.CreateIndexInput{
 				DataType:         types.DataTypeFloat32,
 				VectorBucketName: aws.String(bucket),
 				IndexName:        aws.String(index),
 				Dimension:        aws.Int32(int32(dimensions)),
+				DistanceMetric:   types.DistanceMetricCosine, // https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors@v1.6.7/types#DistanceMetric
 			})
 
 			if err != nil {
