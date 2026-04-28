@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"net/url"
 	"strconv"
-
+	"strings"
+	
 	"github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -84,7 +85,6 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		}
 
 		dimensions = v
-		slog.Info("RESET DIMENSIONS", "d", dimensions)
 	}
 
 	region := q.Get("region")
@@ -145,7 +145,8 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	attrs["x-provider"] = rec.Provider
 	attrs["x-subject-id"] = rec.SubjectId
 	attrs["x-depiction-id"] = rec.DepictionId
-
+	attrs["x-created"] = strconv.FormatInt(rec.Created, 10)
+	
 	meta := document.NewLazyDocument(attrs)
 
 	vecs := []types.PutInputVector{
@@ -209,10 +210,63 @@ func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.Ge
 	}
 
 	vec := rsp.Vectors[0]
+	meta := make(map[string]string)
 
+	err = vec.Metadata.UnmarshalSmithyDocument(&meta)
+	
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal metadata")
+	}
+
+	var provider string
+	var model string
+	var depiction_id string
+	var subject_id string
+	var created int64
+	
+	attrs := make(map[string]string)
+
+	for k, v := range meta {
+
+		switch {
+		case strings.HasPrefix(k, "x-"):
+
+			switch k {
+			case "x-provider":
+				provider = v
+			case "x-model":
+				model = v
+			case "x-depiction-id":
+				depiction_id = v
+			case "x-subject-id":
+				subject_id = v
+			case "x-created":
+
+				created_v, err := strconv.ParseInt(v, 10, 64)
+
+				if err != nil {
+					slog.Warn("Failed to parse string created date", "date", v, "error", err)
+				} else {
+					created = created_v
+				}
+				
+			default:
+				slog.Debug("Unrecognized x- key", "k", k)
+			}
+			
+		default:
+			attrs[k] = v
+		}
+	}
+	
 	rec := &embeddingsdb.Record{
 		Embeddings: vec.Data.(*types.VectorDataMemberFloat32).Value,
-		// fix me...need to infate from rsp.Metadata and/or rsp.Key
+		Provider: provider,
+		Model: model,
+		DepictionId: depiction_id,
+		SubjectId: subject_id,
+		Created: created,
+		Attributes: attrs,
 	}
 
 	return rec, nil
