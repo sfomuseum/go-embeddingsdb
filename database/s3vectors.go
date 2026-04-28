@@ -206,7 +206,7 @@ func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.Ge
 	}
 
 	if len(rsp.Vectors) == 0 {
-		return nil, fmt.Errorf("Not found")
+		return nil, RecordNotFound
 	}
 
 	vec := rsp.Vectors[0]
