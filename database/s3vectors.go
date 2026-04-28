@@ -94,6 +94,9 @@ func (db *S3VectorsDatabase) Export(ctx context.Context, uri string, opts ...opt
 
 // Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
 func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
+
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.PutVectors
+	
 	return false, nil
 }
 
@@ -109,16 +112,25 @@ func (db *S3VectorsDatabase) AddBatchedRecord(ctx context.Context, opts ...optio
 
 // Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
+
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.QueryVectors
+	
 	return nil, fmt.Errorf("Not found")
 }
 
 // Remove a record from an EmbeddingsDB instance.
 func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
+
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.DeleteVectors
+	
 	return nil
 }
 
 // Find similar records for a given model and record instance.
 func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
+
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.QueryVectors
+	
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil
 }
@@ -126,6 +138,8 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, rec *embeddings
 // ListRecords returns a paginated list of records stored in the database.
 func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#NewListVectorsPaginator
+	
 	records := make([]*embeddingsdb.Record, 0)
 
 	pg, err := countable.NewResultsFromCountWithOptions(pg_opts, 0)
@@ -150,6 +164,8 @@ func (db *S3VectorsDatabase) LastUpdate(ctx context.Context, opts ...options.Opt
 // Return the list of dimensions supported by this Database  implementation.
 func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
 
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.ListVectors
+	
 	dims := make([]int, 0)
 
 	for idx, err := range db.listIndexes(ctx) {
