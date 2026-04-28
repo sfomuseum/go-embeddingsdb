@@ -32,6 +32,8 @@ func AddRecord(ctx context.Context, args []string) {
 
 	var verbose bool
 
+	var attributes multi.KeyValueString
+
 	fs := flagset.NewFlagSet("add")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
@@ -45,6 +47,8 @@ func AddRecord(ctx context.Context, args []string) {
 
 	fs.StringVar(&action, "action", "", "Valid option are: image, text")
 	fs.StringVar(&input, "input", "", "If - then data is read from STDIN.")
+
+	fs.Var(&attributes, "attribute", "Zero or more {KEY}={VALUE} flags which are used to populate the record's attributes dictionary.")
 
 	// Attributes
 
@@ -158,6 +162,12 @@ func AddRecord(ctx context.Context, args []string) {
 
 	e := embeddings_rsp.(embeddings.EmbeddingsResponse[float32])
 
+	attrs := make(map[string]string)
+
+	for _, kv := range attributes {
+		attrs[kv.Key()] = kv.Value().(string)
+	}
+
 	db_rec := &embeddingsdb.Record{
 		Provider:    provider,
 		DepictionId: depiction_id,
@@ -165,7 +175,7 @@ func AddRecord(ctx context.Context, args []string) {
 		Model:       e.Model(),
 		Embeddings:  e.Embeddings(),
 		Created:     e.Created(),
-		// Attributes:  opts.Attributes,
+		Attributes:  attrs,
 	}
 
 	err = cl.AddRecord(ctx, db_rec)

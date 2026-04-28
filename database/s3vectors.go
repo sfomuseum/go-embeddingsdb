@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	
+
 	"github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -146,7 +146,7 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	attrs["x-subject-id"] = rec.SubjectId
 	attrs["x-depiction-id"] = rec.DepictionId
 	attrs["x-created"] = strconv.FormatInt(rec.Created, 10)
-	
+
 	meta := document.NewLazyDocument(attrs)
 
 	vecs := []types.PutInputVector{
@@ -213,7 +213,7 @@ func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.Ge
 	meta := make(map[string]string)
 
 	err = vec.Metadata.UnmarshalSmithyDocument(&meta)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("Failed to unmarshal metadata")
 	}
@@ -223,7 +223,7 @@ func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.Ge
 	var depiction_id string
 	var subject_id string
 	var created int64
-	
+
 	attrs := make(map[string]string)
 
 	for k, v := range meta {
@@ -249,24 +249,24 @@ func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.Ge
 				} else {
 					created = created_v
 				}
-				
+
 			default:
 				slog.Debug("Unrecognized x- key", "k", k)
 			}
-			
+
 		default:
 			attrs[k] = v
 		}
 	}
-	
+
 	rec := &embeddingsdb.Record{
-		Embeddings: vec.Data.(*types.VectorDataMemberFloat32).Value,
-		Provider: provider,
-		Model: model,
+		Embeddings:  vec.Data.(*types.VectorDataMemberFloat32).Value,
+		Provider:    provider,
+		Model:       model,
 		DepictionId: depiction_id,
-		SubjectId: subject_id,
-		Created: created,
-		Attributes: attrs,
+		SubjectId:   subject_id,
+		Created:     created,
+		Attributes:  attrs,
 	}
 
 	return rec, nil
