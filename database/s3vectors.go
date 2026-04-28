@@ -254,6 +254,8 @@ func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination
 	list_opts := &s3vectors.ListVectorsInput{
 		VectorBucketName: aws.String(db.bucket),
 		IndexName:        aws.String(db.index),
+		ReturnData:       true,
+		ReturnMetadata:   true,
 	}
 
 	per_page := pg_opts.PerPage()
@@ -280,7 +282,9 @@ func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination
 		return nil, nil, err
 	}
 
-	next_cursor = *rsp.NextToken
+	if rsp.NextToken != nil {
+		next_cursor = *rsp.NextToken
+	}
 
 	pg, err := cursor.NewPaginationFromCursors(prev_cursor, next_cursor)
 
@@ -307,7 +311,37 @@ func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination
 
 // IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 func (db *S3VectorsDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
-	return func(yield func(*embeddingsdb.Record, error) bool) {}
+
+	return func(yield func(*embeddingsdb.Record, error) bool) {
+
+		list_opts := &s3vectors.ListVectorsInput{
+			VectorBucketName: aws.String(db.bucket),
+			IndexName:        aws.String(db.index),
+			ReturnData:       true,
+			ReturnMetadata:   true,
+		}
+
+		pg := s3vectors.NewListVectorsPaginator(db.client, list_opts)
+
+		for pg.HasMorePages() {
+
+			rsp, err := pg.NextPage(ctx)
+
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			for _, vec := range rsp.Vectors {
+
+				rec, err := db.s3VectorToRecord(vec.Data, vec.Metadata)
+
+				if !yield(rec, err) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // Return the Unix timestamp of the last update to the Database instance.
@@ -344,6 +378,11 @@ func (db *S3VectorsDatabase) Models(ctx context.Context, opts ...options.Option)
 func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 	providers := make([]string, 0)
 	return providers, nil
+}
+
+// Return the pagination type used by the database.
+func (db *S3VectorsDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
+	return CursorPaginationType, nil
 }
 
 // Close performs and terminating functions required by the database.

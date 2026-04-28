@@ -114,6 +114,11 @@ func (db *NullDatabase) Providers(ctx context.Context, opts ...options.Option) (
 	return providers, nil
 }
 
+// Return the pagination type used by the database.
+func (db *NullDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
+	return NullPaginationType, nil
+}
+
 // Close performs and terminating functions required by the database.
 func (db *NullDatabase) Close(ctx context.Context) error {
 	return nil

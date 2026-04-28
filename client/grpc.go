@@ -16,6 +16,7 @@ import (
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/database"
 	embeddingsdb_grpc "github.com/sfomuseum/go-embeddingsdb/grpc"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 	"golang.org/x/oauth2"
@@ -327,6 +328,10 @@ func (e *GrpcClient) Providers(ctx context.Context, opts ...options.Option) ([]s
 	}
 
 	return rsp.Provider, nil
+}
+
+func (cl *GrpcClient) PaginationType(ctx context.Context, opts ...options.Option) (database.PaginationType, error) {
+	return database.NullPaginationType, nil // fix me ... I guess more grpc methods...
 }
 
 func (cl *GrpcClient) Close(ctx context.Context) error {

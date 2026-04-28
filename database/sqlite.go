@@ -663,6 +663,11 @@ func (db *SQLiteDatabase) Dimensions(ctx context.Context, opts ...options.Option
 	return []int{db.dimensions}
 }
 
+// Return the pagination type used by the database.
+func (db *SQLiteDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
+	return CountablePaginationType, nil
+}
+
 // Close performs and terminating functions required by the SQLite database.
 func (db *SQLiteDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()

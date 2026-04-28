@@ -116,6 +116,10 @@ func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embedding
 	return cl.SimilarRecords(ctx, similar_req, opts...)
 }
 
+func (cl *DatabaseClient) PaginationType(ctx context.Context, opts ...options.Option) (database.PaginationType, error) {
+	return cl.db.PaginationType(ctx, opts...)
+}
+
 func (cl *DatabaseClient) Close(ctx context.Context) error {
 	return cl.db.Close(ctx)
 }

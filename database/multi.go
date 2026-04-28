@@ -445,6 +445,23 @@ func (db *MultiDatabase) Dimensions(ctx context.Context, opts ...options.Option)
 	return dimensions
 }
 
+func (db *MultiDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
+
+	d, err := GetDimensionFromOptions(ctx, opts...)
+
+	if err != nil {
+		return NullPaginationType, err
+	}
+
+	target_db, err := db.loadDatabase(ctx, d)
+
+	if err != nil {
+		return NullPaginationType, err
+	}
+
+	return target_db.PaginationType(ctx)
+}
+
 // Close performs and terminating functions required by the database.
 func (db *MultiDatabase) Close(ctx context.Context) error {
 

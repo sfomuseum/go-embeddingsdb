@@ -592,6 +592,11 @@ func (db *DuckDBDatabase) Dimensions(ctx context.Context, opts ...options.Option
 	return []int{db.dimensions}
 }
 
+// Return the pagination type used by the database.
+func (db *DuckDBDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
+	return CountablePaginationType, nil
+}
+
 // Close performs and terminating functions required by the database.
 func (db *DuckDBDatabase) Close(ctx context.Context) error {
 	return db.vec_db.Close()
