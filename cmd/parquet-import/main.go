@@ -47,7 +47,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new client, %v", err)

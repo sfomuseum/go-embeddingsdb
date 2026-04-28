@@ -12,7 +12,7 @@ import (
 
 	"github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/document"
@@ -210,66 +210,8 @@ func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.Ge
 	}
 
 	vec := rsp.Vectors[0]
-	meta := make(map[string]string)
 
-	err = vec.Metadata.UnmarshalSmithyDocument(&meta)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal metadata")
-	}
-
-	var provider string
-	var model string
-	var depiction_id string
-	var subject_id string
-	var created int64
-
-	attrs := make(map[string]string)
-
-	for k, v := range meta {
-
-		switch {
-		case strings.HasPrefix(k, "x-"):
-
-			switch k {
-			case "x-provider":
-				provider = v
-			case "x-model":
-				model = v
-			case "x-depiction-id":
-				depiction_id = v
-			case "x-subject-id":
-				subject_id = v
-			case "x-created":
-
-				created_v, err := strconv.ParseInt(v, 10, 64)
-
-				if err != nil {
-					slog.Warn("Failed to parse string created date", "date", v, "error", err)
-				} else {
-					created = created_v
-				}
-
-			default:
-				slog.Debug("Unrecognized x- key", "k", k)
-			}
-
-		default:
-			attrs[k] = v
-		}
-	}
-
-	rec := &embeddingsdb.Record{
-		Embeddings:  vec.Data.(*types.VectorDataMemberFloat32).Value,
-		Provider:    provider,
-		Model:       model,
-		DepictionId: depiction_id,
-		SubjectId:   subject_id,
-		Created:     created,
-		Attributes:  attrs,
-	}
-
-	return rec, nil
+	return db.s3VectorToRecord(vec.Data, vec.Metadata)
 }
 
 // Remove a record from an EmbeddingsDB instance.
@@ -288,7 +230,7 @@ func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb
 	_, err := db.client.DeleteVectors(ctx, del_opts)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to remove record, %w", err)
 	}
 
 	return nil
@@ -309,12 +251,55 @@ func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#NewListVectorsPaginator
 
-	records := make([]*embeddingsdb.Record, 0)
+	list_opts := &s3vectors.ListVectorsInput{
+		VectorBucketName: aws.String(db.bucket),
+		IndexName:        aws.String(db.index),
+	}
 
-	pg, err := countable.NewResultsFromCountWithOptions(pg_opts, 0)
+	per_page := pg_opts.PerPage()
+	pointer := pg_opts.Pointer()
+
+	var prev_cursor string
+	var next_cursor string
+
+	if per_page > 0 {
+		list_opts.MaxResults = aws.Int32(int32(per_page))
+	}
+
+	if pointer != nil {
+
+		if token, ok := pointer.(string); ok && token != "" {
+			prev_cursor = token
+			list_opts.NextToken = aws.String(token)
+		}
+	}
+
+	rsp, err := db.client.ListVectors(ctx, list_opts)
 
 	if err != nil {
 		return nil, nil, err
+	}
+
+	next_cursor = *rsp.NextToken
+
+	pg, err := cursor.NewPaginationFromCursors(prev_cursor, next_cursor)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	count := len(rsp.Vectors)
+	records := make([]*embeddingsdb.Record, count)
+
+	for i, vec := range rsp.Vectors {
+
+		rec, err := db.s3VectorToRecord(vec.Data, vec.Metadata)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		records[i] = rec
 	}
 
 	return records, pg, nil
@@ -364,6 +349,71 @@ func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Opti
 // Close performs and terminating functions required by the database.
 func (db *S3VectorsDatabase) Close(ctx context.Context) error {
 	return nil
+}
+
+func (db *S3VectorsDatabase) s3VectorToRecord(vec_data types.VectorData, vec_meta document.Interface) (*embeddingsdb.Record, error) {
+
+	meta := make(map[string]string)
+
+	err := vec_meta.UnmarshalSmithyDocument(&meta)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal metadata")
+	}
+
+	var provider string
+	var model string
+	var depiction_id string
+	var subject_id string
+	var created int64
+
+	attrs := make(map[string]string)
+
+	for k, v := range meta {
+
+		switch {
+		case strings.HasPrefix(k, "x-"):
+
+			switch k {
+			case "x-provider":
+				provider = v
+			case "x-model":
+				model = v
+			case "x-depiction-id":
+				depiction_id = v
+			case "x-subject-id":
+				subject_id = v
+			case "x-created":
+
+				created_v, err := strconv.ParseInt(v, 10, 64)
+
+				if err != nil {
+					slog.Warn("Failed to parse string created date", "date", v, "error", err)
+				} else {
+					created = created_v
+				}
+
+			default:
+				slog.Debug("Unrecognized x- key", "k", k)
+			}
+
+		default:
+			attrs[k] = v
+		}
+	}
+
+	rec := &embeddingsdb.Record{
+		Embeddings:  vec_data.(*types.VectorDataMemberFloat32).Value,
+		Provider:    provider,
+		Model:       model,
+		DepictionId: depiction_id,
+		SubjectId:   subject_id,
+		Created:     created,
+		Attributes:  attrs,
+	}
+
+	return rec, nil
+
 }
 
 func (db *S3VectorsDatabase) listIndexes(ctx context.Context) iter.Seq2[*types.Index, error] {
