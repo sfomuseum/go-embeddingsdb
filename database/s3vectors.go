@@ -27,10 +27,12 @@ type S3VectorsDatabase struct {
 	client *s3vectors.Client
 }
 
+const S3VectorsDatabaseScheme = "s3vectors"
+
 func init() {
 
 	ctx := context.Background()
-	err := RegisterDatabase(ctx, "null", NewS3VectorsDatabase)
+	err := RegisterDatabase(ctx, S3VectorsDatabaseScheme, NewS3VectorsDatabase)
 
 	if err != nil {
 		panic(err)
@@ -200,6 +202,7 @@ func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb
 func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.QueryVectors
+	// https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-metadata-filtering.html
 
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil
