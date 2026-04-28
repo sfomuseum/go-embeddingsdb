@@ -74,7 +74,7 @@ github.com/aws/aws-lambda-go/lambda
 github.com/aws/aws-lambda-go/lambda/handlertrace
 github.com/aws/aws-lambda-go/lambda/messages
 github.com/aws/aws-lambda-go/lambdacontext
-# github.com/aws/aws-sdk-go-v2 v1.41.3
+# github.com/aws/aws-sdk-go-v2 v1.41.6
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/aws
 github.com/aws/aws-sdk-go-v2/aws/arn
@@ -126,10 +126,10 @@ github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
 # github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.12
 ## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/feature/s3/manager
-# github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19
+# github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.22
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/internal/configsources
-# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19
+# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.22
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
 # github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4
@@ -171,6 +171,13 @@ github.com/aws/aws-sdk-go-v2/service/s3/internal/arn
 github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations
 github.com/aws/aws-sdk-go-v2/service/s3/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/s3/types
+# github.com/aws/aws-sdk-go-v2/service/s3vectors v1.6.7
+## explicit; go 1.24
+github.com/aws/aws-sdk-go-v2/service/s3vectors
+github.com/aws/aws-sdk-go-v2/service/s3vectors/document
+github.com/aws/aws-sdk-go-v2/service/s3vectors/internal/document
+github.com/aws/aws-sdk-go-v2/service/s3vectors/internal/endpoints
+github.com/aws/aws-sdk-go-v2/service/s3vectors/types
 # github.com/aws/aws-sdk-go-v2/service/signin v1.0.5
 ## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/service/signin
@@ -196,7 +203,7 @@ github.com/aws/aws-sdk-go-v2/service/ssooidc/types
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/aws-sdk-go-v2/service/sts/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sts/types
-# github.com/aws/smithy-go v1.24.2
+# github.com/aws/smithy-go v1.25.0
 ## explicit; go 1.24
 github.com/aws/smithy-go
 github.com/aws/smithy-go/auth
@@ -205,6 +212,8 @@ github.com/aws/smithy-go/container/private/cache
 github.com/aws/smithy-go/container/private/cache/lru
 github.com/aws/smithy-go/context
 github.com/aws/smithy-go/document
+github.com/aws/smithy-go/document/internal/serde
+github.com/aws/smithy-go/document/json
 github.com/aws/smithy-go/encoding
 github.com/aws/smithy-go/encoding/httpbinding
 github.com/aws/smithy-go/encoding/json
