@@ -331,7 +331,18 @@ func (e *GrpcClient) Providers(ctx context.Context, opts ...options.Option) ([]s
 }
 
 func (cl *GrpcClient) PaginationType(ctx context.Context, opts ...options.Option) (database.PaginationType, error) {
-	return database.NullPaginationType, nil // fix me ... I guess more grpc methods...
+
+	req := &embeddingsdb_grpc.GetPaginationTypeRequest{}
+
+	// opts here...
+
+	rsp, err := cl.client.GetPaginationType(ctx, req)
+
+	if err != nil {
+		return database.NullPaginationType, fmt.Errorf("Failed to determine pagination type, %w", err)
+	}
+
+	return database.NewPaginationType(rsp.PaginationType)
 }
 
 func (cl *GrpcClient) Close(ctx context.Context) error {

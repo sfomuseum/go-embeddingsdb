@@ -27,6 +27,7 @@ const (
 	EmbeddingsDBService_GetModels_FullMethodName          = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetModels"
 	EmbeddingsDBService_GetProviders_FullMethodName       = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetProviders"
 	EmbeddingsDBService_GetDimensions_FullMethodName      = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetDimensions"
+	EmbeddingsDBService_GetPaginationType_FullMethodName  = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/GetPaginationType"
 	EmbeddingsDBService_ListRecords_FullMethodName        = "/org_sfomuseum_embeddingsdb_service.EmbeddingsDBService/ListRecords"
 )
 
@@ -42,6 +43,7 @@ type EmbeddingsDBServiceClient interface {
 	GetModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error)
 	GetProviders(ctx context.Context, in *GetProvidersRequest, opts ...grpc.CallOption) (*GetProvidersResponse, error)
 	GetDimensions(ctx context.Context, in *GetDimensionsRequest, opts ...grpc.CallOption) (*GetDimensionsResponse, error)
+	GetPaginationType(ctx context.Context, in *GetPaginationTypeRequest, opts ...grpc.CallOption) (*GetPaginationTypeResponse, error)
 	ListRecords(ctx context.Context, in *ListRecordsRequest, opts ...grpc.CallOption) (*ListRecordsResponse, error)
 }
 
@@ -125,6 +127,15 @@ func (c *embeddingsDBServiceClient) GetDimensions(ctx context.Context, in *GetDi
 	return out, nil
 }
 
+func (c *embeddingsDBServiceClient) GetPaginationType(ctx context.Context, in *GetPaginationTypeRequest, opts ...grpc.CallOption) (*GetPaginationTypeResponse, error) {
+	out := new(GetPaginationTypeResponse)
+	err := c.cc.Invoke(ctx, EmbeddingsDBService_GetPaginationType_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *embeddingsDBServiceClient) ListRecords(ctx context.Context, in *ListRecordsRequest, opts ...grpc.CallOption) (*ListRecordsResponse, error) {
 	out := new(ListRecordsResponse)
 	err := c.cc.Invoke(ctx, EmbeddingsDBService_ListRecords_FullMethodName, in, out, opts...)
@@ -146,6 +157,7 @@ type EmbeddingsDBServiceServer interface {
 	GetModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error)
 	GetProviders(context.Context, *GetProvidersRequest) (*GetProvidersResponse, error)
 	GetDimensions(context.Context, *GetDimensionsRequest) (*GetDimensionsResponse, error)
+	GetPaginationType(context.Context, *GetPaginationTypeRequest) (*GetPaginationTypeResponse, error)
 	ListRecords(context.Context, *ListRecordsRequest) (*ListRecordsResponse, error)
 	mustEmbedUnimplementedEmbeddingsDBServiceServer()
 }
@@ -177,6 +189,9 @@ func (UnimplementedEmbeddingsDBServiceServer) GetProviders(context.Context, *Get
 }
 func (UnimplementedEmbeddingsDBServiceServer) GetDimensions(context.Context, *GetDimensionsRequest) (*GetDimensionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDimensions not implemented")
+}
+func (UnimplementedEmbeddingsDBServiceServer) GetPaginationType(context.Context, *GetPaginationTypeRequest) (*GetPaginationTypeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPaginationType not implemented")
 }
 func (UnimplementedEmbeddingsDBServiceServer) ListRecords(context.Context, *ListRecordsRequest) (*ListRecordsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListRecords not implemented")
@@ -338,6 +353,24 @@ func _EmbeddingsDBService_GetDimensions_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EmbeddingsDBService_GetPaginationType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPaginationTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingsDBServiceServer).GetPaginationType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingsDBService_GetPaginationType_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingsDBServiceServer).GetPaginationType(ctx, req.(*GetPaginationTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EmbeddingsDBService_ListRecords_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRecordsRequest)
 	if err := dec(in); err != nil {
@@ -394,6 +427,10 @@ var EmbeddingsDBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDimensions",
 			Handler:    _EmbeddingsDBService_GetDimensions_Handler,
+		},
+		{
+			MethodName: "GetPaginationType",
+			Handler:    _EmbeddingsDBService_GetPaginationType_Handler,
 		},
 		{
 			MethodName: "ListRecords",

@@ -320,6 +320,28 @@ func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensions
 	return rsp, nil
 }
 
+func (s *grpcService) GetPaginationType(ctx context.Context, req *grpc.GetPaginationTypeRequest) (*grpc.GetPaginationTypeResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to get pagination type", "time", time.Since(t1))
+
+	// options...
+
+	pg_type, err := s.db.PaginationType(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rsp := &grpc.GetPaginationTypeResponse{
+		PaginationType: pg_type.String(),
+	}
+
+	return rsp, nil
+}
+
 func (s *grpcService) Logger(ctx context.Context) *slog.Logger {
 
 	logger := slog.Default()

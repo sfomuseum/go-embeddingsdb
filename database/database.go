@@ -14,14 +14,6 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
-type PaginationType uint8
-
-const (
-	NullPaginationType PaginationType = iota
-	CountablePaginationType
-	CursorPaginationType
-)
-
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
 	// Return the URI string used to instantiate the Database instance.
