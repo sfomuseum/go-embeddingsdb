@@ -13,6 +13,7 @@ import (
 	"github.com/aaronland/go-pagination/countable"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors"
+	"github.com/aws/aws-sdk-go-v2/service/s3vectors/document"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/types"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
@@ -20,10 +21,10 @@ import (
 
 type S3VectorsDatabase struct {
 	Database
-	uri        string
-	dimensions int
-	bucket     string
-	client     *s3vectors.Client
+	uri    string
+	bucket string
+	index  string
+	client *s3vectors.Client
 }
 
 func init() {
@@ -81,6 +82,7 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 	db := &S3VectorsDatabase{
 		client: cl,
 		bucket: bucket,
+		index:  index,
 		uri:    uri,
 	}
 
@@ -96,7 +98,34 @@ func (db *S3VectorsDatabase) Export(ctx context.Context, uri string, opts ...opt
 func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.PutVectors
-	
+
+	attrs := rec.Attributes
+	// need to add extra stuff here...
+
+	meta := document.NewLazyDocument(attrs)
+
+	vecs := []types.PutInputVector{
+		types.PutInputVector{
+			Data: &types.VectorDataMemberFloat32{
+				Value: rec.Embeddings,
+			},
+			Key:      aws.String(rec.Key()),
+			Metadata: meta,
+		},
+	}
+
+	put_opts := &s3vectors.PutVectorsInput{
+		VectorBucketName: aws.String(db.bucket),
+		IndexName:        aws.String(db.index),
+		Vectors:          vecs,
+	}
+
+	_, err := db.client.PutVectors(ctx, put_opts)
+
+	if err != nil {
+		return false, err
+	}
+
 	return false, nil
 }
 
@@ -114,15 +143,56 @@ func (db *S3VectorsDatabase) AddBatchedRecord(ctx context.Context, opts ...optio
 func (db *S3VectorsDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.QueryVectors
-	
-	return nil, fmt.Errorf("Not found")
+
+	get_opts := &s3vectors.GetVectorsInput{
+		Keys: []string{
+			req.Key(),
+		},
+		IndexName:        aws.String(db.index),
+		VectorBucketName: aws.String(db.bucket),
+		ReturnMetadata:   true,
+		ReturnData:       true,
+	}
+
+	rsp, err := db.client.GetVectors(ctx, get_opts)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rsp.Vectors) == 0 {
+		return nil, fmt.Errorf("Not found")
+	}
+
+	vec := rsp.Vectors[0]
+
+	rec := &embeddingsdb.Record{
+		Embeddings: vec.Data.(*types.VectorDataMemberFloat32).Value,
+		// fix me...need to infate from rsp.Metadata and/or rsp.Key
+	}
+
+	return rec, nil
 }
 
 // Remove a record from an EmbeddingsDB instance.
 func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.DeleteVectors
-	
+
+	del_opts := &s3vectors.DeleteVectorsInput{
+		Keys: []string{
+			req.Key(),
+		},
+		IndexName:        aws.String(db.index),
+		VectorBucketName: aws.String(db.bucket),
+	}
+
+	_, err := db.client.DeleteVectors(ctx, del_opts)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -130,7 +200,7 @@ func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb
 func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.QueryVectors
-	
+
 	results := make([]*embeddingsdb.SimilarRecord, 0)
 	return results, nil
 }
@@ -139,7 +209,7 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, rec *embeddings
 func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#NewListVectorsPaginator
-	
+
 	records := make([]*embeddingsdb.Record, 0)
 
 	pg, err := countable.NewResultsFromCountWithOptions(pg_opts, 0)
@@ -165,7 +235,7 @@ func (db *S3VectorsDatabase) LastUpdate(ctx context.Context, opts ...options.Opt
 func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.ListVectors
-	
+
 	dims := make([]int, 0)
 
 	for idx, err := range db.listIndexes(ctx) {
