@@ -13,20 +13,21 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
-	"github.com/sfomuseum/go-flags/multi"
+	_ "github.com/sfomuseum/go-flags/multi"
 )
 
 func main() {
 
 	var client_uri string
-	var database_uris multi.MultiString
 	var output string
 	var verbose bool
+
+	// var database_uris multi.MultiString
 
 	fs := flagset.NewFlagSet("export")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.Var(&database_uris, "database-uri", "...")
+	// fs.Var(&database_uris, "database-uri", "...")
 
 	fs.StringVar(&output, "output", "-", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
@@ -50,7 +51,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new database, %v", err)

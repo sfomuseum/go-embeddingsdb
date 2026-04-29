@@ -9,10 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sfomuseum/go-embeddingsdb/database"
+	_ "github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/server"
 	"github.com/sfomuseum/go-flags/flagset"
-	"github.com/sfomuseum/go-flags/multi"
+	_ "github.com/sfomuseum/go-flags/multi"
 )
 
 const database_placeholder string = "{database}"
@@ -21,20 +21,20 @@ const token_placeholder string = "{token}"
 func main() {
 
 	var server_uri string
-	var database_uris multi.MultiString
+	var database_uri string
 	var token_uri string
 	var verbose bool
 
 	server_uri_default := fmt.Sprintf("grpc://localhost:8081?database-uri=%s&token-uri=%s", database_placeholder, token_placeholder)
 
-	database_uri_desc := fmt.Sprintf("An optional value which be used to replace the '%s' placeholder, if present, in the -server-uri flag. This is expected to be one or more registered sfomuseum/go-embeddingsdb/database.Database URI", database_placeholder)
+	database_uri_desc := fmt.Sprintf("An optional value which be used to replace the '%s' placeholder, if present, in the -server-uri flag. This is expected to be a registered sfomuseum/go-embeddingsdb/database.Database URI", database_placeholder)
 
 	token_uri_desc := fmt.Sprintf("An optional value which be used to replace the '%s' placeholder, if present, in the -server-uri flag. This is expected to be a registered gocloud.dev/runtimevar URI that resolves to a shared authentication token.", token_placeholder)
 
 	fs := flagset.NewFlagSet("server")
 
 	fs.StringVar(&server_uri, "server-uri", server_uri_default, "A registered sfomuseum/go-embeddingsdb/server.EmbeddingsDBServer URI.")
-	fs.Var(&database_uris, "database-uri", database_uri_desc)
+	fs.StringVar(&database_uri, "database-uri", "null://", database_uri_desc)
 	fs.StringVar(&token_uri, "token-uri", "", token_uri_desc)
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
@@ -70,9 +70,7 @@ func main() {
 		if swap_database {
 
 			server_q.Del("database-uri")
-
-			db_uri := database.NewDatabaseURIFromURIs(database_uris...)
-			server_q.Set("database-uri", db_uri)
+			server_q.Set("database-uri", database_uri)
 		}
 
 		if swap_token {

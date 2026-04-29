@@ -20,7 +20,7 @@ import (
 func AddRecord(ctx context.Context, args []string) {
 
 	var client_uri string
-	var database_uris multi.MultiString
+	// var database_uris multi.MultiString
 	var embeddings_client_uri string
 
 	var action string
@@ -39,7 +39,7 @@ func AddRecord(ctx context.Context, args []string) {
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
 	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "...")
 
-	fs.Var(&database_uris, "database-uri", "...")
+	// fs.Var(&database_uris, "database-uri", "...")
 
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")

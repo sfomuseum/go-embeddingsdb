@@ -8,7 +8,12 @@ There are many vector databases or databases with support for managing vector em
 
 This package and the tools it exports still occupy the in-between state of being general purpose and specific to the immediate needs of SFO Museum. That means it may not do what you need it to out of the box. If it doesn't we're certainly open to entertaining changes.
 
-For background, please consult the [Similar object images derived using the MobileCLIP computer-vision models](https://millsfield.sfomuseum.org/blog/2026/01/09/similar/) blog post.
+For background, please consult the following blog posts:
+
+* [OEmbeddings - What is the least amount of metadata necessary for shared vector embeddings?](https://millsfield.sfomuseum.org/blog/2026/04/15/oembeddings/), April 2026
+* [Shared cross-institutional vector embeddings – how we might get there](https://millsfield.sfomuseum.org/blog/2026/04/06/shared-embeddings/), April 2026
+* [Updates (and additions) to machine-learning tools running on consumer hardware](https://millsfield.sfomuseum.org/blog/2026/02/10/docent/), February 2026
+* [Similar object images derived using the MobileCLIP computer-vision models](https://millsfield.sfomuseum.org/blog/2026/01/09/similar/), January 2026
 
 ## Documentation
 

@@ -39,7 +39,7 @@ type Database interface {
 	// Return the Unix timestamp of the last update to the Database instance.
 	LastUpdate(context.Context, ...options.Option) (int64, error)
 	// Return the list of dimensions supported by this Database  implementation.
-	Dimensions(context.Context, ...options.Option) []int
+	Dimensions(context.Context, ...options.Option) ([]int, error)
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
@@ -83,43 +83,6 @@ func ensureDatabaseRoster() error {
 	}
 
 	return nil
-}
-
-func NewDatabaseFromURIs(ctx context.Context, uris ...string) (Database, error) {
-
-	count := len(uris)
-
-	switch count {
-	case 0:
-		return nil, fmt.Errorf("At least one URI is required.")
-	case 1:
-		return NewDatabase(ctx, uris[0])
-	default:
-		db_uri := NewDatabaseURIFromURIs(uris...)
-		return NewDatabase(ctx, db_uri)
-	}
-}
-
-func NewDatabaseURIFromURIs(uris ...string) string {
-
-	count := len(uris)
-
-	switch count {
-	case 0:
-		return ""
-	case 1:
-		return uris[0]
-	default:
-
-		q := url.Values{}
-		q["database-uri"] = uris
-
-		u := new(url.URL)
-		u.Scheme = MultiDatabaseScheme
-		u.RawQuery = q.Encode()
-
-		return u.String()
-	}
 }
 
 // NewDatabase returns a new `Database` instance configured by 'uri'. The value of 'uri' is parsed

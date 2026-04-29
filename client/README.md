@@ -1,5 +1,10 @@
 ## Clients
 
+There are currently (2) supported client implementations:
+
+* [gRPC](#grpc) - interact with a `go-embeddings` database service via [gRPC](https://grpc.io/).
+* [Database](#database) - interact with a `go-embeddings` database directly.
+
 ### grpc://
 
 Create a gRPC-based client for managing embeddings-related operations. Clients are created using a URI-based syntax as follows:

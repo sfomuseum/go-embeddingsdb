@@ -305,7 +305,12 @@ func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensions
 
 	// options...
 
-	dimensions := s.db.Dimensions(ctx)
+	dimensions, err := s.db.Dimensions(ctx)
+
+	if err != nil {
+		logger.Error("Failed to derive dimensions", "error", err)
+		return nil, err
+	}
 
 	d32 := make([]int32, len(dimensions))
 

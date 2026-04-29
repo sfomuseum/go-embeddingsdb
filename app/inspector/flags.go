@@ -6,12 +6,11 @@ import (
 	"os"
 
 	"github.com/sfomuseum/go-flags/flagset"
-	"github.com/sfomuseum/go-flags/multi"
+	_ "github.com/sfomuseum/go-flags/multi"
 )
 
 var server_uri string
 var client_uri string
-var database_uris multi.MultiString
 
 var enable_search bool
 
@@ -23,13 +22,14 @@ var max_results int
 
 var verbose bool
 
+// var database_uris multi.MultiString
+
 func DefaultFlagSet() *flag.FlagSet {
 
 	fs := flagset.NewFlagSet("inspect")
 
 	fs.StringVar(&server_uri, "server-uri", "http://localhost:8080", "A registered aaronland/go-http/v4/server.Server URI.")
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.Var(&database_uris, "database-uri", "...")
 
 	fs.IntVar(&max_results, "max-results", 20, "The maximum number of similar results to return.")
 
@@ -41,6 +41,8 @@ func DefaultFlagSet() *flag.FlagSet {
 	// https://github.com/gangleri/humanbytes/blob/master/humanbytes.go
 	fs.Int64Var(&max_upload_size, "max-upload-size", 10*1024*1024, "The maximum size (in bytes) for uploads.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable verbose (debug) logging.")
+
+	// fs.Var(&database_uris, "database-uri", "...")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "A minimalist web-interface for inspecting documents stored in a `embeddingsdb-server` instance.\n")

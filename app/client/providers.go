@@ -17,16 +17,18 @@ import (
 func Providers(ctx context.Context, args []string) {
 
 	var client_uri string
-	var database_uris multi.MultiString
 	var dimensions multi.MultiInt
 	var verbose bool
+
+	// var database_uris multi.MultiString
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.Var(&database_uris, "database-uri", "...")
 	fs.Var(&dimensions, "dimensions", "...")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
+
+	// fs.Var(&database_uris, "database-uri", "...")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Command-line tool for retrieving the unique list of providers stored in a gRPC EmbeddingsDB \"service\". Results are written as a JSON-encoded string to STDOUT.\n")
@@ -42,7 +44,7 @@ func Providers(ctx context.Context, args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)

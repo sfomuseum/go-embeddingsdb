@@ -10,13 +10,13 @@ import (
 
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-flags/flagset"
-	"github.com/sfomuseum/go-flags/multi"
+	_ "github.com/sfomuseum/go-flags/multi"
 )
 
 func ListRecords(ctx context.Context, args []string) {
 
 	var client_uri string
-	var database_uris multi.MultiString
+	// var database_uris multi.MultiString
 	var start_page int64
 	var end_page int64
 	var per_page int64
@@ -25,7 +25,7 @@ func ListRecords(ctx context.Context, args []string) {
 	fs := flagset.NewFlagSet("list")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.Var(&database_uris, "database-uri", "...")
+	// fs.Var(&database_uris, "database-uri", "...")
 	fs.Int64Var(&start_page, "start-page", 1, "The initial page of results to emit.")
 	fs.Int64Var(&end_page, "end-page", -1, "The maximum page number of results to emit. If -1 then this flag will be ignored and all the results (remaining after -start-page * -per-page) will be returned.")
 	fs.Int64Var(&per_page, "per-page", 10, "The number of records to include in each paginated result set.")
@@ -45,7 +45,7 @@ func ListRecords(ctx context.Context, args []string) {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)

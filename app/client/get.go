@@ -20,7 +20,7 @@ import (
 func GetRecord(ctx context.Context, args []string) {
 
 	var client_uri string
-	var database_uris multi.MultiString
+	// var database_uris multi.MultiString
 	var provider string
 	var depiction_id string
 	var model string
@@ -30,7 +30,7 @@ func GetRecord(ctx context.Context, args []string) {
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.Var(&database_uris, "database-uri", "...")
+	// fs.Var(&database_uris, "database-uri", "...")
 	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
 	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
 	fs.StringVar(&model, "model", "apple/mobileclip_s0", "The name of the model associated with the record to retrieve.")
@@ -54,7 +54,7 @@ func GetRecord(ctx context.Context, args []string) {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cl, err := client.NewClientWithDatabaseURIs(ctx, client_uri, database_uris...)
+	cl, err := client.NewClient(ctx, client_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to create new embeddings client, %v", err)

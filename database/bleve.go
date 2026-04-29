@@ -650,8 +650,8 @@ func (db *BleveDatabase) Providers(ctx context.Context, opts ...options.Option) 
 }
 
 // Return the list of dimensions supported by the [BleveDatabase] implementation.
-func (db *BleveDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
-	return []int{db.dimensions}
+func (db *BleveDatabase) Dimensions(ctx context.Context, opts ...options.Option) ([]int, error) {
+	return []int{db.dimensions}, nil
 }
 
 // Export the contents of the database. This is currently a no/op for the [BleveDatabase] implementation.

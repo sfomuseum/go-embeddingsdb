@@ -1,5 +1,9 @@
 ## Servers
 
+There is currently (1) supported server implement:
+
+* [gRPC](#grpc) - A [gRPC](https://grpc.io/) server for interaction with a `go-embeddings` database service.
+
 ### grcp://
 
 Create a gRPC-based server for managing embeddings-related operations. Servers are created using a URI-based syntax as follows:

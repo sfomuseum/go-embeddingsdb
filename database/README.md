@@ -2,10 +2,10 @@
 
 There are currently (4) supported database implemetations:
 
-* [DuckDB](#) - anages vector embeddings using the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension. This is the default implementation.
-* [SQLite](#) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
-* [Bleve][(https://blevesearch.com/) - manages vector embeddings using the [Bleve](https://github.com/blevesearch/bleve) database and the [faiss](https://github.com/blevesearch/faiss) library.
-* [S3Vectors](#) - manages vector embeddings using the Amazon Web Services [S3Vectors](https://aws.amazon.com/s3/features/vectors/) service.
+* [DuckDB](#duckdb) - manages vector embeddings using the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension. This is the default implementation.
+* [SQLite](#sqlite) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
+* [Bleve](#bleve) - manages vector embeddings using the [Bleve](https://github.com/blevesearch/bleve) database and the [faiss](https://github.com/blevesearch/faiss) library.
+* [S3Vectors](#s3vectors) - manages vector embeddings using the Amazon Web Services [S3Vectors](https://aws.amazon.com/s3/features/vectors/) service.
 
 Here's the "tl;dr":
 

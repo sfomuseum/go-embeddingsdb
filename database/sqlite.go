@@ -659,8 +659,8 @@ func (db *SQLiteDatabase) Providers(ctx context.Context, opts ...options.Option)
 	return providers, nil
 }
 
-func (db *SQLiteDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
-	return []int{db.dimensions}
+func (db *SQLiteDatabase) Dimensions(ctx context.Context, opts ...options.Option) ([]int, error) {
+	return []int{db.dimensions}, nil
 }
 
 // Return the pagination type used by the database.

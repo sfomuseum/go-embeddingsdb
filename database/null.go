@@ -98,8 +98,8 @@ func (db *NullDatabase) LastUpdate(ctx context.Context, opts ...options.Option) 
 }
 
 // Return the list of dimensions supported by this Database  implementation.
-func (db *NullDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
-	return []int{0}
+func (db *NullDatabase) Dimensions(ctx context.Context, opts ...options.Option) ([]int, error) {
+	return []int{0}, nil
 }
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.

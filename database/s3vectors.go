@@ -30,6 +30,7 @@ type S3VectorsDatabase struct {
 	uri          string
 	bucket       string
 	index        string
+	dimensions   int
 	client       *s3vectors.Client
 	index_arn    string
 	models       []string
@@ -186,6 +187,7 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		bucket:       bucket,
 		index:        index,
 		uri:          uri,
+		dimensions:   dimensions,
 		models:       models,
 		providers:    providers,
 		max_results:  max_results,
@@ -563,22 +565,8 @@ func (db *S3VectorsDatabase) LastUpdate(ctx context.Context, opts ...options.Opt
 }
 
 // Return the list of dimensions supported by this Database  implementation.
-func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Option) []int {
-
-	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.ListVectors
-
-	dims := make([]int, 0)
-
-	for idx, err := range db.listIndexes(ctx) {
-
-		if err != nil {
-			continue // fix me
-		}
-
-		dims = append(dims, int(*idx.Dimension))
-	}
-
-	return dims
+func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Option) ([]int, error) {
+	return []int{db.dimensions}, nil
 }
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
