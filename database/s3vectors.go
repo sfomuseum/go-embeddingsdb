@@ -51,6 +51,18 @@ func init() {
 	}
 }
 
+// Create a new [S3VectorsDatabase] instance for managing embeddings using the Amazon Web Services S3Vectors serice derived from 'uri' which is expected to take the form of:
+//
+//	s3vectors://{BUCKET_NAME}?{QUERY_PARAMETERS}
+//
+// Where `{BUCKET_NAME}` is the name of the S3Vectors bucket where embeddings are stored. This will be created dynamically at runtime if it does not already exist. Valid query parameters are:
+// * `index` - The name of the S3Vectors index where embeddings are stored. This will be created dynamically at runtime if it does not already exist.
+// * `region` - The AWS region where your S3Vectors bucket is stored.
+// * `credentials` - A valid `aaronland/go-aws/v3/auth` credentials string.
+// * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
+// * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
+// * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
+// * `refresh-tags` - A boolean flag to update denormalized database properties in to index-specific "tags".
 func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dimensions := 512
@@ -183,7 +195,20 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	// Okay, crawl the index. Not great but it's the only way.
 
-	if len(models) == 0 || len(providers) == 0 || q.Has("refresh-tags") {
+	refresh_tags := false
+
+	if q.Has("refresh-tags") {
+
+		v, err := strconv.ParseBool(q.Get("refresh-tags"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?refresh-tags= parameter, %w", err)
+		}
+
+		refresh_tags = v
+	}
+
+	if len(models) == 0 || len(providers) == 0 || refresh_tags {
 		slog.Debug("Gather model and provider tags")
 		go db.gatherModelsAndProviders(ctx)
 	}

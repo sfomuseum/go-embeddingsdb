@@ -1,10 +1,21 @@
 ## Databases
 
-Here's the "tl;dr" so far:
+There are currently (4) supported database implemetations:
 
-The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
+* [DuckDB](#) - anages vector embeddings using the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension. This is the default implementation.
+* [SQLite](#) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
+* [Bleve][(https://blevesearch.com/) - manages vector embeddings using the [Bleve](https://github.com/blevesearch/bleve) database and the [faiss](https://github.com/blevesearch/faiss) library.
+* [S3Vectors](#) - manages vector embeddings using the Amazon Web Services [S3Vectors](https://aws.amazon.com/s3/features/vectors/) service.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+Here's the "tl;dr":
+
+The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time.
+
+The SQLite implementation while has slower query times but stores (and reads) all its data from disk so it is fast to start.
+
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+
+The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is metered. Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
 ### duckdb://
 
@@ -153,3 +164,49 @@ I have observed that under some conditions importing large datasets (using the `
 The Bleve source code specifies `bbolt` v1.4.0 even though the last release is 1.4.3 but even that was in 2025 and there have been lots of updates to the source code. I've tried both specifying v1.4.3 and using a `go.work` file to use the most recent code but database corruption and the occassional race condition still manifest on Intel-based Macs.
 
 That said, I am not confident that I have even diagnosed the problem correctly.
+
+### s3vectors://
+
+Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. This database implementation relies on a commercial service is metered. Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
+
+```
+s3vectors://{BUCKET_NAME}?{QUERY_PARAMETERS}
+```
+
+Where `{BUCKET_NAME}` is the name of the S3Vectors bucket where embeddings are stored. This will be created dynamically at runtime if it does not already exist.
+
+Valid parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| index | string | yes | The name of the S3Vectors index where embeddings are stored. This will be created dynamically at runtime if it does not already exist. |
+| region | string | yes | The AWS region where your S3Vectors bucket is stored. |
+| credentials | string | yes | A valid `aaronland/go-aws/v3/auth` credentials string. Details are discussed below.  |
+| dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+| max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
+| max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
+| refresh-tags | bool | no | A boolean flag to update denormalized database properties in to index-specific "tags". Details are discussed below. |
+
+For example:
+
+```
+s3vectors://embeddings-bucket?index=embeddings-1024?region=us-east-1&credentials=iam:&dimensions=1024
+```
+
+#### AWS credentials
+
+Under the hood this package uses the [aaronland/go-aws/v3/auth](https://github.com/aaronland/go-aws/tree/main/auth) package for deriving AWS credentials using string labels. Valid labels are:
+
+| Label | Description |
+| --- | --- |
+| `anon:` | Empty or anonymous credentials. |
+| `env:` | Read credentials from AWS-defined environment variables. |
+| `iam:` | Assume AWS IAM credentials are in effect. |
+| `iam:{REGION}:{ARN}` | Assume AWS IAM credentials are in effect after assuming the IAM Role defined by `{ARN}` (in `{REGION}`). |
+| `sts:{ARN}` | Assume the role defined by `{ARN}` using STS credentials. |
+| `{AWS_PROFILE_NAME}` | This this profile from the default AWS credentials location. |
+| `{AWS_CREDENTIALS_PATH}:{AWS_PROFILE_NAME}` | This this profile from a user-defined AWS credentials location. |
+
+#### Refreshing database properties "tags"
+
+The nature of the S3Vectors service means there is no way to quickly derive properties about a "database", like the list of unique models or providers, without crawling the entire data set. To account for this these data are compiled as necessary and stored as index-level "tags" which are read at start-up time to prevent excessive (and potentially expensive) repeated crawling of the index. If you need or want to explicitly refresh those data (tags) you can include the `?refesh-tags=true` query parameter with your URI constructor.
