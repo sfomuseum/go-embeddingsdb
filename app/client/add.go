@@ -23,8 +23,8 @@ func AddRecord(ctx context.Context, args []string) {
 	// var database_uris multi.MultiString
 	var embeddings_client_uri string
 
-	var action string
 	var input string
+	var data string
 
 	var provider string
 	var depiction_id string
@@ -37,16 +37,16 @@ func AddRecord(ctx context.Context, args []string) {
 	fs := flagset.NewFlagSet("add")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "...")
+	fs.StringVar(&embeddings_client_uri, "embeddings-client-uri", "", "A registered go-embeddings.Client URI. This is required if the -enable-search flag is true.")
 
 	// fs.Var(&database_uris, "database-uri", "...")
 
-	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to retrieve.")
-	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to retrieve.")
-	fs.StringVar(&subject_id, "subject-id", "", "The subject ID.")
+	fs.StringVar(&provider, "provider", "", "The name of the provider associated with the record to add.")
+	fs.StringVar(&depiction_id, "depiction-id", "", "The unique depiction ID associated with the record to add.")
+	fs.StringVar(&subject_id, "subject-id", "", "The subject ID associate with the record to add.")
 
-	fs.StringVar(&action, "action", "", "Valid option are: image, text")
-	fs.StringVar(&input, "input", "", "If - then data is read from STDIN.")
+	fs.StringVar(&input, "input", "", "The type of data to add embeddings for. Valid option are: image, text")
+	fs.StringVar(&data, "data", "", "The data create embeddings for. This is expected to be a file on disk however if the value is \"-\" then data is read from STDIN.")
 
 	fs.Var(&attributes, "attribute", "Zero or more {KEY}={VALUE} flags which are used to populate the record's attributes dictionary.")
 
@@ -55,7 +55,7 @@ func AddRecord(ctx context.Context, args []string) {
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Command-line tool for adding a record to a gRPC EmbeddingsDB \"service\".")
+		fmt.Fprintf(os.Stderr, "Command-line tool for adding a record to an EmbeddingsDB database.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options]\n\n", "add")
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
@@ -100,42 +100,25 @@ func AddRecord(ctx context.Context, args []string) {
 
 	var body []byte
 
-	switch action {
-	case "text":
+	switch data {
+	case "-":
 
-		switch input {
-		case "-":
+		b, err := io.ReadAll(os.Stdin)
 
-			b, err := io.ReadAll(os.Stdin)
-
-			if err != nil {
-				log.Fatalf("Failed to read STDIN, %v", err)
-			}
-
-			body = b
-		default:
-
-			b, err := os.ReadFile(input)
-
-			if err != nil {
-				log.Fatalf("Failed to read file, %v", err)
-			}
-
-			body = b
+		if err != nil {
+			log.Fatalf("Failed to read STDIN, %v", err)
 		}
 
-	case "image":
+		body = b
+	default:
 
-		b, err := os.ReadFile(input)
+		b, err := os.ReadFile(data)
 
 		if err != nil {
 			log.Fatalf("Failed to read file, %v", err)
 		}
 
 		body = b
-
-	default:
-		log.Fatalf("Invalid action")
 	}
 
 	embeddings_req := &embeddings.EmbeddingsRequest{
@@ -145,13 +128,13 @@ func AddRecord(ctx context.Context, args []string) {
 	var embeddings_rsp any
 	var embeddings_err error
 
-	switch action {
+	switch input {
 	case "text":
 		embeddings_rsp, embeddings_err = emb_cl.TextEmbeddings(ctx, embeddings_req)
 	case "image":
 		embeddings_rsp, embeddings_err = emb_cl.ImageEmbeddings(ctx, embeddings_req)
 	default:
-		log.Fatal("Invalid action")
+		log.Fatal("Invalid input")
 	}
 
 	if embeddings_err != nil {

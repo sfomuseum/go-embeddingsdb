@@ -9,6 +9,7 @@ Usage:
 	./bin/embeddingsdb-client [command] [options]
 
 Valid commands are:
+* add [options]
 * record [options]
 * remove [options]
 * similar-by-id [options]
@@ -18,6 +19,52 @@ Valid commands are:
 ```
 
 _Note: This tool does implement all of the `Client` interface methods (notably for adding records) yet._
+
+### embeddingsdb-cliet add
+
+Command-line tool for adding a record to an EmbeddingsDB database.Usage:
+
+```
+> ./bin/embeddingsdb-client add -h
+
+Command-line tool for adding a record to an EmbeddingsDB database.
+Usage:
+	add [options]
+
+Valid options are:
+  -attribute value
+    	Zero or more {KEY}={VALUE} flags which are used to populate the record's attributes dictionary.
+  -client-uri string
+    	A validsfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -data string
+    	The data create embeddings for. This is expected to be a file on disk however if the value is "-" then data is read from STDIN.
+  -depiction-id string
+    	The unique depiction ID associated with the record to add.
+  -embeddings-client-uri string
+    	A registered go-embeddings.Client URI. This is required if the -enable-search flag is true.
+  -input string
+    	The type of data to add embeddings for. Valid option are: image, text
+  -provider string
+    	The name of the provider associated with the record to add.
+  -subject-id string
+    	The subject ID associate with the record to add.
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/embeddingsdb-client add \
+	-provider sfomuseum-data-media-collection \
+	-depiction-id 1527858087 \
+	-subject-id 1511924695 \
+	-client-uri 'grpc://localhost:8080' \
+	-embeddings-client-uri 'mlxclip-client://' \
+ 	-input image \
+	-attribute key=value \
+	/path/to/image.jpg
+```
 
 ### embeddingsdb-client record
 
@@ -59,11 +106,11 @@ $> ./bin/embeddingsdb-client record -provider sfomuseum-data-media-collection -d
 
 ### embeddingsdb-client remove
 
-Command-line tool for removing a record from a gRPC EmbeddingsDB "service".
+Command-line tool for removing a record from an EmbeddingsDB database.
 
 ```
 $> ./bin/embeddingsdb-client remove -h
-Command-line tool for removing a record from a gRPC EmbeddingsDB "service".
+Command-line tool for removing a record from an EmbeddingsDB database.
 Usage:
 	record [options]
 
@@ -88,11 +135,11 @@ $> ./bin/embeddingsdb-client remove -client-uri grpc://localhost:8081 -depiction
 
 ### embeddingsdb-client similar-by-id
 
-Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Command-line tool for retrieving records similar to the embeddings for a specific record stored in an EmbeddingsDB database. Results are written as a JSON-encoded string to STDOUT.
 
 ```
 $> ./bin/embeddingsdb-client similar-by-id -h
-Command-line tool for retrieving records similar to the embeddings for a specific record stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Command-line tool for retrieving records similar to the embeddings for a specific record stored in an EmbeddingsDB database. Results are written as a JSON-encoded string to STDOUT.
 Usage:
 	similar-by-id [options]
 
@@ -178,11 +225,11 @@ $> wc -l test.jsonl
 
 ### embeddingsdb-client models
 
-Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Command-line tool for retrieving the unique list of models stored in an EmbeddingsDB database. Results are written as a JSON-encoded string to STDOUT.
 
 ```
 $> ./bin/embeddingsdb-client models -h
-Command-line tool for retrieving the unique list of models stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Command-line tool for retrieving the unique list of models stored in an EmbeddingsDB database. Results are written as a JSON-encoded string to STDOUT.
 Usage:
 	models [options]
 
@@ -208,11 +255,11 @@ $> ./bin/embeddingsdb-client models -client-uri 'grpc://localhost:8081' | jq
 
 ### embeddingsdb-client providers
 
-Command-line tool for retrieving the unique list of providers stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Command-line tool for retrieving the unique list of providers stored in an EmbeddingsDB database. Results are written as a JSON-encoded string to STDOUT.
 
 ```
 $> ./bin/embeddingsdb-client providers -h
-Command-line tool for retrieving the unique list of providers stored in a gRPC EmbeddingsDB "service". Results are written as a JSON-encoded string to STDOUT.
+Command-line tool for retrieving the unique list of providers stored in an EmbeddingsDB database. Results are written as a JSON-encoded string to STDOUT.
 Usage:
 	models [options]
 
