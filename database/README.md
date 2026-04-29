@@ -169,7 +169,7 @@ That said, I am not confident that I have even diagnosed the problem correctly.
 
 ### s3vectors://
 
-Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. This database implementation relies on a commercial service is metered. Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
+Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. This database implementation relies on a commercial service that is metered. Depending on how your database access is configured this could lead to [very large bills](https://murraycole.com/posts/aws-s3-vectors-pricing-deep-dive) at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
 ```
 s3vectors://{BUCKET_NAME}?{QUERY_PARAMETERS}
