@@ -82,6 +82,8 @@ Valid parameters are:
 | Key | Value | Required | Notes |
 | --- | --- | --- | --- |
 | dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+| max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 5.0. |
+| max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 
 For example:
 

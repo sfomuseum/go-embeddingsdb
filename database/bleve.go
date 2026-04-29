@@ -82,6 +82,8 @@ func init() {
 //
 // Valid query parameters are:
 // * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
+// * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 5.0.
+// * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
 func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -95,7 +97,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	q := u.Query()
 
 	dimensions := 512
-	max_distance := float32(1.0)
+	max_distance := float32(5.0)
 	max_results := int32(10)
 
 	if q.Has("dimensions") {
@@ -387,9 +389,16 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	}
 
 	if len(req.Exclude) > 0 {
-		not_q := bleve.NewDocIDQuery(req.Exclude)
 		bool_q := bleve.NewBooleanQuery()
-		bool_q.AddMustNot(not_q)
+
+		for _, id := range req.Exclude {
+			// Use NewTermQuery to target the specific field
+			not_q := bleve.NewTermQuery(id)
+			not_q.SetField("depiction_id")
+
+			bool_q.AddMustNot(not_q)
+		}
+
 		filters = append(filters, bool_q)
 	}
 
@@ -866,6 +875,10 @@ func (db *BleveDatabase) storeEmbeddings(ctx context.Context, rec *embeddingsdb.
 func (db *BleveDatabase) assignEmbeddings(ctx context.Context, rec *embeddingsdb.Record) error {
 
 	id := rec.Key()
+
+	if rec.DepictionId == "" {
+		return nil
+	}
 
 	comp := new(duckdb.Composite[[]float32])
 
