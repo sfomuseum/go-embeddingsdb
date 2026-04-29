@@ -79,3 +79,119 @@ In order for the search functionality to work you will need to instantiate an in
 
 The `embeddingsdb-inspector` does not handle _importing_ records in to an `embeddingsdb` database. This is handled by separate processes like the [`parquet-import` tool](../parquet-import/README.md).
 
+## Running the `embeddingsdb-inspector` as an AWS Lambda Function URL
+
+It is possible to run the `embeddingsdb-inspector` from an AWS Lambda Function URL when using the [S3 Vectors database implementation](../database/README.md#s3vectors).
+
+Note: This documentation assumes you have already added vector embeddings to an S3 Vectors bucket/index using the `parquet-import` tool or something like it. For example:
+
+```
+./bin/parquet-import \
+	-client-uri 'database://?database-uri=s3vectors%3A%2F%2Fembeddings%3Fregion%3Dus-east-1%26credentials%3Dsession%26dimensions%3D512%26index%3Dembeddings-512' \
+	-verbose
+	https://static.sfomuseum.org/embeddings/20260414-sfomuseum-instagram.parquet
+```
+
+### Compiling
+
+The first step is to compile the `embeddingsdb-inspector` application. The easiest way to do this is by running the `lambda-inspector` Makefile target at the root is this repository. For example:
+
+```
+$> cd /usr/local/src/go-embeddingsdb
+$> make lambda-inspector
+if test -f bootstrap; then rm -f bootstrap; fi
+if test -f embeddingsdb-inspector.zip; then rm -f embeddingsdb-inspector.zip; fi
+GOARCH=arm64 GOOS=linux go build -mod readonly -ldflags="-s -w" -tags no_duckdb,lambda.norpc -o bootstrap cmd/inspector/main.go
+zip embeddingsdb-inspector.zip bootstrap
+  adding: bootstrap (deflated 71%)
+rm -f bootstrap
+```
+
+Note the use of the `no_duckdb` tag. This is important. Without it support for DuckDB will be assumed and this will introduce a universe of C-compiler problems.
+
+Create your Lambda function and upload the `embeddingsdb-inspector.zip` as its code source. These details are out of scope for this document.
+
+### Layers
+
+Add the [AWS Lambda Web Adapter](https://github.com/aws/aws-lambda-web-adapter) to your Lambda function:
+
+```
+arn:aws:lambda:us-west-2:753240598075:layer:LambdaAdapterLayerArm64:20
+```
+
+Note that the Lambda Web Adapter is configured to work with applications serving requests from `localhost:8080` which is also the default for the `embeddingsdb-inspector`.
+
+### Environment variables
+
+Command line flags are inferred from AWS Lambda environment variables. The rules for mapping a command line flag to an environment variable are as follows:
+
+* Upper-case the name of the flag.
+* Replace all instances of "-" with "_".
+* Prepend the environment variable with "INSPECTOR_".
+
+For example the command line flag `client-uri` would become `INSPECTOR_CLIENT_URI`. The following envinronment variables are required.
+
+| Key | Value | Notes |
+| --- | --- | --- |
+| INSPECTOR_CLIENT_URI | `database://?database-uri={DATABASE_URI}` | See notes below. |
+
+When defining a client URI `{DATABASE_URI}` is expected to a URL-escaped value in the form of: s3vectors://{BUCKET_NAME}?region={AWS_REGION}&credentials=iam:&dimensions={DIMENSION}&index={INDEX_NAME}". For example:
+
+```
+database://?database-uri=s3vectors%3A%2F%2Fsfomuseum-embeddings%3Fregion%3Dus-east-1%26credentials%3Diam%3A%26dimensions%3D512%26index%3Dembeddings-512
+```
+
+### IAM Policy
+
+Your Lambda function will need an IAM policy like this one to access the vector data. Note this policy allows access to all the indices in a bucket. You may want your policy to be more restrictive.
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DiscoverBuckets",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListVectorBuckets"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ReadAndQueryAllS3VectorIndices",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:GetIndex",
+                "s3vectors:GetVectors",
+                "s3vectors:QueryVectors",
+                "s3vectors:ListVectors"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
+        },
+        {
+            "Sid": "ManageAllS3VectorIndexTags",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListTagsForResource",
+                "s3vectors:TagResource",
+                "s3vectors:UntagResource"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
+        },
+        {
+            "Sid": "ListIndicesInBucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListIndexes",
+                "s3vectors:ListIndexes",
+                "s3vectors:GetVectorBucket"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}"
+        }
+    ]
+}
+```
+
+### Function URL
+
+Create a new Function URL for your Lambda function. Whether or not you make this public, or require credentialed access, is left up to you.

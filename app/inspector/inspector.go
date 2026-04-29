@@ -30,7 +30,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	flagset.Parse(fs)
 
-	err := flagset.SetFlagsFromEnvVars(fs, "EMBEDDINGSDB")
+	err := flagset.SetFlagsFromEnvVars(fs, "INSPECTOR")
 
 	if err != nil {
 		return fmt.Errorf("Failed to derive flags from environment variables, %w", err)
