@@ -44,6 +44,14 @@ inspector:
 		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
 		-server-uri http://localhost:8082
 
+lambda-inspector:
+	if test -f bootstrap; then rm -f bootstrap; fi
+	if test -f embeddingsdb-inspector.zip; then rm -f embeddingsdb-inspector.zip; fi
+	GOARCH=arm64 GOOS=linux go build -mod $(GOMOD) -ldflags="$(LDFLAGS)" -tags no_duckdb,lambda.norpc -o bootstrap cmd/inspector/main.go
+	zip embeddingsdb-inspector.zip bootstrap
+	rm -f bootstrap
+
+
 server-bundle:
 	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-server cmd/server/main.go
 
