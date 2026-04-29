@@ -54,7 +54,7 @@ _Note: "OEmbeddings" should still be considered work in progress and subject to 
 
 OEmbeddings defines a model for the _least_ amount of metadata to be associated with a vector embedding record in order to allow a preview of the content used to create the embeddings and to display provenance for that content with links back to the subject depicted in the content on a provider's website.
 
-OEmbeddings documentation has been moved in to [oembeddings/README.md](oembeddings/README.md]
+OEmbeddings documentation has been moved in to [oembeddings/README.md](oembeddings/README.md)
 
 ### Databases
 
@@ -135,7 +135,7 @@ type Client interface {
 ## Databases
 
 
-Database documentation has been moved in to [database/README.md](database/README.md] but here's the "tl;dr".
+Database documentation has been moved in to [database/README.md](database/README.md) but here's the "tl;dr".
 
 The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
 
@@ -145,11 +145,11 @@ The S3Vectors implementation is fast and demonstrates good query times. It is, h
 
 ## Servers
 
-Server documentation has been moved in to [server/README.md](server/README.md]
+Server documentation has been moved in to [server/README.md](server/README.md)
 
 ## Clients
 
-Client documentation has been moved in to [client/README.md](client/README.md]
+Client documentation has been moved in to [client/README.md](client/README.md)
 
 ## Tools
 
@@ -165,7 +165,7 @@ go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/par
 go build -tags=sqlite -mod readonly -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
 ```
 
-Tools documentation has been moved in to [cmd/README.md](cmd/README.md]
+Tools documentation has been moved in to [cmd/README.md](cmd/README.md)
 
 ## Build
 
