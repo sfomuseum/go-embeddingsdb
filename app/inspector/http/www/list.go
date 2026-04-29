@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
@@ -28,6 +29,7 @@ type ListHandlerOptions struct {
 type ListHandlerVars struct {
 	Records         []*embeddingsdb.Record
 	Pagination      pagination.Results
+	PaginationType  string
 	Models          []string
 	Providers       []string
 	CurrentModel    string
@@ -120,7 +122,6 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 			}
 
 			cursor_opts.PerPage(int64(15))
-			cursor_opts.Pointer(int64(1))
 
 			page, err := sanitize.GetString(req, "page")
 
@@ -131,6 +132,11 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 			}
 
 			if page != "" {
+
+				// Why did I do this in aaronland/go-pagination... ?
+				page = strings.Replace(page, "after-", "", 1)
+				page = strings.Replace(page, "before-", "", 1)
+
 				cursor_opts.Pointer(page)
 			}
 
@@ -181,6 +187,7 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 		vars := ListHandlerVars{
 			Records:         records,
 			Pagination:      pg_rsp,
+			PaginationType:  pg_type.String(),
 			Models:          models,
 			CurrentModel:    model,
 			CurrentProvider: provider,

@@ -70,19 +70,38 @@
     </div>
     
     <div class="pagination">
+	
+	{{ if eq .PaginationType "countable" -}}
 	<div class="pagination-el pagination-previous">
 	    {{ if ne .Pagination.Previous 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Previous }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
 	</div>
 	<div class="pagination-el pagination-next">
 	    {{ if ne .Pagination.Next 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Next }}">page {{ .Pagination.Next }}</a>{{ else }}&#8212;{{ end }}
 	</div>
+	{{ end -}}
+
+	{{ if eq .PaginationType "cursor" -}}
+	<div class="pagination-el pagination-previous">
+	    {{ if ne .Pagination.Previous "" }}<a href="{{ .URIs.List }}?page={{ .Pagination.Previous }}">previous</a>{{ else }}&#8212;{{ end }}
+	</div>
+	<div class="pagination-el pagination-next">
+	    {{ if ne .Pagination.Next "" }}<a href="{{ .URIs.List }}?page={{ .Pagination.Next }}">next</a>{{ else }}&#8212;{{ end }}
+	</div>
+	{{ end -}}
+	
     </div>
 
     <div class="pagination-rollup">
+	{{ if eq .PaginationType "countable" -}}	
 	{{ if gt 1 .Pagination.Total -}}
 	There is one result
 	{{ else -}}
 	There are <span class="hey-look">{{ .Pagination.Total }}</span> results{{ if gt .Pagination.Pages 1 }} and this is <span class="hey-look">page {{ .Pagination.Page }}</span> of <span class="hey-look">{{ .Pagination.Pages }}</span>{{ end }}.
+	{{ end -}}
+	{{ end -}}
+
+	{{ if eq .PaginationType "cursor" -}}
+	This database does not support <q>countable</q> pagination. For as long as there is a <q>next</q> page there are more results.
 	{{ end -}}
     </div>
     

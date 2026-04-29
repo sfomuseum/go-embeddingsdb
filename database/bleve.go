@@ -661,7 +661,7 @@ func (db *BleveDatabase) Export(ctx context.Context, uri string, opts ...options
 
 // Return the pagination type used by the database.
 func (db *BleveDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
-	return CountablePaginationType
+	return CountablePaginationType, nil
 }
 
 // Close performs and terminating functions required by the database.
