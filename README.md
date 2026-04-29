@@ -16,6 +16,13 @@ At this time `godoc` documentation is incomplete.
 
 ## Concepts
 
+There are four principal actors (concepts) to understand with the `go-embeddingsdb`:
+
+1. Records. The inidividual vector embeddings and metadata about the things those embeddings represent.
+2. Databases. The place where records are stored, indexed and queried.
+3. Server. Network-based services for interacting with a database.
+4. Clients. Tools for interacting with a server.
+
 ### Records
 
 Records contain individual embeddings values and related metadata. While not specific to image embeddings they are what most of the work modeling records reflects.
@@ -40,6 +47,14 @@ type Record struct {
 	Attributes map[string]string `json:"attributes"`
 }
 ```
+
+#### OEmbeddings
+
+_Note: "OEmbeddings" should still be considered work in progress and subject to review and suggestions._
+
+OEmbeddings defines a model for the _least_ amount of metadata to be associated with a vector embedding record in order to allow a preview of the content used to create the embeddings and to display provenance for that content with links back to the subject depicted in the content on a provider's website.
+
+OEmbeddings documentation has been moved in to [oembeddings/README.md](oembeddings/README.md]
 
 ### Databases
 
@@ -117,68 +132,16 @@ type Client interface {
 }
 ```
 
-### OEmbeddings
-
-_Note: "OEmbeddings" should still be considered work in progress and subject to review and suggestions._
-
-OEmbeddings defines a model for the _least_ amount of metadata to be associated with a vector embedding record in order to allow a preview of the content used to create the embeddings and to display provenance for that content with links back to the subject depicted in the content on a provider's website.
-
-As the name suggests it is modeled in spirit after the [OEmbed specification](https://oembed.com/) which descibes itself as "a format for allowing an embedded representation of a URL on third party sites.". The `Oembeddings` structure (propeties) MAY be present in the free-form "attributes" dictionary of a `Record` instance but is not required.
-
-```
-type OEmbeddings struct {
-	// The type of material used to create the vector embeddings. Expected to be "image" or "text".
-	Type string `json:"type"`
-	// The preview content for the vector embeddings. If `Type` is "text" then this is expected to be a string. If `Type` is "image" this is expected to be a string confirming to the JSON Schema "uri" type.
-	Preview string `json:"preview"`
-	// A web page (or resource) for the depiction used to create the vector embeddings.
-	DepictionURL string `json:"depiction_url,omitempty"`
-	// A web page (or resource) for the subject of the depiction used to create the vector embeddings.
-	SubjectURL string `json:"subject_url"`
-	// The title of the subject of the depiction.
-	SubjectTitle string `json:"subject_title"`
-	// The creditline or attribution for the subject of the depiction.
-	SubjectCreditline string `json:"subject_creditline"`
-	// The name of the provider (holder) of the subject being depicted.
-	ProviderName string `json:"provider_name"`
-	// The primary web page for the provider (holder) of the subject being depicted.
-	ProviderURL string `json:"provider_url"`
-}
-```
-
-#### JSON Schema
-
-There is a [JSON Schema document](oembeddings/oembeddings.json) for validating an "attributes" dictionary to ensure that it contains the required fields for an `OEmbeddings` data structure.
-
-#### WebAssembly
-
-There is also an `oembeddings_validate` WebAssembly (WASM) binary for use with JavaScript. For example:
-
-```
-const input = document.querySelector("#input");
-const feedback = document.querySelector("#feedback");
-
-const oe = input.value;
-
-oembeddings_validate(oe).then((rsp) => {
-	feedback.innerText = "Document validates as OEmbeddings";
-}).catch((err) => {
-	console.error("Validation failed");
-	feedback.innerText = "Validation failed: " + err;
-});
-```
-
-The WASM binary needs to be built manually using the `make wasmjs` Makefile target. See the [oembeddings/www](oembeddings/www) folder for details.
-
 ## Databases
 
-Here's the "tl;dr" so far:
+
+Database documentation has been moved in to [database/README.md](database/README.md] but here's the "tl;dr".
 
 The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
 
 The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
 
-Database documentation has been moved in to [database/README.md](database/README.md]
+The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is metered. Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
 ## Servers
 
@@ -204,9 +167,39 @@ go build -tags=sqlite -mod readonly -ldflags="-s -w" -o bin/parquet-merge cmd/pa
 
 Tools documentation has been moved in to [cmd/README.md](cmd/README.md]
 
-## DuckDB
+## Build
 
-### Statically linked extensions (MacOS)
+What follows are "known knowns", gotchas and other details that may creep when building tools. This gets in to the technical weeds so if that's not your thing you can stop reading now.
+
+### DuckDB
+
+DuckDB is a dependency regardless of build tags (described below).
+
+This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
+
+Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#).
+
+### Build tags
+
+Build tags are used to enable support for various features. The default set of tags is empty but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
+
+#### bleve
+
+The `bleve` tag adds support for [Bleve](https://blevesearch.com/) document store as an embeddings database. Note that the `vectors` tags is also necessary.
+
+#### sqlite
+
+The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://alexgarcia.xyz/sqlite-vec/) extension for vector embeddings support.
+
+_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
+
+#### vectors
+
+The `vectors` tag is necessary to compile `libfaiss` code when building Bleve document store support. This is a compliement to the `bleve` tag.
+
+### MacOS
+
+#### statically linked DuckDB extensions
 
 If you want to build a `emeddingsdb-server` binary (or any other tool that uses this package as a library) for MacOS with support for DuckDB _and_ that has been signed and notarized you will need to compile a custom `libduckdb_bundle.a` library with both the JSON and VSS extensions statically linked. Then you will need to use specify that custom library when building the `emeddingsdb-server` binary. This is because the default behaviour for DuckDB is to load (and cache) extensions on the fly and those extensions will have been signed by someone other than the "team" (you) that notarized the `emeddingsdb-server` binary.
 

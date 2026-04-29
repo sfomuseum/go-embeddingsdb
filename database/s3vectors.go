@@ -531,6 +531,8 @@ func (db *S3VectorsDatabase) IterateRecords(ctx context.Context, opts ...options
 }
 
 // Return the Unix timestamp of the last update to the Database instance.
+// As of this writing this always returns 0 because the cost of constantly crawling the index
+// and the mechanics of denormalizing this data and then keeping in sync are too high.
 func (db *S3VectorsDatabase) LastUpdate(ctx context.Context, opts ...options.Option) (int64, error) {
 	return 0, nil
 }
