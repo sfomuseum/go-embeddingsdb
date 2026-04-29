@@ -7,8 +7,12 @@ import (
 	"iter"
 	"log/slog"
 	"net/url"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
@@ -23,10 +27,16 @@ import (
 
 type S3VectorsDatabase struct {
 	Database
-	uri    string
-	bucket string
-	index  string
-	client *s3vectors.Client
+	uri          string
+	bucket       string
+	index        string
+	client       *s3vectors.Client
+	index_arn    string
+	models       []string
+	providers    []string
+	mu           *sync.RWMutex
+	max_results  int32
+	max_distance float32
 }
 
 const S3VectorsDatabaseScheme = "s3vectors"
@@ -44,6 +54,11 @@ func init() {
 func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dimensions := 512
+	max_results := int32(10)
+	max_distance := float32(1.0)
+
+	models := make([]string, 0)
+	providers := make([]string, 0)
 
 	u, err := url.Parse(uri)
 
@@ -87,6 +102,28 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		dimensions = v
 	}
 
+	if q.Has("max-results") {
+
+		v, err := strconv.Atoi(q.Get("max-results"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?max-results= parameter, %w", err)
+		}
+
+		max_results = int32(v)
+	}
+
+	if q.Has("max-distance") {
+
+		v, err := strconv.ParseFloat(q.Get("max-distance"), 32)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?max-results= parameter, %w", err)
+		}
+
+		max_distance = float32(v)
+	}
+
 	region := q.Get("region")
 	creds := q.Get("credentials")
 	index := q.Get("index")
@@ -109,17 +146,46 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	cl := s3vectors.NewFromConfig(cfg)
 
-	err = setupS3VectorsBucketAndIndex(ctx, cl, bucket, index, dimensions)
+	index_arn, err := setupS3VectorsBucketAndIndex(ctx, cl, bucket, index, dimensions)
 
 	if err != nil {
 		return nil, err
 	}
 
+	// Try to pull in model and provider information from tags so we
+	// aren't constantly crawling the entire index. If absent we crawl
+	// the entire index below.
+
+	m, p, err := getModelAndProviderTags(ctx, cl, index_arn)
+
+	if err != nil {
+		slog.Error("Failed to read model and provider tags", "error", err)
+	} else {
+		slog.Debug("Assign models and providers from tags", "models", m, "providers", p)
+		models = m
+		providers = p
+	}
+
+	mu := new(sync.RWMutex)
+
 	db := &S3VectorsDatabase{
-		client: cl,
-		bucket: bucket,
-		index:  index,
-		uri:    uri,
+		client:       cl,
+		index_arn:    index_arn,
+		bucket:       bucket,
+		index:        index,
+		uri:          uri,
+		models:       models,
+		providers:    providers,
+		max_results:  max_results,
+		max_distance: max_distance,
+		mu:           mu,
+	}
+
+	// Okay, crawl the index. Not great but it's the only way.
+
+	if len(models) == 0 || len(providers) == 0 || q.Has("refresh-tags") {
+		slog.Debug("Gather model and provider tags")
+		go db.gatherModelsAndProviders(ctx)
 	}
 
 	return db, nil
@@ -170,6 +236,12 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	if err != nil {
 		return false, err
 	}
+
+	go func() {
+		db.addModel(ctx, rec.Model)
+		db.addProvider(ctx, rec.Provider)
+		db.updateModelAndProviderTagsIfChanged(ctx)
+	}()
 
 	return false, nil
 }
@@ -233,16 +305,130 @@ func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb
 		return fmt.Errorf("Failed to remove record, %w", err)
 	}
 
+	// What we really is a map[string]int counter tracking models and providers
+	// such that when we delete a record we decrement the relevant model and provider
+	// pruning them when their respective counter reaches 0. This also means storing
+	// counts in the index tags which isn't great and/or requires crawling the whole
+	// index all the time. So for now we'll just live with the potential inconcistency
+	// and settle for manually updating index tags when necessary.
+
 	return nil
 }
 
 // Find similar records for a given model and record instance.
-func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
+func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#Client.QueryVectors
 	// https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-metadata-filtering.html
 
-	results := make([]*embeddingsdb.SimilarRecord, 0)
+	query_opts := &s3vectors.QueryVectorsInput{
+		VectorBucketName: aws.String(db.bucket),
+		IndexName:        aws.String(db.index),
+		ReturnDistance:   true,
+		ReturnMetadata:   true,
+		QueryVector: &types.VectorDataMemberFloat32{
+			Value: req.Embeddings,
+		},
+		// TopK is set below
+		// Filter is set below
+	}
+
+	has_filter := false
+	filter := make(map[string]interface{})
+
+	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
+
+	if max_results == nil {
+		max_results = &db.max_results
+	}
+
+	if max_distance == nil {
+		max_distance = &db.max_distance
+	}
+
+	if similar_provider != nil {
+
+		filter["x-provider"] = map[string]string{
+			"$eq": *similar_provider,
+		}
+
+		has_filter = true
+	}
+
+	if len(req.Exclude) > 0 {
+
+		filter["x-depiction-id"] = map[string][]string{
+			"$nin": req.Exclude,
+		}
+
+		has_filter = true
+	}
+
+	if has_filter {
+		query_opts.Filter = document.NewLazyDocument(filter)
+	}
+
+	query_opts.TopK = aws.Int32(int32(*max_results))
+
+	rsp, err := db.client.QueryVectors(ctx, query_opts)
+
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]*embeddingsdb.SimilarRecord, len(rsp.Vectors))
+
+	for i, vec := range rsp.Vectors {
+
+		if *max_distance > 0 && *vec.Distance > *max_distance {
+			continue
+		}
+
+		meta := make(map[string]string)
+
+		err := vec.Metadata.UnmarshalSmithyDocument(&meta)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal metadata")
+		}
+
+		rec := &embeddingsdb.SimilarRecord{
+			Distance: *vec.Distance,
+		}
+
+		attrs := make(map[string]string)
+
+		var provider string
+		var depiction_id string
+		var subject_id string
+
+		for k, v := range meta {
+
+			switch {
+			case strings.HasPrefix(k, "x-"):
+				switch k {
+				case "x-provider":
+					provider = v
+				case "x-depiction-id":
+					depiction_id = v
+				case "x-subject-id":
+					subject_id = v
+				}
+			default:
+				attrs[k] = v
+			}
+		}
+
+		rec.Provider = provider
+		rec.DepictionId = depiction_id
+		rec.SubjectId = subject_id
+		rec.Attributes = attrs
+
+		results[i] = rec
+	}
+
 	return results, nil
 }
 
@@ -370,14 +556,12 @@ func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Opt
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *S3VectorsDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
-	models := make([]string, 0)
-	return models, nil
+	return db.models, nil
 }
 
 // Return the unique list of providers across all the embeddings.
 func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
-	providers := make([]string, 0)
-	return providers, nil
+	return db.providers, nil
 }
 
 // Return the pagination type used by the database.
@@ -455,6 +639,153 @@ func (db *S3VectorsDatabase) s3VectorToRecord(vec_data types.VectorData, vec_met
 
 }
 
+func (db *S3VectorsDatabase) gatherModelsAndProviders(ctx context.Context) error {
+
+	t1 := time.Now()
+
+	defer func() {
+		slog.Debug("Time to get stuff", "time", time.Since(t1))
+	}()
+
+	wg := new(sync.WaitGroup)
+
+	list_opts := &s3vectors.ListVectorsInput{
+		VectorBucketName: aws.String(db.bucket),
+		IndexName:        aws.String(db.index),
+		ReturnMetadata:   true,
+	}
+
+	pg := s3vectors.NewListVectorsPaginator(db.client, list_opts)
+
+	for pg.HasMorePages() {
+
+		rsp, err := pg.NextPage(ctx)
+
+		if err != nil {
+			return err
+		}
+
+		for _, vec := range rsp.Vectors {
+
+			logger := slog.Default()
+			logger = logger.With("key", vec.Key)
+
+			wg.Go(func() {
+				meta := make(map[string]string)
+
+				err := vec.Metadata.UnmarshalSmithyDocument(&meta)
+
+				if err != nil {
+					slog.Error("Failed to unmarshal metadata", "error", err)
+					return
+				}
+
+				model, exists := meta["x-model"]
+
+				if !exists {
+					logger.Error("Metadata missing model")
+					return
+				}
+
+				provider, exists := meta["x-provider"]
+
+				if !exists {
+					logger.Error("Metadata missing provider")
+					return
+				}
+
+				db.addModel(ctx, model)
+				db.addProvider(ctx, provider)
+			})
+		}
+	}
+
+	wg.Wait()
+
+	err := db.updateModelAndProviderTagsIfChanged(ctx)
+
+	if err != nil {
+		slog.Error("Failed to update model provider tags", "error", err)
+	}
+
+	return nil
+}
+
+func (db *S3VectorsDatabase) addModel(ctx context.Context, model string) {
+
+	if slices.Contains(db.models, model) {
+		return
+	}
+
+	slog.Debug("Add model", "model", model)
+
+	db.mu.Lock()
+
+	if !slices.Contains(db.models, model) {
+		db.models = append(db.models, model)
+	}
+
+	db.mu.Unlock()
+}
+
+func (db *S3VectorsDatabase) addProvider(ctx context.Context, provider string) {
+
+	if slices.Contains(db.providers, provider) {
+		return
+	}
+
+	slog.Debug("Add provider", "provider", provider)
+
+	db.mu.Lock()
+
+	if !slices.Contains(db.providers, provider) {
+		db.providers = append(db.providers, provider)
+	}
+
+	db.mu.Unlock()
+}
+
+func (db *S3VectorsDatabase) updateModelAndProviderTagsIfChanged(ctx context.Context) error {
+
+	models, providers, err := getModelAndProviderTags(ctx, db.client, db.index_arn)
+
+	if err != nil {
+		return err
+	}
+
+	str_models := strings.Join(db.models, " ")
+	str_providers := strings.Join(db.providers, " ")
+
+	if str_models == strings.Join(models, " ") && str_providers == strings.Join(providers, " ") {
+		return nil
+	}
+
+	idx_tags := map[string]string{
+		"embeddingsdb_models":    str_models,
+		"embeddingsdb_providers": str_providers,
+	}
+
+	return db.addIndexTags(ctx, idx_tags)
+}
+
+func (db *S3VectorsDatabase) addIndexTags(ctx context.Context, tags map[string]string) error {
+
+	slog.Info("tag resource", "arn", db.index_arn, "tags", tags)
+
+	tag_opts := &s3vectors.TagResourceInput{
+		ResourceArn: aws.String(db.index_arn),
+		Tags:        tags,
+	}
+
+	_, err := db.client.TagResource(ctx, tag_opts)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (db *S3VectorsDatabase) listIndexes(ctx context.Context) iter.Seq2[*types.Index, error] {
 
 	// Maybe move in to aaronland/go-aws/s3vectors? TBD...
@@ -493,7 +824,7 @@ func (db *S3VectorsDatabase) listIndexes(ctx context.Context) iter.Seq2[*types.I
 	}
 }
 
-func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, bucket string, index string, dimensions int) error {
+func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, bucket string, index string, dimensions int) (string, error) {
 
 	// Maybe move in to aaronland/go-aws/s3vectors? TBD...
 
@@ -518,15 +849,17 @@ func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, buc
 
 			if err != nil {
 				logger.Error("Failed to create bucket", "error", err)
-				return err
+				return "", err
 			}
 		} else {
 			logger.Error("Failed to check bucket", "error", err)
-			return err
+			return "", err
 		}
 	}
 
-	_, err = cl.GetIndex(ctx, &s3vectors.GetIndexInput{
+	var arn string
+
+	rsp, err := cl.GetIndex(ctx, &s3vectors.GetIndexInput{
 		VectorBucketName: aws.String(bucket),
 		IndexName:        aws.String(index),
 	})
@@ -539,7 +872,7 @@ func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, buc
 
 			logger.Debug("Index not found, creating", "dimensions", dimensions)
 
-			_, err = cl.CreateIndex(ctx, &s3vectors.CreateIndexInput{
+			rsp, err := cl.CreateIndex(ctx, &s3vectors.CreateIndexInput{
 				DataType:         types.DataTypeFloat32,
 				VectorBucketName: aws.String(bucket),
 				IndexName:        aws.String(index),
@@ -549,13 +882,62 @@ func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, buc
 
 			if err != nil {
 				logger.Error("Failed to create index", "error", err)
-				return err
+				return "", err
 			}
+
+			arn = aws.ToString(rsp.IndexArn)
+
 		} else {
 			logger.Error("Failed to check index", "error", err)
-			return err
+			return "", err
 		}
+	} else {
+		arn = aws.ToString(rsp.Index.IndexArn)
 	}
 
-	return nil
+	return arn, nil
+}
+
+func getModelAndProviderTags(ctx context.Context, cl *s3vectors.Client, arn string) ([]string, []string, error) {
+
+	models := make([]string, 0)
+	providers := make([]string, 0)
+
+	tags, err := listIndexTags(ctx, cl, arn)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	str_models, exists := tags["embeddingsdb_models"]
+
+	if exists {
+		models = strings.Split(str_models, " ")
+	}
+
+	str_providers, exists := tags["embeddingsdb_providers"]
+
+	if exists {
+		providers = strings.Split(str_providers, " ")
+	}
+
+	sort.Strings(models)
+	sort.Strings(providers)
+
+	return models, providers, nil
+}
+
+func listIndexTags(ctx context.Context, cl *s3vectors.Client, arn string) (map[string]string, error) {
+
+	list_opts := &s3vectors.ListTagsForResourceInput{
+		ResourceArn: aws.String(arn),
+	}
+
+	rsp, err := cl.ListTagsForResource(ctx, list_opts)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rsp.Tags, nil
 }
