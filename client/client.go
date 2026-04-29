@@ -38,7 +38,7 @@ type Client interface {
 	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
 	Providers(context.Context, ...options.Option) ([]string, error)
-	//
+	// Return the pagination type used by the database implementation.
 	PaginationType(context.Context, ...options.Option) (database.PaginationType, error)
 	// Close performs and terminating functions required by the client.
 	Close(context.Context) error

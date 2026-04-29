@@ -25,7 +25,7 @@ There are four principal actors (concepts) to understand with the `go-embeddings
 
 1. Records. The inidividual vector embeddings and metadata about the things those embeddings represent.
 2. Databases. The place where records are stored, indexed and queried.
-3. Server. Network-based services for interacting with a database.
+3. Servers. Network-based services for interacting with a database.
 4. Clients. Tools for interacting with a server.
 
 ### Records
@@ -68,32 +68,36 @@ A database is a system for managing (storing, indexing and querying) embeddings.
 ```
 // Database defines an interface for adding and querying vector embeddings of [embeddingsdb.Record] records.
 type Database interface {
-	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation.
-	AddRecord(context.Context, *embeddingsdb.Record) error
-	// The number of batched records currently waiting to be added.
-	BatchedRecordsCount(context.Context) (int, error)
-	// Add the pending batched records
-	AddBatchedRecords(context.Context) error	
-	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
-	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
-	// Remove a record from an EmbeddingsDB instance.
-	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
-	// ListRecords returns a pagination list of records stored in the database.
-	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
-	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
-	IterateRecords(context.Context) iter.Seq2[*embeddingsdb.Record, error]
-	// Find similar records for a given model and record instance.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
-	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
-	Export(context.Context, string) error
-	// Return the Unix timestamp of the last update to the Database instance.
-	LastUpdate(context.Context) (int64, error)
 	// Return the URI string used to instantiate the Database instance.
 	URI() string
+	// Add adds a [embeddingsdb.Record] instance to the underlying database implementation. Returns true or false if the addition was batched.
+	AddRecord(context.Context, *embeddingsdb.Record, ...options.Option) (bool, error)
+	// The number of batched records currently waiting to be added.
+	BatchedRecordsCount(context.Context, ...options.Option) (int, error)
+	// Add the pending batched records.
+	AddBatchedRecords(context.Context, ...options.Option) error
+	// Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest, ...options.Option) (*embeddingsdb.Record, error)
+	// Remove a record from an EmbeddingsDB instance.
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest, ...options.Option) error
+	// ListRecords returns a paginated list of records stored in the database.
+	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
+	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
+	IterateRecords(context.Context, ...options.Option) iter.Seq2[*embeddingsdb.Record, error]
+	// Find similar records for a given model and record instance.
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
+	// Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
+	Export(context.Context, string, ...options.Option) error
+	// Return the Unix timestamp of the last update to the Database instance.
+	LastUpdate(context.Context, ...options.Option) (int64, error)
+	// Return the list of dimensions supported by this Database  implementation.
+	Dimensions(context.Context, ...options.Option) ([]int, error)
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
-	Models(context.Context, ...string) ([]string, error)
+	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)
+	Providers(context.Context, ...options.Option) ([]string, error)
+	// Return the pagination type used by the database implementation.
+	PaginationType(context.Context, ...options.Option) (PaginationType, error)
 	// Close performs and terminating functions required by the database.
 	Close(context.Context) error
 }
@@ -121,19 +125,23 @@ type Client interface {
 	// Add a new record to an embeddings database.
 	AddRecord(context.Context, *embeddingsdb.Record) error
 	// Retrieve a specific record from an embeddings database.
-	GetRecord(context.Context, *embeddingsdb.GetRecordRequest) (*embeddingsdb.Record, error)
+	GetRecord(context.Context, *embeddingsdb.GetRecordRequest, ...options.Option) (*embeddingsdb.Record, error)
 	// Remove a record from an EmbeddingsDB instance.
-	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest) error
+	RemoveRecord(context.Context, *embeddingsdb.RemoveRecordRequest, ...options.Option) error
 	// ListRecords returns a pagination list of records stored in the database.
-	ListRecords(context.Context, pagination.Options, ...*ListRecordsFilter) ([]*embeddingsdb.Record, pagination.Results, error)
+	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
 	// Retrieve records with similar embeddings from an embeddings database.
-	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest) ([]*embeddingsdb.SimilarRecord, error)
+	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
 	// Retrieve records with similar embeddings, for a specific record, from an embeddings database.
-	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest) ([]*embeddingsdb.SimilarRecord, error)
+	SimilarRecordsById(context.Context, *embeddingsdb.SimilarRecordsByIdRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)
 	// Return the unique list of models, for zero (all) or more providers, across all the embeddings.
-	Models(context.Context, ...string) ([]string, error)
+	Models(context.Context, ...options.Option) ([]string, error)
 	// Return the unique list of providers across all the embeddings.
-	Providers(context.Context) ([]string, error)
+	Providers(context.Context, ...options.Option) ([]string, error)
+	// Return the pagination type used by the database implementation.
+	PaginationType(context.Context, ...options.Option) (database.PaginationType, error)
+	// Close performs and terminating functions required by the client.
+	Close(context.Context) error
 }
 ```
 
