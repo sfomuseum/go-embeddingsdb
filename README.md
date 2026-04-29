@@ -150,11 +150,13 @@ type Client interface {
 
 Database documentation has been moved in to [database/README.md](database/README.md) but here's the "tl;dr".
 
-The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time. The SQLite implementation while slower stores (and reads) all its data from disk.
+The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+The SQLite implementation while has slower query times but stores (and reads) all its data from disk so it is fast to start.
 
-The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is metered. Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency.
+
+The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is [metered](https://aws.amazon.com/s3/pricing/?nc=sn&loc=4). Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
 ## Servers
 
