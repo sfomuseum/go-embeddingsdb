@@ -157,12 +157,12 @@ The easiest way to build the included tools is to run the handy `cli` Makefile t
 
 ```
 $> make cli
-go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
-go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
-go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
-go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
-go build -tags=sqlite -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
-go build -tags=sqlite -mod readonly -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
 ```
 
 Tools documentation has been moved in to [cmd/README.md](cmd/README.md)
