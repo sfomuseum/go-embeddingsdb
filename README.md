@@ -166,9 +166,13 @@ Client documentation has been moved in to [client/README.md](client/README.md)
 
 ## Tools
 
-The easiest way to build the included tools is to run the handy `cli` Makefile target. For example:
+The easiest way to build the included tools is to run the handy `cli` Makefile target (after you've run `go mod tidy && go mod vendor` for reasons described below). For example:
 
 ```
+$> git clone git@github.com:sfomuseum/go-embeddingsdb.git
+$> cd go-embeddingsdb
+$> go mod tidy && go mod vendor
+
 $> make cli
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/server/main.go
