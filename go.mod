@@ -3,12 +3,15 @@ module github.com/sfomuseum/go-embeddingsdb
 go 1.26.0
 
 require (
+	github.com/aaronland/go-aws/v3 v3.5.0
 	github.com/aaronland/go-http/v4 v4.0.3
 	github.com/aaronland/go-pagination v0.3.0
 	github.com/aaronland/go-pagination-sql v0.2.0
 	github.com/aaronland/go-roster v1.0.0
 	github.com/aaronland/gocloud v1.1.0
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/aws/aws-sdk-go-v2 v1.41.6
+	github.com/aws/aws-sdk-go-v2/service/s3vectors v1.6.7
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/blevesearch/bleve_index_api v1.3.11
 	github.com/bwmarrin/snowflake v0.3.0
@@ -17,7 +20,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/parquet-go/parquet-go v0.29.0
 	github.com/sfomuseum/go-database v0.0.18
-	github.com/sfomuseum/go-embeddings v0.4.0
+	github.com/sfomuseum/go-embeddings v0.4.1
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-template v1.11.0
 	golang.org/x/oauth2 v0.36.0
@@ -28,19 +31,17 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.4.5 // indirect
-	github.com/aaronland/go-aws/v3 v3.5.0 // indirect
 	github.com/akrylysov/algnhsa v1.1.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apache/arrow-go/v18 v18.5.1 // indirect
 	github.com/aws/aws-lambda-go v1.53.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.41.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.6 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.9 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.9 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.12 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.22 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.22 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cognitoidentity v1.33.18 // indirect
@@ -55,7 +56,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
-	github.com/aws/smithy-go v1.24.2 // indirect
+	github.com/aws/smithy-go v1.25.0 // indirect
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
 	github.com/blevesearch/geo v0.2.4 // indirect
 	github.com/blevesearch/go-faiss v1.0.26 // indirect

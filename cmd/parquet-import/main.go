@@ -12,16 +12,19 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/client"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
+	"github.com/sfomuseum/go-flags/multi"
 )
 
 func main() {
 
 	var client_uri string
+	var database_uris multi.MultiString
 	var verbose bool
 
 	fs := flagset.NewFlagSet("import")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
+	fs.Var(&database_uris, "database-uri", "...")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {

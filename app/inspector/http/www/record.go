@@ -82,7 +82,7 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			Model:      model,
 			MaxResults: &opts.MaxResults,
 			Exclude: []string{
-				record.Key(),
+				record.DepictionId,
 			},
 		}
 

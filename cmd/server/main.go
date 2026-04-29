@@ -9,8 +9,10 @@ import (
 	"os"
 	"strings"
 
+	_ "github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/server"
 	"github.com/sfomuseum/go-flags/flagset"
+	_ "github.com/sfomuseum/go-flags/multi"
 )
 
 const database_placeholder string = "{database}"
@@ -32,7 +34,7 @@ func main() {
 	fs := flagset.NewFlagSet("server")
 
 	fs.StringVar(&server_uri, "server-uri", server_uri_default, "A registered sfomuseum/go-embeddingsdb/server.EmbeddingsDBServer URI.")
-	fs.StringVar(&database_uri, "database-uri", "", database_uri_desc)
+	fs.StringVar(&database_uri, "database-uri", "null://", database_uri_desc)
 	fs.StringVar(&token_uri, "token-uri", "", token_uri_desc)
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
@@ -66,6 +68,7 @@ func main() {
 		server_q := server_u.Query()
 
 		if swap_database {
+
 			server_q.Del("database-uri")
 			server_q.Set("database-uri", database_uri)
 		}

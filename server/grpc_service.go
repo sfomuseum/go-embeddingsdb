@@ -9,6 +9,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 	"google.golang.org/grpc/peer"
 )
 
@@ -122,17 +123,13 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 	pg_opts.PerPage(req.Pagination.PerPage)
 	pg_opts.Pointer(req.Pagination.Page)
 
-	filters := make([]*database.ListRecordsFilter, len(req.Filters))
+	opts := make([]options.Option, len(req.Filters))
 
 	for i, f := range req.Filters {
-
-		filters[i] = &database.ListRecordsFilter{
-			Column: f.Column,
-			Value:  f.Value,
-		}
+		opts[i] = options.NewFilterOption(f.Column, f.Value)
 	}
 
-	db_records, pg_rsp, err := s.db.ListRecords(ctx, pg_opts, filters...)
+	db_records, pg_rsp, err := s.db.ListRecords(ctx, pg_opts, opts...)
 
 	if err != nil {
 		logger.Error("Failed to list records", "error", err)
@@ -174,15 +171,29 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 	}()
 
 	db_req := &embeddingsdb.SimilarRecordsRequest{
-		Model:           req.Model,
-		Embeddings:      req.Embeddings,
-		Exclude:         req.Exclude,
-		SimilarProvider: req.SimilarProvider,
-		MaxDistance:     req.MaxDistance,
-		MaxResults:      req.MaxResults,
+		Model:      req.Model,
+		Embeddings: req.Embeddings,
+		Exclude:    req.Exclude,
 	}
 
-	records, err := s.db.SimilarRecords(ctx, db_req)
+	opts := make([]options.Option, 0)
+
+	if req.SimilarProvider != nil {
+		o := options.NewSimilarProviderOption(*req.SimilarProvider)
+		opts = append(opts, o)
+	}
+
+	if req.MaxDistance != nil {
+		o := options.NewMaxDistanceOption(*req.MaxDistance)
+		opts = append(opts, o)
+	}
+
+	if req.MaxResults != nil {
+		o := options.NewMaxResultsOption(*req.MaxResults)
+		opts = append(opts, o)
+	}
+
+	records, err := s.db.SimilarRecords(ctx, db_req, opts...)
 
 	if err != nil {
 		logger.Error("Failed to retrieve similar records", "error", err)
@@ -244,7 +255,13 @@ func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest)
 	t1 := time.Now()
 	defer logger.Debug("Time to list models", "time", time.Since(t1))
 
-	models, err := s.db.Models(ctx, req.Provider...)
+	opts := make([]options.Option, len(req.Provider))
+
+	for i, p := range req.Provider {
+		opts[i] = options.NewProviderOption(p)
+	}
+
+	models, err := s.db.Models(ctx, opts...)
 
 	if err != nil {
 		logger.Error("Failed to list models", "error", err)
@@ -274,6 +291,57 @@ func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRe
 
 	rsp := &grpc.GetProvidersResponse{
 		Provider: providers,
+	}
+
+	return rsp, nil
+}
+
+func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensionsRequest) (*grpc.GetDimensionsResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to list dimensions", "time", time.Since(t1))
+
+	// options...
+
+	dimensions, err := s.db.Dimensions(ctx)
+
+	if err != nil {
+		logger.Error("Failed to derive dimensions", "error", err)
+		return nil, err
+	}
+
+	d32 := make([]int32, len(dimensions))
+
+	for i, d := range dimensions {
+		d32[i] = int32(d)
+	}
+
+	rsp := &grpc.GetDimensionsResponse{
+		Dimensions: d32,
+	}
+
+	return rsp, nil
+}
+
+func (s *grpcService) GetPaginationType(ctx context.Context, req *grpc.GetPaginationTypeRequest) (*grpc.GetPaginationTypeResponse, error) {
+
+	logger := s.Logger(ctx)
+
+	t1 := time.Now()
+	defer logger.Debug("Time to get pagination type", "time", time.Since(t1))
+
+	// options...
+
+	pg_type, err := s.db.PaginationType(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rsp := &grpc.GetPaginationTypeResponse{
+		PaginationType: pg_type.String(),
 	}
 
 	return rsp, nil

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sfomuseum/go-embeddingsdb"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 func TestSQLiteDatabase(t *testing.T) {
@@ -130,16 +131,19 @@ func TestSQLiteDatabase(t *testing.T) {
 			t.Fatalf("[%s] Unexpected providers length %d", compression, len(providers))
 		}
 
-		max_results := int32(10)
+		max_results := 10
 
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
 			SimilarProvider: &rec2.Provider,
 			Model:           rec2.Model,
 			Embeddings:      rec2.Embeddings,
-			MaxResults:      &max_results,
 		}
 
-		similar_rsp, err := db.SimilarRecords(ctx, similar_req)
+		opts := []options.Option{
+			options.NewMaxResultsOption(&max_results),
+		}
+
+		similar_rsp, err := db.SimilarRecords(ctx, similar_req, opts...)
 
 		if err != nil {
 			t.Fatalf("[%s] Failed to determine similar records for rec 2, %v", compression, err)
