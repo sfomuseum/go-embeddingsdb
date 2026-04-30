@@ -67,7 +67,6 @@ func mmap(len int, prot, flags, hfile uintptr, off int64) ([]byte, error) {
 	fileOffsetLow := uint32(off & 0xFFFFFFFF)
 	addr, errno := windows.MapViewOfFile(h, dwDesiredAccess, fileOffsetHigh, fileOffsetLow, uintptr(len))
 	if addr == 0 {
-		windows.CloseHandle(windows.Handle(h))
 		return nil, os.NewSyscallError("MapViewOfFile", errno)
 	}
 	handleLock.Lock()
@@ -102,7 +101,7 @@ func (m MMap) flush() error {
 		return errors.New("unknown base address")
 	}
 
-	if handle.writable && handle.file != windows.Handle(^uintptr(0)) {
+	if handle.writable {
 		if err := windows.FlushFileBuffers(handle.file); err != nil {
 			return os.NewSyscallError("FlushFileBuffers", err)
 		}

@@ -134,6 +134,8 @@ $> cd /usr/local/src/bleve
 $> go mod tidy && go mod vendor
 ```
 
+_Note: Since writing this Bleve has published a [v2.6.0 release](https://github.com/blevesearch/bleve/releases/tag/v2.6.0) which merges a whole stack of changes but introduces new C-level errors (specifically `vendor/github.com/blevesearch/go-faiss/search_params.go:144:10: could not determine what C.faiss_SearchParametersRaBitQ_new_with refers to`) which I have not had a chance to investigate._
+
 Now come back to _this_ repository and run:
 
 ```

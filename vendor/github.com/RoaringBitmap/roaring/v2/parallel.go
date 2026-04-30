@@ -370,23 +370,23 @@ func ParOr(parallelism int, bitmaps ...*Bitmap) *Bitmap {
 
 	var chunkSize int
 	var chunkCount int
-	if parallelism*4 > keyRange {
+	if parallelism*4 > int(keyRange) {
 		chunkSize = 1
-		chunkCount = keyRange
+		chunkCount = int(keyRange)
 	} else {
 		chunkCount = parallelism * 4
-		chunkSize = (keyRange + chunkCount - 1) / chunkCount
+		chunkSize = (int(keyRange) + chunkCount - 1) / chunkCount
 	}
 
-	if chunkCount*chunkSize < keyRange {
+	if chunkCount*chunkSize < int(keyRange) {
 		// it's fine to panic to indicate an implementation error
 		panic(fmt.Sprintf("invariant check failed: chunkCount * chunkSize < keyRange, %d * %d < %d", chunkCount, chunkSize, keyRange))
 	}
 
 	chunks := make([]*roaringArray, chunkCount)
 
-	chunkSpecChan := make(chan parChunkSpec, minOfInt(maxOfInt(64, 2*parallelism), chunkCount))
-	chunkChan := make(chan parChunk, minOfInt(32, chunkCount))
+	chunkSpecChan := make(chan parChunkSpec, minOfInt(maxOfInt(64, 2*parallelism), int(chunkCount)))
+	chunkChan := make(chan parChunk, minOfInt(32, int(chunkCount)))
 
 	orFunc := func() {
 		for spec := range chunkSpecChan {
@@ -412,7 +412,7 @@ func ParOr(parallelism int, bitmaps ...*Bitmap) *Bitmap {
 			spec := parChunkSpec{
 				start: uint16(int(lKey) + i*chunkSize),
 				end:   uint16(minOfInt(int(lKey)+(i+1)*chunkSize-1, int(hKey))),
-				idx:   i,
+				idx:   int(i),
 			}
 			chunkSpecChan <- spec
 		}
