@@ -14,4 +14,5 @@ const (
 
 type Option interface {
 	Type() OptionType
+	String() string
 }

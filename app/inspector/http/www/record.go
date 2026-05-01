@@ -11,6 +11,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type RecordHandlerOptions struct {
@@ -86,6 +87,8 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			},
 		}
 
+		custom_opts := make([]options.Option, 0)
+
 		similar_provider, err := sanitize.GetString(req, "similar-provider")
 
 		if err != nil {
@@ -102,7 +105,10 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 				return
 			}
 
+			// DEPRECATED
 			similar_req.SimilarProvider = &similar_provider
+
+			custom_opts = append(custom_opts, options.NewSimilarProviderOption(similar_provider))
 		}
 
 		max_dist := float32(0.0)
@@ -126,10 +132,14 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			}
 
 			max_dist := float32(max64)
+
+			// DEPRECATED
 			similar_req.MaxDistance = &max_dist
+
+			custom_opts = append(custom_opts, options.NewMaxDistanceOption(max_dist))
 		}
 
-		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
+		similar, err := opts.Client.SimilarRecords(ctx, similar_req, custom_opts...)
 
 		if err != nil {
 			logger.Error("Failed to retrieve similar records", "error", err)
