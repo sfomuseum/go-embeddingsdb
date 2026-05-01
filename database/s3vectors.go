@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	// "encoding/json"
+
 	"github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/cursor"
@@ -360,8 +362,9 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, req *embeddings
 		// Filter is set below
 	}
 
-	has_filter := false
-	filter := make(map[string]interface{})
+	// https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-metadata-filtering.html
+
+	filters := make([]map[string]any, 0)
 
 	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
 	max_results := GetMaxResultsFromOptions(ctx, opts...)
@@ -377,24 +380,37 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, req *embeddings
 
 	if similar_provider != nil {
 
-		filter["x-provider"] = map[string]string{
-			"$eq": *similar_provider,
+		f := map[string]any{
+			"x-provider": map[string]string{
+				"$eq": *similar_provider,
+			},
 		}
 
-		has_filter = true
+		filters = append(filters, f)
 	}
 
 	if len(req.Exclude) > 0 {
 
-		filter["x-depiction-id"] = map[string][]string{
-			"$nin": req.Exclude,
+		f := map[string]any{
+			"x-depiction-id": map[string][]string{
+				"$nin": req.Exclude,
+			},
 		}
 
-		has_filter = true
+		filters = append(filters, f)
 	}
 
-	if has_filter {
-		query_opts.Filter = document.NewLazyDocument(filter)
+	switch len(filters) {
+	case 0:
+		// pass
+	case 1:
+		query_opts.Filter = document.NewLazyDocument(filters[0])
+	default:
+		f := map[string]any{
+			"$and": filters,
+		}
+
+		query_opts.Filter = document.NewLazyDocument(f)
 	}
 
 	query_opts.TopK = aws.Int32(int32(*max_results))
@@ -461,6 +477,12 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, req *embeddings
 
 // ListRecords returns a paginated list of records stored in the database.
 func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	// Here's the problem: The ListVectors API method does not provide
+	// any way to filter things...
+
+	// filters := GetAllFiltersFromOptions(ctx, opts...)
+	// args := make([]any, len(filters))
 
 	// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/s3vectors#NewListVectorsPaginator
 
