@@ -17,6 +17,7 @@ import (
 	"github.com/sfomuseum/go-embeddings"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type SearchHandlerOptions struct {
@@ -196,6 +197,8 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			MaxResults: &opts.MaxResults,
 		}
 
+		custom_opts := make([]options.Option, 0)
+
 		custom_max_dist, err := sanitize.PostBool(req, "custom-max-distance")
 
 		if err != nil {
@@ -215,7 +218,11 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			}
 
 			max32 := float32(max_dist)
+
+			// DEPRECATED
 			similar_req.MaxDistance = &max32
+
+			custom_opts = append(custom_opts, options.NewMaxDistanceOption(max32))
 		}
 
 		similar_provider, err := sanitize.PostString(req, "similar-provider")
@@ -234,12 +241,15 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 				return
 			}
 
+			// DEPRECATED
 			similar_req.SimilarProvider = &similar_provider
+
+			custom_opts = append(custom_opts, options.NewSimilarProviderOption(similar_provider))
 		}
 
 		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(similar_embeddings), "max distance", similar_req.MaxDistance)
 
-		similar, err := opts.Client.SimilarRecords(ctx, similar_req)
+		similar, err := opts.Client.SimilarRecords(ctx, similar_req, custom_opts...)
 
 		if err != nil {
 			logger.Error("Failed to retrieve similar records", "error", err)
