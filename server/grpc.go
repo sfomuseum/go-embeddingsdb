@@ -8,10 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/url"
-	_ "os"
-	_ "os/signal"
 	"strings"
-	_ "syscall"
 	"time"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -29,6 +26,12 @@ var (
 	errInvalidToken    = status.Errorf(codes.Unauthenticated, "invalid token")
 )
 
+// GrpcServer implements a gRPC‐based server for managing embeddings
+// operations. The server is configured via a URI that specifies the
+// host, port, and various optional query parameters (see the
+// documentation of NewGrpcServer for details).  The server
+// interacts with a database implementation that satisfies the
+// `sfomuseum/go-embeddingsdb/database.Database` interface.
 type GrpcServer struct {
 	Server
 	host   string
@@ -113,6 +116,13 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 	return s, nil
 }
 
+// ListenAndServe starts the gRPC server and blocks until the context is
+// cancelled or an error occurs.  It creates a database instance from the
+// URI supplied to NewGrpcServer, sets up optional periodic database
+// export and batching logic, and then listens for incoming gRPC
+// connections on the configured host/port.  If TLS credentials were
+// supplied to NewGrpcServer, the server will require TLS; otherwise
+// it accepts insecure connections.
 func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 
 	logger := slog.Default()

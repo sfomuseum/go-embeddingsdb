@@ -13,11 +13,18 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
+// grpcService implements the grpc.EmbeddingsDBServiceServer interface.
+// It forwards each RPC request to the underlying database.Database instance
+// that was provided when the service was constructed.
 type grpcService struct {
 	grpc.EmbeddingsDBServiceServer
 	db database.Database
 }
 
+// AddRecord adds a new embeddings record to the database.
+// The request must contain a valid grpc.EmbeddingsDBRecord.  The
+// method logs the time taken to insert the record and returns
+// an empty AddRecordResponse on success.
 func (s *grpcService) AddRecord(ctx context.Context, req *grpc.AddRecordRequest) (*grpc.AddRecordResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -44,6 +51,9 @@ func (s *grpcService) AddRecord(ctx context.Context, req *grpc.AddRecordRequest)
 	return rsp, nil
 }
 
+// GetRecord retrieves a single record identified by provider, depiction_id and model.
+// It logs the time taken to perform the lookup and returns the
+// corresponding grpc.EmbeddingsDBRecord wrapped in a GetRecordResponse.
 func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest) (*grpc.GetRecordResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -76,6 +86,9 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 	return rsp, nil
 }
 
+// RemoveRecord deletes the specified record from the database.
+// The method logs the time taken to perform the deletion and
+// returns an empty RemoveRecordResponse on success.
 func (s *grpcService) RemoveRecord(ctx context.Context, req *grpc.RemoveRecordRequest) (*grpc.RemoveRecordResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -103,6 +116,9 @@ func (s *grpcService) RemoveRecord(ctx context.Context, req *grpc.RemoveRecordRe
 	return rsp, nil
 }
 
+// ListRecords returns a paginated list of records that match the supplied
+// filters and pagination options.  The response includes the pagination
+// metadata and a slice of grpc.EmbeddingsDBRecord objects.
 func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequest) (*grpc.ListRecordsResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -155,6 +171,11 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 	return rsp, nil
 }
 
+// SimilarRecords returns a list of records that are similar to the supplied
+// embeddings vector.  The request can optionally restrict the search to a
+// specific provider, set a maximum distance threshold, or limit the number
+// of results.  The method logs the time taken to perform the query and
+// returns the matched records in a SimilarRecordsResponse.
 func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecordsRequest) (*grpc.SimilarRecordsResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -211,6 +232,9 @@ func (s *grpcService) SimilarRecords(ctx context.Context, req *grpc.SimilarRecor
 	return rsp, nil
 }
 
+// SimilarRecordsById first fetches the record identified by the supplied
+// provider, depiction_id and model, then performs a SimilarRecords query
+// using that record’s embeddings vector.
 func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarRecordsByIdRequest) (*grpc.SimilarRecordsResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -248,6 +272,8 @@ func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarR
 	return s.SimilarRecords(ctx, similar_req)
 }
 
+// GetModels retrieves the list of distinct model names available in the database.
+// The request may filter by one or more providers.
 func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest) (*grpc.GetModelsResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -275,6 +301,7 @@ func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest)
 	return rsp, nil
 }
 
+// GetProviders returns a list of distinct provider names stored in the database.
 func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRequest) (*grpc.GetProvidersResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -296,6 +323,7 @@ func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRe
 	return rsp, nil
 }
 
+// GetDimensions retrieves the dimensionality of the embeddings vectors stored in the database.
 func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensionsRequest) (*grpc.GetDimensionsResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -325,6 +353,8 @@ func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensions
 	return rsp, nil
 }
 
+// GetPaginationType returns the pagination strategy used by the database
+// implementation (e.g., cursor, offset).
 func (s *grpcService) GetPaginationType(ctx context.Context, req *grpc.GetPaginationTypeRequest) (*grpc.GetPaginationTypeResponse, error) {
 
 	logger := s.Logger(ctx)
@@ -347,6 +377,9 @@ func (s *grpcService) GetPaginationType(ctx context.Context, req *grpc.GetPagina
 	return rsp, nil
 }
 
+// Logger returns a slog.Logger instance that includes the remote address
+// of the client (if available) as a structured log field.  The logger
+// is used by all RPC methods to provide consistent logging output.
 func (s *grpcService) Logger(ctx context.Context) *slog.Logger {
 
 	logger := slog.Default()
