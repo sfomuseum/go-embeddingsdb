@@ -823,44 +823,6 @@ func (db *S3VectorsDatabase) addIndexTags(ctx context.Context, tags map[string]s
 	return nil
 }
 
-func (db *S3VectorsDatabase) listIndexes(ctx context.Context) iter.Seq2[*types.Index, error] {
-
-	// Maybe move in to aaronland/go-aws/s3vectors? TBD...
-
-	return func(yield func(*types.Index, error) bool) {
-
-		list_opts := &s3vectors.ListIndexesInput{
-			VectorBucketName: aws.String(db.bucket),
-		}
-
-		rsp, err := db.client.ListIndexes(ctx, list_opts)
-
-		if err != nil {
-			if !yield(nil, err) {
-				return
-			}
-		}
-
-		for _, idx_meta := range rsp.Indexes {
-
-			rsp, err := db.client.GetIndex(ctx, &s3vectors.GetIndexInput{
-				VectorBucketName: aws.String(db.bucket),
-				IndexName:        idx_meta.IndexName,
-			})
-
-			var idx *types.Index
-
-			if err == nil {
-				idx = rsp.Index
-			}
-
-			if !yield(idx, err) {
-				return
-			}
-		}
-	}
-}
-
 func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, bucket string, index string, dimensions int) (string, error) {
 
 	// Maybe move in to aaronland/go-aws/s3vectors? TBD...
