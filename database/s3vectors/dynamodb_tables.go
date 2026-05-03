@@ -47,8 +47,26 @@ func DynamoDBTables(table_name string) map[string]*dynamodb.CreateTableInput {
 					Projection: &types.Projection{
 						ProjectionType: types.ProjectionTypeAll,
 					},
-				},
+				},				
 			},
+			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
+				{
+					IndexName: aws.String("by_model_provider"),
+					KeySchema: []types.KeySchemaElement{
+						{
+							AttributeName: aws.String("Model"),
+							KeyType:       types.KeyTypeHash,
+						},
+						{
+							AttributeName: aws.String("Provider"),
+							KeyType:       types.KeyTypeRange,
+						},
+					},
+					Projection: &types.Projection{
+						ProjectionType: types.ProjectionTypeAll,
+					},
+				},
+			}
 			BillingMode: types.BillingModePayPerRequest,
 		},
 	}
