@@ -174,8 +174,11 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 		if provider != "" {
 			o := options.NewFilterOption("provider", provider)
 			opts = append(opts, o)
+
+			logger.Info("LIST WI PRO", "p", provider)
 		}
 
+		logger.Info("LIST RECORDS", "opts", opts)
 		records, pg_rsp, err := list_opts.Client.ListRecords(ctx, pg_opts, opts...)
 
 		if err != nil {

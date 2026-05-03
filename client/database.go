@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"log/slog"
+
 	"github.com/aaronland/go-pagination"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
@@ -85,6 +87,7 @@ func (cl *DatabaseClient) Providers(ctx context.Context, opts ...options.Option)
 
 func (cl *DatabaseClient) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
+	slog.Info("WTF", "OPTS", opts)
 	return cl.db.ListRecords(ctx, pg_opts, opts...)
 }
 

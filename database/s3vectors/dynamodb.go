@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	aa_dynamodb "github.com/aaronland/go-aws/v3/dynamodb"
@@ -139,6 +140,9 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pag
 
 		if ok && str_key != "" {
 
+			str_key = strings.TrimLeft(str_key, "after-")
+			str_key = strings.TrimLeft(str_key, "before-")
+
 			start_key, err := decodeStartKey(str_key)
 
 			if err != nil {
@@ -146,6 +150,8 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pag
 			} else {
 				query_opts.ExclusiveStartKey = start_key
 			}
+
+			slog.Info("START", "key", start_key)
 		}
 
 	}

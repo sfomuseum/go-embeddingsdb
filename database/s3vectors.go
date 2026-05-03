@@ -169,16 +169,36 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, err
 	}
 
-	dynamodb_cl, err := db_s3vectors.NewDynamoDBClient(ctx, cfg_uri)
+	var dynamodb_cl *db_s3vectors.DynamoDBClient
 
-	if err != nil {
-		return nil, err
+	with_dynamodb := true
+
+	if q.Has("with-dynamodb") {
+
+		v, err := strconv.ParseBool(q.Get("with-dynamodb"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?with-dynamodb= parameter, %w", err)
+		}
+
+		with_dynamodb = v
 	}
 
-	err = dynamodb_cl.SetupTable(ctx)
+	if with_dynamodb {
 
-	if err != nil {
-		return nil, err
+		d_cl, err := db_s3vectors.NewDynamoDBClient(ctx, cfg_uri)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = d_cl.SetupTable(ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		dynamodb_cl = d_cl
 	}
 
 	//
@@ -523,13 +543,34 @@ func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination
 		return db.listRecords(ctx, pg_opts, opts...)
 	}
 
-	provider := options.GetProviderFromOptions(ctx, opts...)
+	var provider string
 
-	if provider == nil {
+	if provider == "" {
+
+		pr := options.GetProviderFromOptions(ctx, opts...)
+
+		if pr != nil {
+			provider = *pr
+		}
+	}
+
+	if provider == "" {
+
+		v := options.GetFilterFromOptions(ctx, "provider", opts...)
+
+		switch v.(type) {
+		case string:
+			provider = v.(string)
+		default:
+			slog.Warn("Unexpected value for provider", "value", v)
+		}
+	}
+
+	if provider == "" {
 		return db.listRecords(ctx, pg_opts, opts...)
 	}
 
-	return db.listRecordsWithDynamoDB(ctx, pg_opts, *provider, opts...)
+	return db.listRecordsWithDynamoDB(ctx, pg_opts, provider, opts...)
 }
 
 func (db *S3VectorsDatabase) listRecordsWithDynamoDB(ctx context.Context, pg_opts pagination.Options, provider string, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
@@ -541,7 +582,6 @@ func (db *S3VectorsDatabase) listRecordsWithDynamoDB(ctx context.Context, pg_opt
 	}
 
 	count := len(dynamodb_rsp)
-	slog.Info("YO RECORDS", "count", count)
 
 	records := make([]*embeddingsdb.Record, count)
 

@@ -4,7 +4,25 @@ import (
 	"context"
 	"fmt"
 	"slices"
+
+	"log/slog"
 )
+
+func GetFilterFromOptions(ctx context.Context, key string, opts ...Option) any {
+
+	for _, o := range opts {
+
+		if o.Type() == FilterOptionType {
+			f := o.(*FilterOption)
+
+			if f.Key() == key {
+				return f.Value()
+			}
+		}
+	}
+
+	return nil
+}
 
 func GetModelFromOptions(ctx context.Context, opts ...Option) *string {
 
@@ -21,9 +39,14 @@ func GetModelFromOptions(ctx context.Context, opts ...Option) *string {
 
 func GetProviderFromOptions(ctx context.Context, opts ...Option) *string {
 
+	slog.Info("GET", "opts", opts)
+
 	for _, o := range opts {
 
+		slog.Info("GET", "t", o.Type())
+
 		if o.Type() == ProviderOptionType {
+			slog.Info("YO")
 			v := o.(*ProviderOption).Provider()
 			return &v
 		}
