@@ -2,14 +2,17 @@ package s3vectors
 
 import (
 	"context"
+	"fmt"
 
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	aa_dynamodb "github.com/aaronland/go-aws/v3/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/sfomuseum/go-embeddingsdb"
+	_ "github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 const DynamoDBTableName string = "s3vectors"
@@ -135,8 +138,43 @@ func (cl *DynamoDBClient) RemoveRecord(ctx context.Context, rec *embeddingsdb.Re
 	return err
 }
 
-func (cl *DynamoDBClient) ListRecords(ctx context.Context) error {
-	return nil
+func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider string) ([]*DynamoDBRecord, error) {
+
+	cond := expression.Key("Provider").Equal(expression.Value(provider))
+
+	bldr := expression.NewBuilder()
+	bldr = bldr.WithKeyCondition(cond)
+
+	expr, err := bldr.Build()
+
+	if err != nil {
+		return nil, err
+	}
+
+	query_opts := &dynamodb.QueryInput{
+		TableName:                 aws.String(cl.table),
+		IndexName:                 aws.String("by_provider"),
+		KeyConditionExpression:    expr.KeyCondition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+
+	rsp, err := cl.client.Query(ctx, query_opts)
+
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	// Unmarshal the returned items
+	var records []*DynamoDBRecord
+
+	err = attributevalue.UnmarshalListOfMaps(rsp.Items, &records)
+
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal: %w", err)
+	}
+
+	return records, nil
 }
 
 func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {

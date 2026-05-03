@@ -8,6 +8,19 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
+func GetProviderFromOptions(ctx context.Context, opts ...options.Option) *string {
+
+	for _, o := range opts {
+
+		if o.Type() == options.ProviderOptionType {
+			v := o.(*options.ProviderOption).Provider()
+			return &v
+		}
+	}
+
+	return nil
+}
+
 func GetMaxDistanceFromOptions(ctx context.Context, opts ...options.Option) *float32 {
 
 	for _, o := range opts {
