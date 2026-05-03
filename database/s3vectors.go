@@ -16,30 +16,33 @@ import (
 
 	// "encoding/json"
 
-	"github.com/aaronland/go-aws/v3/auth"
+	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/cursor"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/document"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/types"
 	"github.com/sfomuseum/go-embeddingsdb"
+	db_s3vectors "github.com/sfomuseum/go-embeddingsdb/database/s3vectors"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 type S3VectorsDatabase struct {
 	Database
-	uri          string
-	bucket       string
-	index        string
-	dimensions   int
-	client       *s3vectors.Client
-	index_arn    string
-	models       []string
-	providers    []string
-	mu           *sync.RWMutex
-	max_results  int32
-	max_distance float32
+	uri             string
+	bucket          string
+	index           string
+	dimensions      int
+	client          *s3vectors.Client
+	dynamodb_client *dynamodb.Client
+	index_arn       string
+	models          []string
+	providers       []string
+	mu              *sync.RWMutex
+	max_results     int32
+	max_distance    float32
 }
 
 const S3VectorsDatabaseScheme = "s3vectors"
@@ -153,7 +156,7 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	cfg_uri := cfg_u.String()
 
-	cfg, err := auth.NewConfig(ctx, cfg_uri)
+	cfg, err := aa_auth.NewConfig(ctx, cfg_uri)
 
 	if err != nil {
 		return nil, err
@@ -162,6 +165,14 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 	cl := s3vectors.NewFromConfig(cfg)
 
 	index_arn, err := setupS3VectorsBucketAndIndex(ctx, cl, bucket, index, dimensions)
+
+	if err != nil {
+		return nil, err
+	}
+
+	dynamodb_cl := dynamodb.NewFromConfig(cfg)
+
+	err = db_s3vectors.SetupS3VectorsDynamoDBTable(ctx, dynamodb_cl)
 
 	if err != nil {
 		return nil, err
@@ -184,17 +195,18 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 	mu := new(sync.RWMutex)
 
 	db := &S3VectorsDatabase{
-		client:       cl,
-		index_arn:    index_arn,
-		bucket:       bucket,
-		index:        index,
-		uri:          uri,
-		dimensions:   dimensions,
-		models:       models,
-		providers:    providers,
-		max_results:  max_results,
-		max_distance: max_distance,
-		mu:           mu,
+		client:          cl,
+		dynamodb_client: dynamodb_cl,
+		index_arn:       index_arn,
+		bucket:          bucket,
+		index:           index,
+		uri:             uri,
+		dimensions:      dimensions,
+		models:          models,
+		providers:       providers,
+		max_results:     max_results,
+		max_distance:    max_distance,
+		mu:              mu,
 	}
 
 	// Okay, crawl the index. Not great but it's the only way.
