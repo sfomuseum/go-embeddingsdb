@@ -20,7 +20,6 @@ import (
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/cursor"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/document"
 	"github.com/aws/aws-sdk-go-v2/service/s3vectors/types"
@@ -36,7 +35,7 @@ type S3VectorsDatabase struct {
 	index           string
 	dimensions      int
 	client          *s3vectors.Client
-	dynamodb_client *dynamodb.Client
+	dynamodb_client *db_s3vectors.DynamoDBClient
 	index_arn       string
 	models          []string
 	providers       []string
@@ -170,13 +169,19 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		return nil, err
 	}
 
-	dynamodb_cl := dynamodb.NewFromConfig(cfg)
-
-	err = db_s3vectors.SetupS3VectorsDynamoDBTable(ctx, dynamodb_cl)
+	dynamodb_cl, err := db_s3vectors.NewDynamoDBClient(ctx, cfg_uri)
 
 	if err != nil {
 		return nil, err
 	}
+
+	err = dynamodb_cl.SetupTable(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	//
 
 	// Try to pull in model and provider information from tags so we
 	// aren't constantly crawling the entire index. If absent we crawl
