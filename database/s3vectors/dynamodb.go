@@ -50,57 +50,8 @@ func NewDynamoDBClient(ctx context.Context, cfg_uri string) (*DynamoDBClient, er
 
 func (cl *DynamoDBClient) SetupTable(ctx context.Context) error {
 
-	tables := map[string]*dynamodb.CreateTableInput{
-		"s3vectors": &dynamodb.CreateTableInput{
-			KeySchema: []types.KeySchemaElement{
-				{
-					AttributeName: aws.String("Key"), // partition key
-					KeyType:       "HASH",
-				},
-			},
-			AttributeDefinitions: []types.AttributeDefinition{
-				{
-					AttributeName: aws.String("Key"),
-					AttributeType: "S",
-				},
-				{
-					AttributeName: aws.String("Provider"),
-					AttributeType: "S",
-				},
-			},
-			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
-				{
-					IndexName: aws.String("by_key"),
-					KeySchema: []types.KeySchemaElement{
-						{
-							AttributeName: aws.String("Key"),
-							KeyType:       "HASH",
-						},
-					},
-					Projection: &types.Projection{
-						ProjectionType: "ALL",
-					},
-				},
-				{
-					IndexName: aws.String("by_provider"),
-					KeySchema: []types.KeySchemaElement{
-						{
-							AttributeName: aws.String("Provider"),
-							KeyType:       "HASH",
-						},
-					},
-					Projection: &types.Projection{
-						ProjectionType: "ALL",
-					},
-				},
-			},
-			BillingMode: types.BillingModePayPerRequest,
-			TableName:   aws.String(cl.table),
-		},
-	}
-
 	table_opts := &aa_dynamodb.CreateTablesOptions{
-		Tables: tables,
+		Tables: DynamoDBTables(cl.table),
 	}
 
 	return aa_dynamodb.CreateTables(ctx, cl.client, table_opts)
@@ -160,7 +111,7 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider st
 
 	query_opts := &dynamodb.QueryInput{
 		TableName:                 aws.String(cl.table),
-		IndexName:                 aws.String("by_provider"),
+		IndexName:                 aws.String("by_provider_model"),
 		KeyConditionExpression:    expr.KeyCondition(),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
