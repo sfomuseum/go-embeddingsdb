@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/sfomuseum/go-embeddingsdb"
-	_ "github.com/sfomuseum/go-embeddingsdb/options"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 const DynamoDBTableName string = "s3vectors"
@@ -138,12 +138,19 @@ func (cl *DynamoDBClient) RemoveRecord(ctx context.Context, rec *embeddingsdb.Re
 	return err
 }
 
-func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider string) ([]*DynamoDBRecord, error) {
+func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider string, custom_opts ...options.Option) ([]*DynamoDBRecord, error) {
 
 	cond := expression.Key("Provider").Equal(expression.Value(provider))
 
 	bldr := expression.NewBuilder()
 	bldr = bldr.WithKeyCondition(cond)
+
+	model := options.GetModelFromOptions(ctx, custom_opts...)
+
+	if model != nil {
+		filt := expression.Name("Model").Equal(expression.Value(*model))
+		bldr = bldr.WithFilter(filt)
+	}
 
 	expr, err := bldr.Build()
 
@@ -155,6 +162,7 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider st
 		TableName:                 aws.String(cl.table),
 		IndexName:                 aws.String("by_provider"),
 		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 	}

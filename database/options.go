@@ -1,5 +1,7 @@
 package database
 
+// DEPRECATED. Use methods in options
+
 import (
 	"context"
 	"fmt"
@@ -7,6 +9,19 @@ import (
 
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
+
+func GetModelFromOptions(ctx context.Context, opts ...options.Option) *string {
+
+	for _, o := range opts {
+
+		if o.Type() == options.ModelOptionType {
+			v := o.(*options.ModelOption).Model()
+			return &v
+		}
+	}
+
+	return nil
+}
 
 func GetProviderFromOptions(ctx context.Context, opts ...options.Option) *string {
 
