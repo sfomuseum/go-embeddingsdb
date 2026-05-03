@@ -2,10 +2,15 @@ package s3vectors
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	aa_dynamodb "github.com/aaronland/go-aws/v3/dynamodb"
+	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
@@ -89,7 +94,7 @@ func (cl *DynamoDBClient) RemoveRecord(ctx context.Context, rec *embeddingsdb.Re
 	return err
 }
 
-func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider string, custom_opts ...options.Option) ([]*DynamoDBRecord, error) {
+func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pagination.Options, provider string, custom_opts ...options.Option) ([]*DynamoDBRecord, pagination.Results, error) {
 
 	cond := expression.Key("Provider").Equal(expression.Value(provider))
 
@@ -106,7 +111,7 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider st
 	expr, err := bldr.Build()
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	query_opts := &dynamodb.QueryInput{
@@ -118,10 +123,48 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider st
 		ExpressionAttributeValues: expr.Values(),
 	}
 
+	per_page := pg_opts.PerPage()
+	pointer := pg_opts.Pointer()
+
+	var prev_cursor string
+	var next_cursor string
+
+	if per_page > 0 {
+		query_opts.Limit = aws.Int32(int32(per_page))
+	}
+
+	if pointer != nil {
+
+		str_key, ok := pointer.(string)
+
+		if ok && str_key != "" {
+
+			start_key, err := decodeStartKey(str_key)
+
+			if err != nil {
+				slog.Warn("Failed to unmarshal start key", "error", err)
+			} else {
+				query_opts.ExclusiveStartKey = start_key
+			}
+		}
+
+	}
+
 	rsp, err := cl.client.Query(ctx, query_opts)
 
 	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
+		return nil, nil, fmt.Errorf("query: %w", err)
+	}
+
+	if rsp.LastEvaluatedKey != nil {
+
+		enc_key, err := encodeStartKey(rsp.LastEvaluatedKey)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		next_cursor = enc_key
 	}
 
 	// Unmarshal the returned items
@@ -130,10 +173,16 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, provider st
 	err = attributevalue.UnmarshalListOfMaps(rsp.Items, &records)
 
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal: %w", err)
+		return nil, nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
-	return records, nil
+	pg_rsp, err := cursor.NewPaginationFromCursors(prev_cursor, next_cursor)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return records, pg_rsp, nil
 }
 
 func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {
@@ -145,4 +194,56 @@ func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {
 		DepictionId: rec.DepictionId,
 		Dimensions:  len(rec.Embeddings),
 	}
+}
+
+func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
+
+	if len(key) == 0 {
+		return "", nil
+	}
+
+	var plain_map map[string]interface{}
+
+	err := attributevalue.UnmarshalMap(key, &plain_map)
+
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(plain_map)
+
+	if err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(data), nil
+}
+
+func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
+
+	if str_key == "" {
+		return nil, nil
+	}
+
+	data, err := base64.URLEncoding.DecodeString(str_key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var plain_map map[string]interface{}
+
+	err = json.Unmarshal(data, &plain_map)
+
+	if err != nil {
+		return nil, err
+	}
+
+	start_key, err := attributevalue.MarshalMap(plain_map)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return start_key, nil
 }

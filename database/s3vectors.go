@@ -65,7 +65,7 @@ func init() {
 // * `region` - The AWS region where your S3Vectors bucket is stored.
 // * `credentials` - A valid `aaronland/go-aws/v3/auth` credentials string.
 // * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
-// * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
+// * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
 // * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
 // * `refresh-tags` - A boolean flag to update denormalized database properties in to index-specific "tags".
 func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
@@ -283,6 +283,15 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 		return false, err
 	}
 
+	if db.dynamodb_client != nil {
+
+		err := db.dynamodb_client.AddRecord(ctx, rec)
+
+		if err != nil {
+			return false, fmt.Errorf("Failed to add record to DynamoDB, %w", err)
+		}
+	}
+
 	go func() {
 		db.addModel(ctx, rec.Model)
 		db.addProvider(ctx, rec.Provider)
@@ -349,6 +358,21 @@ func (db *S3VectorsDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb
 
 	if err != nil {
 		return fmt.Errorf("Failed to remove record, %w", err)
+	}
+
+	if db.dynamodb_client != nil {
+
+		rec := &embeddingsdb.Record{
+			Provider:    req.Provider,
+			Model:       req.Model,
+			DepictionId: req.DepictionId,
+		}
+
+		err := db.dynamodb_client.RemoveRecord(ctx, rec)
+
+		if err != nil {
+			return fmt.Errorf("Failed to remove record to DynamoDB, %w", err)
+		}
 	}
 
 	// What we really is a map[string]int counter tracking models and providers
@@ -494,6 +518,92 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, req *embeddings
 
 // ListRecords returns a paginated list of records stored in the database.
 func (db *S3VectorsDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	if db.dynamodb_client == nil {
+		return db.listRecords(ctx, pg_opts, opts...)
+	}
+
+	provider := options.GetProviderFromOptions(ctx, opts...)
+
+	if provider == nil {
+		return db.listRecords(ctx, pg_opts, opts...)
+	}
+
+	return db.listRecordsWithDynamoDB(ctx, pg_opts, *provider, opts...)
+}
+
+func (db *S3VectorsDatabase) listRecordsWithDynamoDB(ctx context.Context, pg_opts pagination.Options, provider string, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
+
+	dynamodb_rsp, pg_rsp, err := db.dynamodb_client.ListRecordsByProvider(ctx, pg_opts, provider, opts...)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	count := len(dynamodb_rsp)
+	slog.Info("YO RECORDS", "count", count)
+
+	records := make([]*embeddingsdb.Record, count)
+
+	if count == 0 {
+		return records, pg_rsp, nil
+	}
+
+	type record struct {
+		index  int
+		record *embeddingsdb.Record
+	}
+
+	done_ch := make(chan bool)
+	err_ch := make(chan error)
+	rec_ch := make(chan record)
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	for i, r := range dynamodb_rsp {
+
+		go func(i int, r *db_s3vectors.DynamoDBRecord) {
+
+			defer func() {
+				done_ch <- true
+			}()
+
+			req := &embeddingsdb.GetRecordRequest{
+				Model:       r.Model,
+				Provider:    r.Provider,
+				DepictionId: r.DepictionId,
+			}
+
+			rec, err := db.GetRecord(ctx, req)
+
+			if err != nil {
+				err_ch <- fmt.Errorf("Failed to retrieve record %s, %w", req.Key(), err)
+				return
+			}
+
+			rec_ch <- record{index: i, record: rec}
+
+		}(i, r)
+	}
+
+	remaining := count
+
+	for remaining > 0 {
+		select {
+		case <-done_ch:
+			remaining -= 1
+		case err := <-err_ch:
+			return nil, nil, err
+		case rec := <-rec_ch:
+			records[rec.index] = rec.record
+		}
+	}
+
+	return records, pg_rsp, nil
+}
+
+func (db *S3VectorsDatabase) listRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	// Here's the problem: The ListVectors API method does not provide
 	// any way to filter things...
