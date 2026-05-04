@@ -1,3 +1,7 @@
+// Package s3vectors contains helper code for maintaining a DynamoDB table
+// that mirrors the records stored in an S3 Vectors index.  The table
+// is used by the main database implementation to enable efficient
+// listing by provider or model.
 package s3vectors
 
 import (
@@ -6,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
@@ -21,8 +26,12 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
+// DynamoDBTableName is the default name of the table used to store
+// the record key, provider, model, depiction id and dimension count.
 const DynamoDBTableName string = "s3vectors"
 
+// DynamoDBRecord represents a minimal record stored in DynamoDB.
+// The primary key is the concatenated provider|model|depiction_id.
 type DynamoDBRecord struct {
 	Key         string
 	Provider    string
@@ -31,12 +40,37 @@ type DynamoDBRecord struct {
 	Dimensions  int
 }
 
+// DynamoDBClient wraps basic add and remove operations the DynamoDB table
+// used to mirror the S3 Vectors index.
 type DynamoDBClient struct {
 	client *dynamodb.Client
 	table  string
 }
 
+// NewDynamoDBClient creates a DynamoDB client using the AWS
+// configuration supplied by cfg_uri.
 func NewDynamoDBClient(ctx context.Context, cfg_uri string) (*DynamoDBClient, error) {
+
+	dynamodb_table := DynamoDBTableName
+
+	u, err := url.Parse(cfg_uri)
+
+	if err != nil {
+		return nil, err
+	}
+
+	q := u.Query()
+
+	if q.Has("dynamodb-table") {
+
+		v := q.Get("dynamodb-table")
+
+		if v == "" {
+			return nil, fmt.Errorf("?dynamodb-table= parameter may not be empty.")
+		}
+
+		dynamodb_table = v
+	}
 
 	cfg, err := aa_auth.NewConfig(ctx, cfg_uri)
 
@@ -48,12 +82,13 @@ func NewDynamoDBClient(ctx context.Context, cfg_uri string) (*DynamoDBClient, er
 
 	cl := &DynamoDBClient{
 		client: dynamodb_cl,
-		table:  DynamoDBTableName,
+		table:  dynamodb_table,
 	}
 
 	return cl, nil
 }
 
+// SetupTable creates the DynamoDB table if it does not already exist.
 func (cl *DynamoDBClient) SetupTable(ctx context.Context) error {
 
 	table_opts := &aa_dynamodb.CreateTablesOptions{
@@ -63,6 +98,9 @@ func (cl *DynamoDBClient) SetupTable(ctx context.Context) error {
 	return aa_dynamodb.CreateTables(ctx, cl.client, table_opts)
 }
 
+// AddRecord inserts the supplied Record into the DynamoDB table.
+// The function serialises the Record into a DynamoDBRecord
+// and marshals it into a DynamoDB item.
 func (cl *DynamoDBClient) AddRecord(ctx context.Context, rec *embeddingsdb.Record) error {
 
 	dynamodb_rec := recordAsDynamoDBRecord(rec)
@@ -81,6 +119,7 @@ func (cl *DynamoDBClient) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	return err
 }
 
+// RemoveRecord deletes the record identified by rec from DynamoDB.
 func (cl *DynamoDBClient) RemoveRecord(ctx context.Context, rec *embeddingsdb.Record) error {
 
 	delete_opts := &dynamodb.DeleteItemInput{
@@ -95,6 +134,9 @@ func (cl *DynamoDBClient) RemoveRecord(ctx context.Context, rec *embeddingsdb.Re
 	return err
 }
 
+// ListRecordsByProvider returns all records that match the given provider.
+// The results are paginated according to pg_opts.  An optional
+// model filter may be supplied via options.
 func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pagination.Options, provider string, custom_opts ...options.Option) ([]*DynamoDBRecord, pagination.Results, error) {
 
 	cond := expression.Key("Provider").Equal(expression.Value(provider))
@@ -123,6 +165,48 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pag
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 	}
+
+	return cl.queryRecords(ctx, query_opts, pg_opts)
+}
+
+// ListRecordsByModel returns all records that match the given model.
+// The results are paginated according to pg_opts.  An optional
+// provider filter may be supplied via options.
+func (cl *DynamoDBClient) ListRecordsByModel(ctx context.Context, pg_opts pagination.Options, model string, custom_opts ...options.Option) ([]*DynamoDBRecord, pagination.Results, error) {
+
+	cond := expression.Key("Model").Equal(expression.Value(model))
+
+	bldr := expression.NewBuilder()
+	bldr = bldr.WithKeyCondition(cond)
+
+	provider := options.GetModelFromOptions(ctx, custom_opts...)
+
+	if provider != nil {
+		filt := expression.Name("Provider").Equal(expression.Value(*provider))
+		bldr = bldr.WithFilter(filt)
+	}
+
+	expr, err := bldr.Build()
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	query_opts := &dynamodb.QueryInput{
+		TableName:                 aws.String(cl.table),
+		IndexName:                 aws.String("by_model_provider"),
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+
+	return cl.queryRecords(ctx, query_opts, pg_opts)
+}
+
+// queryRecords executes a DynamoDB query and returns the decoded
+// records together with pagination cursors.
+func (cl *DynamoDBClient) queryRecords(ctx context.Context, query_opts *dynamodb.QueryInput, pg_opts pagination.Options) ([]*DynamoDBRecord, pagination.Results, error) {
 
 	per_page := pg_opts.PerPage()
 	pointer := pg_opts.Pointer()
@@ -189,6 +273,7 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pag
 	return records, pg_rsp, nil
 }
 
+// recordAsDynamoDBRecord converts an embeddingsdb.Record into a DynamoDBRecord.
 func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {
 
 	return &DynamoDBRecord{
@@ -200,6 +285,8 @@ func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {
 	}
 }
 
+// encodeStartKey serialises a DynamoDB key map into a base64 string
+// suitable for use as a pagination cursor.
 func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
 
 	if len(key) == 0 {
@@ -224,6 +311,8 @@ func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
 	return enc, nil
 }
 
+// decodeStartKey deserialises a pagination cursor back into
+// a DynamoDB key map.
 func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
 
 	if str_key == "" {
