@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	// "encoding/json"
-
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/cursor"
@@ -68,14 +66,16 @@ func init() {
 //	s3vectors://{BUCKET_NAME}?{QUERY_PARAMETERS}
 //
 // Where `{BUCKET_NAME}` is the name of the S3Vectors bucket where embeddings are stored. This will be created dynamically at runtime if it does not already exist. Valid query parameters are:
-// * `index` - The name of the S3Vectors index where embeddings are stored. This will be created dynamically at runtime if it does not already exist.
-// * `region` - The AWS region where your S3Vectors bucket is stored.
-// * `credentials` - A valid `aaronland/go-aws/v3/auth` credentials string.
-// * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
-// * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
-// * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
-// * `refresh-tags` - A boolean flag to update denormalized database properties in to index-specific "tags".
-//   - with-dynamodb – A boolean flag to use a DynamoDB table for indexing and querying records by provider or model.
+//   - `index` - The name of the S3Vectors index where embeddings are stored. This will be created dynamically at runtime if it does not already exist.
+//   - `region` - The AWS region where your S3Vectors bucket is stored.
+//   - `credentials` - A valid `aaronland/go-aws/v3/auth` credentials string.
+//   - `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
+//   - `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
+//   - `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
+//   - `refresh-tags` - A boolean flag to update denormalized database properties in to index-specific "tags".
+//   - `with-dynamodb` – A boolean flag to use a DynamoDB table for indexing and querying records by provider or model.
+//     Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors". Default is true.
+//   - `dynamodb-table` – Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors".
 func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dimensions := 512

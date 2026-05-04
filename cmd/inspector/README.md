@@ -143,54 +143,7 @@ database://?database-uri=s3vectors%3A%2F%2Fsfomuseum-embeddings%3Fregion%3Dus-ea
 
 ### IAM Policy
 
-Your Lambda function will need an IAM policy like this one to access the vector data. Note this policy allows access to all the indices in a bucket. You may want your policy to be more restrictive.
-
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "DiscoverBuckets",
-            "Effect": "Allow",
-            "Action": [
-                "s3vectors:ListVectorBuckets"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "ReadAndQueryAllS3VectorIndices",
-            "Effect": "Allow",
-            "Action": [
-                "s3vectors:GetIndex",
-                "s3vectors:GetVectors",
-                "s3vectors:QueryVectors",
-                "s3vectors:ListVectors"
-            ],
-            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
-        },
-        {
-            "Sid": "ManageAllS3VectorIndexTags",
-            "Effect": "Allow",
-            "Action": [
-                "s3vectors:ListTagsForResource",
-                "s3vectors:TagResource",
-                "s3vectors:UntagResource"
-            ],
-            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
-        },
-        {
-            "Sid": "ListIndicesInBucket",
-            "Effect": "Allow",
-            "Action": [
-                "s3vectors:ListIndexes",
-                "s3vectors:ListIndexes",
-                "s3vectors:GetVectorBucket"
-            ],
-            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}"
-        }
-    ]
-}
-```
+Example IAM policies can be found in [the `s3vectors` database documentation](database/README/#s3vectors).
 
 ### Function URL
 

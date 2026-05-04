@@ -190,7 +190,8 @@ Valid parameters are:
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 | refresh-tags | bool | no | A boolean flag to update denormalized database properties in to index-specific "tags". Details are discussed below. |
-
+| with-dynamodb | bool | no | A boolean flag to use a DynamoDB table for indexing and querying records by provider or model. If false then it is not possible to list records with a provider or model filter. This is a AWS S3Vectors limitation. Default is true. |
+| dynamodb-table | string | no | Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors". | 
 For example:
 
 ```
@@ -214,3 +215,101 @@ Under the hood this package uses the [aaronland/go-aws/v3/auth](https://github.c
 #### Refreshing database properties "tags"
 
 The nature of the S3Vectors service means there is no way to quickly derive properties about a "database", like the list of unique models or providers, without crawling the entire data set. To account for this these data are compiled as necessary and stored as index-level "tags" which are read at start-up time to prevent excessive (and potentially expensive) repeated crawling of the index. If you need or want to explicitly refresh those data (tags) you can include the `?refesh-tags=true` query parameter with your URI constructor.
+
+### IAM policies
+
+The following are the _minimal_ IAM policies you will need to have to use an S3Vectors-backed database. The following policies work are designed to work with a minimalist Lambs function but these should be adjusted as needed to the specifics of your situation.
+
+#### S3Vectors
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DiscoverBuckets",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListVectorBuckets"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ReadAndQueryAllS3VectorIndices",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:GetIndex",
+                "s3vectors:GetVectors",
+                "s3vectors:QueryVectors",
+                "s3vectors:ListVectors"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
+        },
+        {
+            "Sid": "ManageAllS3VectorIndexTags",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListTagsForResource",
+                "s3vectors:TagResource",
+                "s3vectors:UntagResource"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}/index/*"
+        },
+        {
+            "Sid": "ListIndicesInBucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3vectors:ListIndexes",
+                "s3vectors:ListIndexes",
+                "s3vectors:GetVectorBucket"
+            ],
+            "Resource": "arn:aws:s3vectors:{AWS_REGION}:{AWS_ACCOUNT_ID}:bucket/{BUCKET_NAME}"
+        }
+    ]
+}
+```
+
+#### DynamoDB
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DynamoDBTableCreateDescribeAndList",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:CreateTable",
+                "dynamodb:DescribeTable",
+                "dynamodb:ListTables"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/*",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/*"
+            ]
+        },
+        {
+            "Sid": "DynamoDBPutDelete",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors"
+        },
+        {
+            "Sid": "DynamoDBQueryOnTableAndGSI",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:Query"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_provider_model",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_model_provider"
+            ]
+        }
+    ]
+}
+```
