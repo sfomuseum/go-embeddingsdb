@@ -344,10 +344,11 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 		}
 	}
 
+	// Make this optional...
+	
 	go func() {
 		db.addModel(ctx, rec.Model)
 		db.addProvider(ctx, rec.Provider)
-		db.updateModelAndProviderTagsIfChanged(ctx)
 	}()
 
 	return false, nil
@@ -868,7 +869,8 @@ func (db *S3VectorsDatabase) PaginationType(ctx context.Context, opts ...options
 
 // Close performs and terminating functions required by the database.
 func (db *S3VectorsDatabase) Close(ctx context.Context) error {
-	return nil
+
+	return db.updateModelAndProviderTagsIfChanged(ctx)	
 }
 
 // s3VectorToRecord converts an S3 Vectors vector and metadata
@@ -1083,7 +1085,7 @@ func (db *S3VectorsDatabase) updateModelAndProviderTagsIfChanged(ctx context.Con
 // addIndexTags sets the supplied tags on the S3 Vectors index.
 func (db *S3VectorsDatabase) addIndexTags(ctx context.Context, tags map[string]string) error {
 
-	slog.Info("tag resource", "arn", db.index_arn, "tags", tags)
+	slog.Debug("tag resource", "arn", db.index_arn, "tags", tags)
 
 	tag_opts := &s3vectors.TagResourceInput{
 		ResourceArn: aws.String(db.index_arn),
