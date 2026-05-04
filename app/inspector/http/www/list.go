@@ -127,7 +127,7 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 
 			cursor_opts.PerPage(int64(15))
 
-			page, err := sanitize.GetString(req, "page")
+			cursor, err := sanitize.GetString(req, "cursor")
 
 			if err != nil {
 				logger.Error("Failed to derive page query parameter", "error", err)
@@ -135,13 +135,8 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			if page != "" {
-
-				// Why did I do this in aaronland/go-pagination... ?
-				page = strings.Replace(page, "after-", "", 1)
-				page = strings.Replace(page, "before-", "", 1)
-
-				cursor_opts.Pointer(page)
+			if cursor != "" {
+				cursor_opts.Pointer(cursor)
 			}
 
 			pg_opts = cursor_opts
@@ -178,11 +173,8 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 		if provider != "" {
 			o := options.NewFilterOption("provider", provider)
 			opts = append(opts, o)
-
-			logger.Info("LIST WI PRO", "p", provider)
 		}
 
-		logger.Info("LIST RECORDS", "opts", opts)
 		records, pg_rsp, err := list_opts.Client.ListRecords(ctx, pg_opts, opts...)
 
 		if err != nil {
@@ -218,19 +210,16 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 			next := pg_rsp.Next().(string)
 
 			if prev != "" {
-				prev = strings.TrimLeft(prev, "before-")
+				prev = strings.Replace(prev, "before-", "", 1)
 				pg_prev = paginationURL(list_root, "cursor", prev, provider, model)
 			}
 
 			if next != "" {
-				next = strings.TrimLeft(next, "after-")
+				next = strings.Replace(next, "after-", "", 1)
 				pg_next = paginationURL(list_root, "cursor", next, provider, model)
 			}
 
 		}
-
-		logger.Debug("PG", "prev", pg_prev)
-		logger.Debug("PG", "next", pg_next)
 
 		vars := ListHandlerVars{
 			Records:               records,

@@ -140,8 +140,8 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pag
 
 		if ok && str_key != "" {
 
-			str_key = strings.TrimLeft(str_key, "after-")
-			str_key = strings.TrimLeft(str_key, "before-")
+			str_key = strings.Replace(str_key, "after-", "", 1)
+			str_key = strings.Replace(str_key, "before-", "", 1)
 
 			start_key, err := decodeStartKey(str_key)
 
@@ -220,7 +220,8 @@ func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
 		return "", err
 	}
 
-	return base64.URLEncoding.EncodeToString(data), nil
+	enc := base64.URLEncoding.EncodeToString(data)
+	return enc, nil
 }
 
 func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
@@ -232,7 +233,9 @@ func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
 	data, err := base64.URLEncoding.DecodeString(str_key)
 
 	if err != nil {
-		return nil, err
+
+		slog.Error("WTF", "key", str_key, "error", err)
+		return nil, fmt.Errorf("Failed to decode key, %w", err)
 	}
 
 	var plain_map map[string]interface{}
@@ -240,13 +243,13 @@ func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
 	err = json.Unmarshal(data, &plain_map)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to unmarshal map, %w", err)
 	}
 
 	start_key, err := attributevalue.MarshalMap(plain_map)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to marshal start key, %w", err)
 	}
 
 	return start_key, nil
