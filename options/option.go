@@ -10,6 +10,7 @@ const (
 	SimilarProviderOptionType
 	MaxDistanceOptionType
 	MaxResultsOptionType
+	ModelOptionType
 )
 
 type Option interface {

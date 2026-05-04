@@ -73,19 +73,19 @@
 	
 	{{ if eq .PaginationType "countable" -}}
 	<div class="pagination-el pagination-previous">
-	    {{ if ne .Pagination.Previous 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Previous }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
+	    {{ if ne .PaginationPreviousURL "" }}<a href="{{ .PaginationPreviousURL }}">page {{ .Pagination.Previous }}</a>{{ else }}&#8212;{{ end }}
 	</div>
 	<div class="pagination-el pagination-next">
-	    {{ if ne .Pagination.Next 0 }}<a href="{{ .URIs.List }}?page={{ .Pagination.Next }}">page {{ .Pagination.Next }}</a>{{ else }}&#8212;{{ end }}
+	    {{ if ne .PaginationNextURL "" }}<a href="{{ .PaginationNextURL }}">page {{ .Pagination.Next }}</a>{{ else }}&#8212;{{ end }}
 	</div>
 	{{ end -}}
 
 	{{ if eq .PaginationType "cursor" -}}
 	<div class="pagination-el pagination-previous">
-	    {{ if ne .Pagination.Previous "" }}<a href="{{ .URIs.List }}?page={{ .Pagination.Previous }}">previous</a>{{ else }}&#8212;{{ end }}
+	    {{ if ne .PaginationPreviousURL "" }}<a href="{{ .PaginationPreviousURL }}">previous</a>{{ else }}&#8212;{{ end }}
 	</div>
 	<div class="pagination-el pagination-next">
-	    {{ if ne .Pagination.Next "" }}<a href="{{ .URIs.List }}?page={{ .Pagination.Next }}">next</a>{{ else }}&#8212;{{ end }}
+	    {{ if ne .PaginationNextURL "" }}<a href="{{ .PaginationNextURL }}">next</a>{{ else }}&#8212;{{ end }}
 	</div>
 	{{ end -}}
 	
