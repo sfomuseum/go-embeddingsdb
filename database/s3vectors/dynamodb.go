@@ -146,12 +146,10 @@ func (cl *DynamoDBClient) ListRecordsByProvider(ctx context.Context, pg_opts pag
 			start_key, err := decodeStartKey(str_key)
 
 			if err != nil {
-				slog.Warn("Failed to unmarshal start key", "error", err)
+				slog.Warn("Failed to unmarshal start key", "error", err, "key", str_key)
 			} else {
 				query_opts.ExclusiveStartKey = start_key
 			}
-
-			slog.Info("START", "key", start_key)
 		}
 
 	}
@@ -205,7 +203,7 @@ func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {
 func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
 
 	if len(key) == 0 {
-		return "", nil
+		return "", fmt.Errorf("Missing key")
 	}
 
 	var plain_map map[string]interface{}
@@ -228,7 +226,7 @@ func encodeStartKey(key map[string]types.AttributeValue) (string, error) {
 func decodeStartKey(str_key string) (map[string]types.AttributeValue, error) {
 
 	if str_key == "" {
-		return nil, nil
+		return nil, fmt.Errorf("Missing key")
 	}
 
 	data, err := base64.URLEncoding.DecodeString(str_key)
