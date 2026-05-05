@@ -2,8 +2,6 @@
 
 package database
 
-// Filter by provider for list view
-
 import (
 	"context"
 	"database/sql"
@@ -367,9 +365,9 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 		return results, nil
 	}
 
-	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
-	max_results := GetMaxResultsFromOptions(ctx, opts...)
-	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
+	max_distance := options.GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
 		max_results = &db.max_results
@@ -464,7 +462,7 @@ func (db *BleveDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	var q query.Query
 
-	filters := GetAllFiltersFromOptions(ctx, opts...)
+	filters := options.GetAllFiltersFromOptions(ctx, opts...)
 
 	if len(filters) > 0 {
 
