@@ -4,12 +4,16 @@ Import parquet-encoded embeddingsdb records from one or more files and add them 
 
 ```
 $> ./bin/parquet-import -h
-Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.
+Import parquet-encoded embeddingsdb records from one or more files or HTTP(S) URIs and add them to an embeddingsdb instance.
 Usage:
 	./bin/parquet-import [options] parquet_file(N) parquet_file(N)
 Valid options are:
   -client-uri string
     	A registered sfomuseum/go-embeddingsdb/client.Client URI. (default "grpc://localhost:8080")
+  -end int
+    	Ending offset for import records. If '0' then records will be imported up to and including the last record.
+  -start int
+    	Starting offset for importing records. If '0' then records will be imported from the first record onwards.
   -verbose
     	Enable vebose (debug) logging.
 ```

@@ -22,7 +22,7 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 
 	logger := slog.Default()
 	total := int64(0)
-	
+
 	for _, uri := range uris {
 
 		logger := slog.Default()
@@ -31,7 +31,7 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 		count := int64(0)
 
 		for rec, err := range Iterate(ctx, uri) {
-			
+
 			if err != nil {
 				logger.Error("Iterator yielded an error", "error", err)
 				return total, err
@@ -40,10 +40,10 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 			count += 1
 			total += 1
 
-			if start > 0 && start < count {
+			if start > 0 && start > count {
 				continue
 			}
-			
+
 			err := cl.AddRecord(ctx, rec)
 
 			if err != nil {
@@ -55,7 +55,7 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 
 			if end > 0 && end >= count {
 				break
-			}
+			}			
 		}
 
 		logger.Debug("Finished iterating uri", "count", count, "total", total)

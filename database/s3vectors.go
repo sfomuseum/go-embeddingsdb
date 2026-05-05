@@ -345,10 +345,11 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	}
 
 	// Make this optional...
-	
+
 	go func() {
 		db.addModel(ctx, rec.Model)
 		db.addProvider(ctx, rec.Provider)
+		db.updateModelAndProviderTagsIfChanged(ctx)
 	}()
 
 	return false, nil
@@ -870,7 +871,7 @@ func (db *S3VectorsDatabase) PaginationType(ctx context.Context, opts ...options
 // Close performs and terminating functions required by the database.
 func (db *S3VectorsDatabase) Close(ctx context.Context) error {
 
-	return db.updateModelAndProviderTagsIfChanged(ctx)	
+	return db.updateModelAndProviderTagsIfChanged(ctx)
 }
 
 // s3VectorToRecord converts an S3 Vectors vector and metadata
@@ -1067,10 +1068,13 @@ func (db *S3VectorsDatabase) updateModelAndProviderTagsIfChanged(ctx context.Con
 		return err
 	}
 
-	str_models := strings.Join(db.models, " ")
-	str_providers := strings.Join(db.providers, " ")
+	str_models := strings.Join(models, " ")
+	str_providers := strings.Join(providers, " ")
 
-	if str_models == strings.Join(models, " ") && str_providers == strings.Join(providers, " ") {
+	cmp_models := strings.Join(db.models, " ")
+	cmp_providers := strings.Join(db.providers, " ")
+
+	if str_models == cmp_models && str_providers == cmp_providers {
 		return nil
 	}
 

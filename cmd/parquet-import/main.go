@@ -19,10 +19,10 @@ func main() {
 
 	var client_uri string
 	// var database_uris multi.MultiString
-	
+
 	start := int64(0)
 	end := int64(0)
-	
+
 	var verbose bool
 
 	fs := flagset.NewFlagSet("import")
@@ -30,8 +30,8 @@ func main() {
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
 	// fs.Var(&database_uris, "database-uri", "...")
 	fs.Int64Var(&start, "start", 0, "Starting offset for importing records. If '0' then records will be imported from the first record onwards.")
-	fs.Int64Var(&end, "end", 0, "Ending offset for import records. If '0' then records will be imported up to and including the last record.")	
-	
+	fs.Int64Var(&end, "end", 0, "Ending offset for import records. If '0' then records will be imported up to and including the last record.")
+
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
