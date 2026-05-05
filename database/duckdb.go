@@ -376,8 +376,6 @@ func (db *DuckDBDatabase) LastUpdate(ctx context.Context, opts ...options.Option
 // ListRecords returns a paginated list of records stored in the database.
 func (db *DuckDBDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	slog.Info("LIST", "opts", opts)
-
 	filters := options.GetAllFiltersFromOptions(ctx, opts...)
 	args := make([]any, len(filters))
 

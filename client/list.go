@@ -42,8 +42,6 @@ func DefaultListRecordsOptions() *ListRecordsOptions {
 // an `embeddingsdb` database. It handles all the pagination requirements derived from 'opts'.
 func ListRecords(ctx context.Context, cl Client, list_opts *ListRecordsOptions, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
-	slog.Info("CLIENT LIST", "opts", opts)
-
 	return func(yield func(*embeddingsdb.Record, error) bool) {
 
 		pg_type, err := cl.PaginationType(ctx)
