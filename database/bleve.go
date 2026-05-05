@@ -80,9 +80,10 @@ func init() {
 //
 // Valid query parameters are:
 // * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
+// * `similarity-metric` - The similarity metric used when comparing embeddings. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "l2_norm".
+// * `optimize-for` - The vector index optimization strategy to use. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "latency".
 // * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 5.0.
 // * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
-// * `optimize-for` - The vector index optimization strategy to use. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "latency".
 func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -97,6 +98,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dimensions := 512
 	optimize_for := "latency"
+	similarity_metric := "l2_norm"
 
 	max_distance := float32(5.0)
 	max_results := int32(10)
@@ -138,17 +140,47 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	if q.Has("optimize-for") {
-		optimize_for = q.Get("optimize-for")
+
+		v := q.Get("optimize-for")
+
+		if v == "" {
+			return nil, fmt.Errorf("?optimize-for= parameter may not be empty")
+		}
+
+		optimize_for = v
+	}
+
+	if q.Has("similarity-metric") {
+
+		v := q.Get("similarity-metric")
+
+		if v == "" {
+			return nil, fmt.Errorf("?similarity-metric= parameter may not be empty")
+		}
+
+		similarity_metric = v
 	}
 
 	var index bleve.Index
 	var path_embeddings string
 	var tmp_embeddings bool
 
+	idx_config := map[string]interface{}{
+		"forceSegmentType":    "zap",
+		"forceSegmentVersion": 17, // 16+ required for vector search
+		"unsafe_batch":        true,
+		"initialMmapSize":     512 * 1024 * 1024,
+	}
+
 	switch path_index {
 	case "":
-		idx_mapping := bleveMappings(dimensions, optimize_for)
-		index, err = bleve.NewMemOnly(idx_mapping)
+
+		idx_mapping := bleveMappings(dimensions, similarity_metric, optimize_for)
+		index, err = bleve.NewUsing("", idx_mapping, "scorch", "mem", idx_config)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create index, %w", err)
+		}
 
 		dir, err := os.MkdirTemp("", "embeddingsdb")
 
@@ -156,28 +188,24 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 			return nil, fmt.Errorf("Failed to create temp dir for static embeddings, %w", err)
 		}
 
-		path_embeddings = dir
+		path_embeddings = filepath.Join(dir, "embeddingsdb")
 		tmp_embeddings = true
 	default:
-
-		idx_config := map[string]interface{}{
-			"forceSegmentType":    "zap",
-			"forceSegmentVersion": 17, // 16+ required for vector search
-			"unsafe_batch":        true,
-			"initialMmapSize":     512 * 1024 * 1024,
-		}
 
 		_, err = os.Stat(path_index)
 
 		if err != nil {
 
-			slog.Info("Set up Bleve mapping", "dimensions", dimensions, "optimize for", optimize_for)
-
-			idx_mapping := bleveMappings(dimensions, optimize_for)
+			idx_mapping := bleveMappings(dimensions, similarity_metric, optimize_for)
 			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", idx_config)
+
 		} else {
 
 			index, err = bleve.OpenUsing(path_index, idx_config)
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create index, %w", err)
 		}
 
 		path_embeddings = filepath.Join(path_index, "embeddingsdb")
@@ -909,7 +937,10 @@ func (db *BleveDatabase) assignEmbeddings(ctx context.Context, rec *embeddingsdb
 	}
 }
 
-func bleveMappings(dimensions int, optimize_for string) *mapping.IndexMappingImpl {
+func bleveMappings(dimensions int, similarity_metric string, optimize_for string) *mapping.IndexMappingImpl {
+
+	logger := slog.Default()
+	logger.Info("Set up Bleve mapping", "dimensions", dimensions, "similarity metric", similarity_metric, "optimize for", optimize_for)
 
 	kw_mapping := bleve.NewTextFieldMapping()
 	kw_mapping.Analyzer = "keyword"
@@ -934,7 +965,7 @@ func bleveMappings(dimensions int, optimize_for string) *mapping.IndexMappingImp
 
 	vec_mapping := bleve.NewVectorFieldMapping()
 	vec_mapping.Dims = dimensions
-	vec_mapping.Similarity = "l2_norm"
+	vec_mapping.Similarity = similarity_metric
 	vec_mapping.Store = false
 	vec_mapping.Index = true
 	vec_mapping.DocValues = false

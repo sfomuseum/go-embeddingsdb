@@ -13,7 +13,7 @@ The DuckDB implementation is generally faster than the SQLite but requires that 
 
 The SQLite implementation while has slower query times but stores (and reads) all its data from disk so it is fast to start.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency. If you can get it to work a Bleve-backed database is pretty great but know that the build process may be a challenge.
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). If you can get it to work a Bleve-backed database is pretty great but know that the build process may be a challenge.
 
 The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is [metered](https://aws.amazon.com/s3/pricing/?nc=sn&loc=4). Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
@@ -82,6 +82,8 @@ Valid parameters are:
 | Key | Value | Required | Notes |
 | --- | --- | --- | --- |
 | dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
+| similarity-metric | string | no | The similarity metric used when comparing embeddings. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "l2_norm". |
+| optimize-for | string | no | The vector index optimization strategy to use. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "latency". |  
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 5.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 
