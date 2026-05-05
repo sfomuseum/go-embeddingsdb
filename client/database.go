@@ -84,7 +84,6 @@ func (cl *DatabaseClient) Providers(ctx context.Context, opts ...options.Option)
 }
 
 func (cl *DatabaseClient) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
-
 	return cl.db.ListRecords(ctx, pg_opts, opts...)
 }
 

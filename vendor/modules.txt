@@ -9,6 +9,7 @@ github.com/RoaringBitmap/roaring/v2/roaring64
 # github.com/aaronland/go-aws/v3 v3.5.0
 ## explicit; go 1.25.0
 github.com/aaronland/go-aws/v3/auth
+github.com/aaronland/go-aws/v3/dynamodb
 # github.com/aaronland/go-http/v4 v4.0.3
 ## explicit; go 1.25.0
 github.com/aaronland/go-http/v4/sanitize
@@ -117,6 +118,12 @@ github.com/aws/aws-sdk-go-v2/credentials/logincreds
 github.com/aws/aws-sdk-go-v2/credentials/processcreds
 github.com/aws/aws-sdk-go-v2/credentials/ssocreds
 github.com/aws/aws-sdk-go-v2/credentials/stscreds
+# github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.26
+## explicit; go 1.23
+github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue
+# github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.8.26
+## explicit; go 1.23
+github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression
 # github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17
 ## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
@@ -143,6 +150,15 @@ github.com/aws/aws-sdk-go-v2/internal/v4a/internal/v4
 github.com/aws/aws-sdk-go-v2/service/cognitoidentity
 github.com/aws/aws-sdk-go-v2/service/cognitoidentity/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/cognitoidentity/types
+# github.com/aws/aws-sdk-go-v2/service/dynamodb v1.55.0
+## explicit; go 1.23
+github.com/aws/aws-sdk-go-v2/service/dynamodb
+github.com/aws/aws-sdk-go-v2/service/dynamodb/internal/customizations
+github.com/aws/aws-sdk-go-v2/service/dynamodb/internal/endpoints
+github.com/aws/aws-sdk-go-v2/service/dynamodb/types
+# github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.32.6
+## explicit; go 1.23
+github.com/aws/aws-sdk-go-v2/service/dynamodbstreams/types
 # github.com/aws/aws-sdk-go-v2/service/iam v1.53.2
 ## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/service/iam
@@ -154,6 +170,9 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding
 # github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.11
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/service/internal/checksum
+# github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.17
+## explicit; go 1.23
+github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery
 # github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.19
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url
