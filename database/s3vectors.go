@@ -868,7 +868,8 @@ func (db *S3VectorsDatabase) PaginationType(ctx context.Context, opts ...options
 
 // Close performs and terminating functions required by the database.
 func (db *S3VectorsDatabase) Close(ctx context.Context) error {
-	return nil
+
+	return db.updateModelAndProviderTagsIfChanged(ctx)
 }
 
 // s3VectorToRecord converts an S3 Vectors vector and metadata
@@ -1065,10 +1066,13 @@ func (db *S3VectorsDatabase) updateModelAndProviderTagsIfChanged(ctx context.Con
 		return err
 	}
 
-	str_models := strings.Join(db.models, " ")
-	str_providers := strings.Join(db.providers, " ")
+	str_models := strings.Join(models, " ")
+	str_providers := strings.Join(providers, " ")
 
-	if str_models == strings.Join(models, " ") && str_providers == strings.Join(providers, " ") {
+	cmp_models := strings.Join(db.models, " ")
+	cmp_providers := strings.Join(db.providers, " ")
+
+	if str_models == cmp_models && str_providers == cmp_providers {
 		return nil
 	}
 
@@ -1083,7 +1087,7 @@ func (db *S3VectorsDatabase) updateModelAndProviderTagsIfChanged(ctx context.Con
 // addIndexTags sets the supplied tags on the S3 Vectors index.
 func (db *S3VectorsDatabase) addIndexTags(ctx context.Context, tags map[string]string) error {
 
-	slog.Info("tag resource", "arn", db.index_arn, "tags", tags)
+	slog.Debug("tag resource", "arn", db.index_arn, "tags", tags)
 
 	tag_opts := &s3vectors.TagResourceInput{
 		ResourceArn: aws.String(db.index_arn),
