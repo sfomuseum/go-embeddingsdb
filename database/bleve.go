@@ -82,6 +82,7 @@ func init() {
 // * `dimensions` – The number of dimensions for the embeddings being stored. Default is 512.
 // * `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 5.0.
 // * `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
+// * `optimize-for` - The vector index optimization strategy to use. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "latency".
 func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -95,6 +96,8 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 	q := u.Query()
 
 	dimensions := 512
+	optimize_for := "latency"
+
 	max_distance := float32(5.0)
 	max_results := int32(10)
 
@@ -134,13 +137,17 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 		slog.Debug("Reassign max results", "value", max_results)
 	}
 
+	if q.Has("optimize-for") {
+		optimize_for = q.Get("optimize-for")
+	}
+
 	var index bleve.Index
 	var path_embeddings string
 	var tmp_embeddings bool
 
 	switch path_index {
 	case "":
-		idx_mapping := bleveMappings(dimensions)
+		idx_mapping := bleveMappings(dimensions, optimize_for)
 		index, err = bleve.NewMemOnly(idx_mapping)
 
 		dir, err := os.MkdirTemp("", "embeddingsdb")
@@ -155,7 +162,7 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 		idx_config := map[string]interface{}{
 			"forceSegmentType":    "zap",
-			"forceSegmentVersion": 16, // 16 required for vector search
+			"forceSegmentVersion": 17, // 16+ required for vector search
 			"unsafe_batch":        true,
 			"initialMmapSize":     512 * 1024 * 1024,
 		}
@@ -164,9 +171,12 @@ func NewBleveDatabase(ctx context.Context, uri string) (Database, error) {
 
 		if err != nil {
 
-			idx_mapping := bleveMappings(dimensions)
+			slog.Info("Set up Bleve mapping", "dimensions", dimensions, "optimize for", optimize_for)
+
+			idx_mapping := bleveMappings(dimensions, optimize_for)
 			index, err = bleve.NewUsing(path_index, idx_mapping, "scorch", "scorch", idx_config)
 		} else {
+
 			index, err = bleve.OpenUsing(path_index, idx_config)
 		}
 
@@ -407,7 +417,7 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	search_req := bleve.NewSearchRequest(bleve.NewMatchNoneQuery())
 	search_req.AddKNNWithFilter("embeddings", req.Embeddings, int64(*max_results), 1.0, filter_q)
 
-	search_req.SortBy([]string{"-_score"})
+	search_req.SortBy([]string{"_score"})
 	search_req.Size = int(*max_results)
 	search_req.Fields = []string{"*"}
 
@@ -417,21 +427,22 @@ func (db *BleveDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 		return nil, fmt.Errorf("Failed to execute search request to find similar, %w", err)
 	}
 
+	limit := db.max_distance
+
+	if max_distance != nil && *max_distance != 0 {
+		limit = *max_distance
+	}
+
 	for _, hit := range rsp.Hits {
 
-		dist := float32(hit.Score)
+		if hit.Score <= 0 {
+			continue
+		}
 
-		if max_distance == nil {
+		dist := float32(math.Sqrt(1.0 / hit.Score))
 
-			if dist > db.max_distance {
-				continue
-			}
-
-		} else {
-
-			if *max_distance != 0 && dist > *max_distance {
-				continue
-			}
+		if dist > limit {
+			continue
 		}
 
 		rec, err := db.inflateRecordWithMatch(ctx, hit)
@@ -898,7 +909,7 @@ func (db *BleveDatabase) assignEmbeddings(ctx context.Context, rec *embeddingsdb
 	}
 }
 
-func bleveMappings(dimensions int) *mapping.IndexMappingImpl {
+func bleveMappings(dimensions int, optimize_for string) *mapping.IndexMappingImpl {
 
 	kw_mapping := bleve.NewTextFieldMapping()
 	kw_mapping.Analyzer = "keyword"
@@ -928,6 +939,7 @@ func bleveMappings(dimensions int) *mapping.IndexMappingImpl {
 	vec_mapping.Index = true
 	vec_mapping.DocValues = false
 	vec_mapping.IncludeInAll = false
+	vec_mapping.VectorIndexOptimizedFor = optimize_for
 
 	sf_mapping := bleve.NewTextFieldMapping()
 	sf_mapping.Store = true
