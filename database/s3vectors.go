@@ -467,9 +467,9 @@ func (db *S3VectorsDatabase) SimilarRecords(ctx context.Context, req *embeddings
 
 	filters := make([]map[string]any, 0)
 
-	max_distance := GetMaxDistanceFromOptions(ctx, opts...)
-	max_results := GetMaxResultsFromOptions(ctx, opts...)
-	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
+	max_distance := options.GetMaxDistanceFromOptions(ctx, opts...)
+	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
 		max_results = &db.max_results

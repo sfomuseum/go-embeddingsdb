@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
 	"net/http"
 	"slices"
 	"strings"
+
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
@@ -194,10 +195,11 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
 			Embeddings: similar_embeddings,
 			Model:      model,
-			MaxResults: &opts.MaxResults,
 		}
 
 		custom_opts := make([]options.Option, 0)
+
+		custom_opts = append(custom_opts, options.NewMaxResultsOption(opts.MaxResults))
 
 		custom_max_dist, err := sanitize.PostBool(req, "custom-max-distance")
 
@@ -220,7 +222,7 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			max32 := float32(max_dist)
 
 			// DEPRECATED
-			similar_req.MaxDistance = &max32
+			// similar_req.MaxDistance = &max32
 
 			custom_opts = append(custom_opts, options.NewMaxDistanceOption(max32))
 		}
@@ -242,12 +244,12 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			}
 
 			// DEPRECATED
-			similar_req.SimilarProvider = &similar_provider
+			// similar_req.SimilarProvider = &similar_provider
 
 			custom_opts = append(custom_opts, options.NewSimilarProviderOption(similar_provider))
 		}
 
-		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(similar_embeddings), "max distance", similar_req.MaxDistance)
+		logger.Debug("Find similar records", "model", model, "similar provider", similar_provider, "embeddings", len(similar_embeddings))
 
 		similar, err := opts.Client.SimilarRecords(ctx, similar_req, custom_opts...)
 
