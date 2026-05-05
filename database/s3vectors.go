@@ -344,8 +344,6 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 		}
 	}
 
-	// Make this optional...
-
 	go func() {
 		db.addModel(ctx, rec.Model)
 		db.addProvider(ctx, rec.Provider)
