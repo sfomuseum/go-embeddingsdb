@@ -263,11 +263,11 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	similar_provider := GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
-		*max_results = db.max_results
+		max_results = &db.max_results
 	}
 
 	if max_distance == nil {
-		*max_distance = db.max_distance
+		max_distance = &db.max_distance
 	}
 
 	conditions := make([]string, 0)
