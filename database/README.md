@@ -13,7 +13,7 @@ The DuckDB implementation is generally faster than the SQLite but requires that 
 
 The SQLite implementation while has slower query times but stores (and reads) all its data from disk so it is fast to start.
 
-The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency. If you can get it to work a Bleve-backed database is pretty great but nothing, so far, tells me that the build process won't be a challenge.
+The Bleve implementation is also fast, has a fast start-up time, doesn't require loading all the data in to memory, doesn't use an unmanageable amount of disk space but remains a non-trivial chore to set up because of the dependency on `libfaiss` (see details below). It's also unclear to me whether it is possible to create a single, bundled executable of the Bleve implementation because of the `libfaiss` depedency. If you can get it to work a Bleve-backed database is pretty great but know that the build process may be a challenge.
 
 The S3Vectors implementation is fast and demonstrates good query times. It is, however, dependent on a commercial service (Amazon Web Services (AWS)) where everything (from storage to queries) is [metered](https://aws.amazon.com/s3/pricing/?nc=sn&loc=4). Depending on how your database access is configured this could lead to very large bills at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
@@ -104,7 +104,13 @@ This is a bit of a chore on a Mac. If you have already installed `libfaiss` from
 ```
 $> git clone ssh://git@github.com/blevesearch/faiss.git
 $> cd faiss
+```
 
+Note: The `blevesearch/faiss` checkpoint is relevant and specific to the version of `blevesearch/bleve` being used. For details consult: https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#pre-requisites
+
+Now issue the following commands:
+
+```
 $> export LDFLAGS="-L/opt/homebrew/opt/llvm/lib" \
 $> export CPPFLAGS="-I/opt/homebrew/opt/llvm/include" \
 $> export CXX=/opt/homebrew/opt/llvm/bin/clang++ \
@@ -123,37 +129,14 @@ $> sudo cp build/c_api/libfaiss_c.dylib /usr/local/lib
 
 _Note that I had to use a completely different set of instructions to get `libfaiss` to compile on an Intel Mac. I don't know. For build instructions for Linux and Windows please consult the [Bleve documentation](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#setup-instructions)._
 
-#### Building (Bleve)
-
-If that weren't enough the current versioned Bleve release (2.5.7) is not current with changes in either the Bleve fork or `libfaiss` or [blevesearch/go-faiss](https://github.com/blevesearch/go-faiss) so, for the time being, the "easiest" thing is just to clone the most recent build of [blevesearch/bleve](https://github.com/blevesearch/bleve) locally and point to it from a [go.work](https://go.dev/doc/tutorial/workspaces) file. This is not ideal but it's less less-ideal than the alternatives.
+As of the "v2.6.0" release of `blevesearch/bleve` everything _should_ work. Per the documentation you can [sanity check](https://github.com/blevesearch/bleve/blob/master/docs/vectors.md#sanity-check) things as follows:
 
 ```
-$> cd /usr/local/src/
-$> git clone https://github.com/blevesearch/bleve.git /usr/local/src/bleve
 $> cd /usr/local/src/bleve
-$> go mod tidy && go mod vendor
+$> go test -ldflags "-r /usr/local/lib" ./... -tags=vectors
 ```
 
-_Note: Since writing this Bleve has published a [v2.6.0 release](https://github.com/blevesearch/bleve/releases/tag/v2.6.0) which merges a whole stack of changes but introduces new C-level errors (specifically `vendor/github.com/blevesearch/go-faiss/search_params.go:144:10: could not determine what C.faiss_SearchParametersRaBitQ_new_with refers to`) which I have not had a chance to investigate._
-
-Now come back to _this_ repository and run:
-
-```
-$> go work init
-```
-
-Edit the `go.work` file to look like this (adjusting for wherever you are keeping your copy of the Bleve source code:
-
-```
-go 1.26.2
-
-use (
-    ./
-    /usr/local/src/bleve
-)    
-```
-
-Remember that you also need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
+Assuming that all the tests pass you can build the tools in _this_ package. Remember that you also need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
 
 ```
 $> make cli TAGS=sqlite,bleve,vectors LDFLAGS='-s -w -r /usr/local/lib'
@@ -164,10 +147,6 @@ go build -tags=sqlite,bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/
 #### Other "known knowns"
 
 I have observed that under some conditions importing large datasets (using the `parquet-import` tool for example) data corruption can occur. This problem _seems_ to be related to memory-mapping and the `go.etcd.io/bbolt` package but I am not certain. These problems seem to have been resolved on Apple Silicon Macs but I continue to experience them on older Intel-based Macs.
-
-The Bleve source code specifies `bbolt` v1.4.0 even though the last release is 1.4.3 but even that was in 2025 and there have been lots of updates to the source code. I've tried both specifying v1.4.3 and using a `go.work` file to use the most recent code but database corruption and the occassional race condition still manifest on Intel-based Macs.
-
-That said, I am not confident that I have even diagnosed the problem correctly.
 
 ### s3vectors://
 
