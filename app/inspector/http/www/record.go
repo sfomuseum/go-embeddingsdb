@@ -81,13 +81,14 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
 			Embeddings: record.Embeddings,
 			Model:      model,
-			MaxResults: &opts.MaxResults,
 			Exclude: []string{
 				record.DepictionId,
 			},
 		}
 
 		custom_opts := make([]options.Option, 0)
+
+		custom_opts = append(custom_opts, options.NewMaxResultsOption(opts.MaxResults))
 
 		similar_provider, err := sanitize.GetString(req, "similar-provider")
 
@@ -104,9 +105,6 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 				http.Error(rsp, "Bad request", http.StatusBadRequest)
 				return
 			}
-
-			// DEPRECATED
-			similar_req.SimilarProvider = &similar_provider
 
 			custom_opts = append(custom_opts, options.NewSimilarProviderOption(similar_provider))
 		}
@@ -132,9 +130,6 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			}
 
 			max_dist := float32(max64)
-
-			// DEPRECATED
-			similar_req.MaxDistance = &max_dist
 
 			custom_opts = append(custom_opts, options.NewMaxDistanceOption(max_dist))
 		}

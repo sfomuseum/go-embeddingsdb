@@ -7,6 +7,7 @@ import (
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/client"
+	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
 func GetSimilarRecordsFromRequest(req *net_http.Request, cl client.Client) ([]*embeddingsdb.SimilarRecord, error) {
@@ -37,12 +38,14 @@ func GetSimilarRecordsFromRequest(req *net_http.Request, cl client.Client) ([]*e
 		},
 	}
 
+	custom_opts := make([]options.Option, 0)
+
 	if max_dist > 0.0 {
 		max32 := float32(max_dist)
-		similar_req.MaxDistance = &max32
+		custom_opts = append(custom_opts, options.NewMaxDistanceOption(max32))
 	}
 
-	similar, err := cl.SimilarRecords(ctx, similar_req)
+	similar, err := cl.SimilarRecords(ctx, similar_req, custom_opts...)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get similar records, %w", err)

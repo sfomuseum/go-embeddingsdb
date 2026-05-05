@@ -107,9 +107,6 @@ func (cl *DatabaseClient) SimilarRecordsById(ctx context.Context, req *embedding
 		Exclude: []string{
 			record.DepictionId,
 		},
-		SimilarProvider: req.SimilarProvider,
-		MaxDistance:     req.MaxDistance,
-		MaxResults:      req.MaxResults,
 	}
 
 	return cl.SimilarRecords(ctx, similar_req, opts...)

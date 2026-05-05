@@ -19,12 +19,24 @@ fix:
 	go test -tags $(TAGS) ./...
 
 cli:
-	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-client cmd/client/main.go
+	@make cli-server
+	@make cli-client
+	@make cli-inspector
+	@make cli-parquet
+
+cli-server:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-server cmd/server/main.go
-	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-inspector cmd/inspector/main.go
+
+cli-client:
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-client cmd/client/main.go
+
+cli-parquet:
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-merge cmd/parquet-merge/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-export cmd/parquet-export/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-import cmd/parquet-import/main.go
-	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-merge cmd/parquet-merge/main.go
+
+cli-inspector:
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-inspector cmd/inspector/main.go
 
 bleve:
 	@make cli TAGS=sqlite,vectors,bleve LDFLAGS='-s -w -r /usr/local/lib'

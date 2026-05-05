@@ -55,7 +55,7 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 
 			if end > 0 && end >= count {
 				break
-			}			
+			}
 		}
 
 		logger.Debug("Finished iterating uri", "count", count, "total", total)
