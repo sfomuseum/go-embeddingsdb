@@ -82,7 +82,7 @@ Valid parameters are:
 | Key | Value | Required | Notes |
 | --- | --- | --- | --- |
 | dimensions | int | no | The number of dimensions for the embeddings being stored. Default is 512. |
-| similarity-metric | string | no | The similarity metric used when comparing embeddings. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "l2_norm". |
+| similarity-metric | string | no | The similarity metric used when comparing embeddings. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Note: This can not be changed after a Bleve index is created. Default is "l2_norm". |
 | optimize-for | string | no | The vector index optimization strategy to use. Consult https://github.com/blevesearch/bleve/blob/master/docs/vectors.md for details. Default is "latency". |  
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 5.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
