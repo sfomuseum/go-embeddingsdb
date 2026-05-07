@@ -6,9 +6,54 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func DynamoDBTables(table_name string) map[string]*dynamodb.CreateTableInput {
+func DynamoDBTables(table_name string, metadata_table_name string) map[string]*dynamodb.CreateTableInput {
 
 	tables := map[string]*dynamodb.CreateTableInput{
+		"metadata": {
+			TableName: aws.String(metadata_table_name),
+			// Define the PK and SK attributes
+			AttributeDefinitions: []types.AttributeDefinition{
+				{
+					AttributeName: aws.String("PK"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
+				{
+					AttributeName: aws.String("SK"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
+			},
+			// Define the primary key schema
+			KeySchema: []types.KeySchemaElement{
+				{
+					AttributeName: aws.String("PK"),
+					KeyType:       types.KeyTypeHash,
+				},
+				{
+					AttributeName: aws.String("SK"),
+					KeyType:       types.KeyTypeRange,
+				},
+			},
+			// Define the Inverted GSI
+			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
+				{
+					IndexName: aws.String("GSI1"),
+					KeySchema: []types.KeySchemaElement{
+						{
+							AttributeName: aws.String("SK"), // Inverted: SK becomes PK
+							KeyType:       types.KeyTypeHash,
+						},
+						{
+							AttributeName: aws.String("PK"), // Inverted: PK becomes SK
+							KeyType:       types.KeyTypeRange,
+						},
+					},
+					Projection: &types.Projection{
+						ProjectionType: types.ProjectionTypeAll,
+					},
+				},
+			},
+			BillingMode: types.BillingModePayPerRequest,
+		},
 		"s3vectors": {
 			TableName: aws.String(table_name),
 			AttributeDefinitions: []types.AttributeDefinition{
