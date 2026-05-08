@@ -9,7 +9,7 @@ import (
 func DynamoDBTables(table_name string, metadata_table_name string) map[string]*dynamodb.CreateTableInput {
 
 	tables := map[string]*dynamodb.CreateTableInput{
-		"metadata": {
+		"s3vectors_metadata": {
 			TableName: aws.String(metadata_table_name),
 			// Define the PK and SK attributes
 			AttributeDefinitions: []types.AttributeDefinition{

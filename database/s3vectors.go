@@ -224,7 +224,7 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 			return nil, err
 		}
 
-		err = d_cl.SetupTable(ctx)
+		err = d_cl.SetupTables(ctx)
 
 		if err != nil {
 			return nil, err

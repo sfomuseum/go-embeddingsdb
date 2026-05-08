@@ -31,7 +31,7 @@ import (
 // the record key, provider, model, depiction id and dimension count.
 const DynamoDBTableName string = "s3vectors"
 
-const DynamoDBTableNameMetadata string = "s3vectors_metdata"
+const DynamoDBTableNameMetadata string = "s3vectors_metadata"
 
 // DynamoDBRecord represents a minimal record stored in DynamoDB.
 // The primary key is the concatenated provider|model|depiction_id.
@@ -94,11 +94,13 @@ func NewDynamoDBClient(ctx context.Context, cfg_uri string) (*DynamoDBClient, er
 	return cl, nil
 }
 
-// SetupTable creates the DynamoDB table if it does not already exist.
-func (cl *DynamoDBClient) SetupTable(ctx context.Context) error {
+// SetupTables creates the necessary DynamoDB tables if they don't not already exist.
+func (cl *DynamoDBClient) SetupTables(ctx context.Context) error {
+
+	tables := DynamoDBTables(cl.table, cl.table_metadata)
 
 	table_opts := &aa_dynamodb.CreateTablesOptions{
-		Tables: DynamoDBTables(cl.table, cl.table_metadata),
+		Tables: tables,
 	}
 
 	return aa_dynamodb.CreateTables(ctx, cl.client, table_opts)
@@ -412,29 +414,29 @@ func (cl *DynamoDBClient) GetProvidersForModel(ctx context.Context, model string
 }
 
 func parseSKs(items []map[string]types.AttributeValue) []string {
-	
+
 	results := make([]string, 0, len(items))
-	
+
 	for _, item := range items {
-		
+
 		if val, ok := item["SK"].(*types.AttributeValueMemberS); ok {
-			
+
 			if idx := strings.Index(val.Value, "#"); idx != -1 {
 				results = append(results, val.Value[idx+1:])
 			}
 		}
 	}
-	
+
 	return results
 }
 
 // parsePKs extracts values from the PK field (used for GSI queries)
 func parsePKs(items []map[string]types.AttributeValue) []string {
-	
+
 	results := make([]string, 0, len(items))
-	
+
 	for _, item := range items {
-		
+
 		if val, ok := item["PK"].(*types.AttributeValueMemberS); ok {
 
 			if idx := strings.Index(val.Value, "#"); idx != -1 {
@@ -442,7 +444,7 @@ func parsePKs(items []map[string]types.AttributeValue) []string {
 			}
 		}
 	}
-	
+
 	return results
 }
 
