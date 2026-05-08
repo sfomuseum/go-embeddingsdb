@@ -343,7 +343,7 @@ func (cl *DynamoDBClient) AddModelProviderMetadata(ctx context.Context, model st
 	return nil
 }
 
-func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop string) ([]string, error) {
+func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop string, opts ...options.Option) ([]string, error) {
 
 	pk := "SUMMARY#" + strings.ToUpper(prop)
 
@@ -391,14 +391,13 @@ func (cl *DynamoDBClient) GetModelsForProvider(ctx context.Context, provider str
 		return nil, err
 	}
 
-	// ... (parse results similarly to GetUniqueList)
 	return parseSKs(out.Items), nil
 }
 
 func (cl *DynamoDBClient) GetProvidersForModel(ctx context.Context, model string) ([]string, error) {
 
 	out, err := cl.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String("ModelProviderTable"),
+		TableName:              aws.String(cl.table_metadata),
 		IndexName:              aws.String("GSI1"),
 		KeyConditionExpression: aws.String("SK = :sk AND begins_with(PK, :pkPrefix)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
