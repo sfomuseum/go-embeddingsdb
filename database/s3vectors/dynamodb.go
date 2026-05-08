@@ -345,7 +345,7 @@ func (cl *DynamoDBClient) AddModelProviderMetadata(ctx context.Context, model st
 
 func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop string) ([]string, error) {
 
-	pk := "SUMMARY#" + prop
+	pk := "SUMMARY#" + strings.ToUpper(prop)
 
 	out, err := cl.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(cl.table_metadata),
@@ -364,6 +364,7 @@ func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop st
 	for _, item := range out.Items {
 
 		sk_value := item["SK"].(*types.AttributeValueMemberS).Value
+
 		delimiterIndex := strings.Index(sk_value, "#")
 
 		if delimiterIndex != -1 {

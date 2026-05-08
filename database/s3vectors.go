@@ -793,13 +793,13 @@ func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Opt
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *S3VectorsDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "model")
+	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "MODELS")
 }
 
 // Return the unique list of providers across all the embeddings.
 func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "provider")
+	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "PROVIDERS")
 }
 
 // Return the pagination type used by the database.
