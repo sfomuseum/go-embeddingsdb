@@ -15,6 +15,8 @@ type URIs struct {
 	APIEmbeddings         string
 	APIEmbeddingsWithVars string
 	APISearch             string
+	APIModels             string
+	APIProviders          string
 }
 
 func DefaultURIs(prefix string) (*URIs, error) {
@@ -29,6 +31,8 @@ func DefaultURIs(prefix string) (*URIs, error) {
 		APIEmbeddings:         "/api/embeddings/",
 		APIEmbeddingsWithVars: "/api/embeddings/{provider}/{depiction_id}/",
 		APISearch:             "/api/search/",
+		APIModels:             "/api/models/",
+		APIProviders:          "/api/providers/",
 	}
 
 	if prefix != "" {
@@ -56,6 +60,8 @@ func DefaultURIs(prefix string) (*URIs, error) {
 			&u.APIEmbeddings,
 			&u.APIEmbeddingsWithVars,
 			&u.APISearch,
+			&u.APIModels,
+			&u.APIProviders,
 		}
 
 		for _, ptr := range fields {

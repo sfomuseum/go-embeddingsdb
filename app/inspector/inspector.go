@@ -78,6 +78,8 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	mux := http.NewServeMux()
 
+	// It is probably time to start using aaronland/go-http/route
+
 	static_handler := http.FileServerFS(static.FS)
 
 	if uri_prefix != "" {
@@ -132,6 +134,32 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	logger.Debug("Register API embeddings handler", "uri", uris.APIEmbeddingsWithVars)
 	mux.Handle(uris.APIEmbeddingsWithVars, api_embeddings_handler)
+
+	api_models_opts := &api.ModelsHandlerOptions{
+		Client: cl,
+	}
+
+	api_models_handler, err := api.ModelsHandler(api_models_opts)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create new API models handler, %w", err)
+	}
+
+	logger.Debug("Register API models handler", "uri", uris.APIModels)
+	mux.Handle(uris.APIModels, api_models_handler)
+
+	api_providers_opts := &api.ProvidersHandlerOptions{
+		Client: cl,
+	}
+
+	api_providers_handler, err := api.ProvidersHandler(api_providers_opts)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create new API providers handler, %w", err)
+	}
+
+	logger.Debug("Register API providers handler", "uri", uris.APIProviders)
+	mux.Handle(uris.APIProviders, api_providers_handler)
 
 	if enable_search {
 

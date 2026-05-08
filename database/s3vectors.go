@@ -863,7 +863,6 @@ func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Opti
 	case 0:
 		return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "PROVIDERS")
 	case 1:
-		slog.Info("POO", "m", models[0])
 		return db.dynamodb_client.GetProvidersForModel(ctx, models[0])
 	default:
 
