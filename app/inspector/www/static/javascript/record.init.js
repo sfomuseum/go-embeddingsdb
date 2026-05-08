@@ -1,5 +1,10 @@
 window.addEventListener('load', function(e){
 
+    const main = document.querySelector("#main");
+    const providers_uri = main.getAttribute("data-api-providers-uri");
+    const models_uri = main.getAttribute("data-api-models-uri");
+    const record_uri = main.getAttribute("data-record-uri");
+    
     const model_current = document.querySelector("#model-current");
     const model_select = document.querySelector("#model-select");
     const record_table = document.querySelector("#record-table");
@@ -9,7 +14,7 @@ window.addEventListener('load', function(e){
     const current_model = record_table.getAttribute("data-model");        
 
     const similar_controls = document.querySelector("#similar-controls");
-    const model_provider = document.querySelector("#model-provider");
+    const provider_select = document.querySelector("#provider-select");
 
     const max_distance = document.querySelector("#max-distance");
     const max_distance_wrapper = document.querySelector("#max-distance-wrapper");
@@ -46,11 +51,79 @@ window.addEventListener('load', function(e){
     });
     
     
-    const main = document.querySelector("#main");
-    const record_uri = main.getAttribute("data-record-uri");
-    
     const refine_btn = document.querySelector("#refine");
 
+    model_select.onchange = function(){
+
+	const u = new URL(providers_uri, location);
+
+	const s = new URLSearchParams();
+	s.set("model", model_select.value);
+
+	u.search = s
+
+	fetch(u.toString())
+	    .then(rsp => {
+		return rsp.json();
+	    }).then(data => {
+
+		provider_select.innerHTML = "";
+
+		const opt = document.createElement("option");
+		opt.setAttribute("value", "");
+		opt.appendChild(document.createTextNode("All providers"));
+		provider_select.appendChild(opt);
+		
+		const count = data.length;
+
+		for (var i=0; i < count; i++){
+
+		    const opt = document.createElement("option");
+		    opt.setAttribute("value", data[i]);
+		    opt.appendChild(document.createTextNode(data[i]));
+		    provider_select.appendChild(opt);
+		}
+		
+	    }).catch(err => {
+		console.error("SAD", err)
+	    });
+	
+	return false;
+    };
+
+    provider_select.onchange = function(){
+
+	const u = new URL(models_uri, location);
+
+	const s = new URLSearchParams();
+	s.set("provider", provider_select.value);
+
+	u.search = s
+
+	fetch(u.toString())
+	    .then(rsp => {
+		return rsp.json();
+	    }).then(data => {
+
+		model_select.innerHTML = "";
+
+		const count = data.length;
+
+		for (var i=0; i < count; i++){
+
+		    const opt = document.createElement("option");
+		    opt.setAttribute("value", data[i]);
+		    opt.appendChild(document.createTextNode(data[i]));
+		    model_select.appendChild(opt);
+		}
+		
+	    }).catch(err => {
+		console.error("SAD", err)
+	    });
+	
+	return false;
+    };
+    
     refine_btn.onclick = function(){
 
 	const u = new URL("/", location);
@@ -62,8 +135,8 @@ window.addEventListener('load', function(e){
 	    s.set("model", model_select.value)
 	}
 	
-	if (model_provider.value != ""){
-	    s.set("similar-provider", model_provider.value);
+	if (provider_select.value != ""){
+	    s.set("similar-provider", provider_select.value);
 	}
 
 	if (custom_max_distance.checked){
