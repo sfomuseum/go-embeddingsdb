@@ -249,6 +249,8 @@ The following are the _minimal_ IAM policies you will need to have to use an S3V
 
 #### DynamoDB
 
+Note the use of the `s3vectors` and `s3vectors_metadata` table names in the example below. These are the default values. If you reassign the value of the `s3vectors` table with the `?dynamodb-table={YOUR_TABLE}` parameter, described above, you will need to update this example to replace `s3vectors` and `s3vectors_metadata` with `{YOUR_TABLE}` and `{YOUR_TABLE}_metadata` respecitively.
+
 ```
 {
     "Version": "2012-10-17",
