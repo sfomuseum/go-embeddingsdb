@@ -2,7 +2,7 @@
 {{ template "inc_header" . -}}
 {{ $root := . }}
 
-<div class="container" id="main" data-record-uri="{{ .URIs.Record }}" data-api-models-uri="{{ .URIs.APIModels }}" data-api-providers-uri="{{ .URIs.APIProviders }}">
+<div class="container" id="main" data-record-provider="{{ .Record.Provider }}" data-record-uri="{{ .URIs.Record }}" data-api-models-uri="{{ .URIs.APIModels }}" data-api-providers-uri="{{ .URIs.APIProviders }}">
     
     <div class="row record-grid">
 

@@ -4,6 +4,8 @@ window.addEventListener('load', function(e){
     const providers_uri = main.getAttribute("data-api-providers-uri");
     const models_uri = main.getAttribute("data-api-models-uri");
     const record_uri = main.getAttribute("data-record-uri");
+
+    const record_provider = main.getAttribute("data-record-provider");
     
     const model_current = document.querySelector("#model-current");
     const model_select = document.querySelector("#model-select");
@@ -56,10 +58,9 @@ window.addEventListener('load', function(e){
     model_select.onchange = function(){
 
 	const u = new URL(providers_uri, location);
-
 	const s = new URLSearchParams();
-	s.set("model", model_select.value);
 
+	s.set("model", model_select.value);
 	u.search = s
 
 	fetch(u.toString())
@@ -85,7 +86,7 @@ window.addEventListener('load', function(e){
 		}
 		
 	    }).catch(err => {
-		console.error("SAD", err)
+		console.error("Failed to get model providers", err)
 	    });
 	
 	return false;
@@ -94,31 +95,57 @@ window.addEventListener('load', function(e){
     provider_select.onchange = function(){
 
 	const u = new URL(models_uri, location);
-
 	const s = new URLSearchParams();
+
 	s.set("provider", provider_select.value);
+	u.search = s;
 
-	u.search = s
-
+	console.debug("Get models for provider", u.toString());
+	
 	fetch(u.toString())
 	    .then(rsp => {
 		return rsp.json();
 	    }).then(data => {
 
-		model_select.innerHTML = "";
+		// now get models for record provider
 
-		const count = data.length;
+		const u2 = new URL(models_uri, location);
+		const s2 = new URLSearchParams();
+		
+		s2.set("provider", record_provider);
+		u2.search = s2;
 
-		for (var i=0; i < count; i++){
+		console.debug("Get record models", u2.toString());
+		
+		fetch(u2.toString())
+		    .then(rsp => {
+			return rsp.json();
+		    }).then(record_models => {
+		
+			model_select.innerHTML = "";
+			
+			const count = data.length;
+			
+			for (var i=0; i < count; i++){
+			    
+			    const opt = document.createElement("option");
+			    opt.setAttribute("value", data[i]);
 
-		    const opt = document.createElement("option");
-		    opt.setAttribute("value", data[i]);
-		    opt.appendChild(document.createTextNode(data[i]));
-		    model_select.appendChild(opt);
-		}
+			    if (! record_models.includes(data[i])){
+				opt.setAttribute("disabled", "disabled");
+			    }
+			    
+			    opt.appendChild(document.createTextNode(data[i]));
+			    model_select.appendChild(opt);
+			}
+			
+		    }).catch(err => {
+			console.error("Failed to get record models", err);
+			throw err;
+		    });
 		
 	    }).catch(err => {
-		console.error("SAD", err)
+		console.error("Failed to derive provider models", err)
 	    });
 	
 	return false;
