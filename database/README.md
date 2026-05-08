@@ -291,6 +291,7 @@ Note the use of the `s3vectors` and `s3vectors_metadata` table names in the exam
             ],
             "Resource": [
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+  		"arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata",		
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_provider_model",
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_model_provider",
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata/index/GSI1"		
