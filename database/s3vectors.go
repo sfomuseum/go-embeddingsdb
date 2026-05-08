@@ -40,6 +40,7 @@ type S3VectorsDatabase struct {
 	mu              *sync.RWMutex
 	max_results     int32
 	max_distance    float32
+	metadata        *sync.Map
 }
 
 // S3VectorsDatabaseScheme is the URI scheme used to create
@@ -208,6 +209,7 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dynamodb_cl = d_cl
 
+	metadata := new(sync.Map)
 	mu := new(sync.RWMutex)
 
 	db := &S3VectorsDatabase{
@@ -221,6 +223,7 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		max_results:     max_results,
 		max_distance:    max_distance,
 		mu:              mu,
+		metadata:        metadata,
 	}
 
 	return db, nil
@@ -282,12 +285,28 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	}
 
 	go func() {
+
 		ctx := context.Background()
+
+		// Don't do this more than once
+
+		k := fmt.Sprintf("%s-%s", rec.Provider, rec.Model)
+
+		_, exists := db.metadata.Load(k)
+
+		if exists {
+			return
+		}
+
+		// Okay, do this
+
 		err := db.dynamodb_client.AddModelProviderMetadata(ctx, rec.Model, rec.Provider)
 
 		if err != nil {
 			slog.Error("Failed to add model/provider metadata", "provider", rec.Provider, "model", rec.Model, "error", err)
 		}
+
+		db.metadata.Store(k, true)
 	}()
 
 	return false, nil
