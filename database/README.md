@@ -152,7 +152,9 @@ I have observed that under some conditions importing large datasets (using the `
 
 ### s3vectors://
 
-Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. This database implementation relies on a commercial service that is metered. Depending on how your database access is configured this could lead to [very large bills](https://murraycole.com/posts/aws-s3-vectors-pricing-deep-dive) at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
+Manage embeddings use the Amazon Web Services (AWS) [S3Vectors](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors.html) service. It also uses the AWS [DynamoDB](https://docs.aws.amazon.com/dynamodb/) service to store metadata properties to enable functionality not otherwise available by the `S3Vectors` service.
+
+This database implementation relies on a commercial service that is metered. Depending on how your database access is configured this could lead to [very large bills](https://murraycole.com/posts/aws-s3-vectors-pricing-deep-dive) at the end of the month. If you have already made your peace with AWS then it can be a quick and easy way to get started with vector embeddings.
 
 ```
 s3vectors://{BUCKET_NAME}?{QUERY_PARAMETERS}
@@ -171,7 +173,6 @@ Valid parameters are:
 | max-distance | float | no | Update the default maximum distance when querying for similar embeddings. Default is 1.0. |
 | max-results | int | no | Update the default number of records to return when querying	for similar embeddings.	Default	is 10. |
 | refresh-tags | bool | no | A boolean flag to update denormalized database properties in to index-specific "tags". Details are discussed below. |
-| with-dynamodb | bool | no | A boolean flag to use a DynamoDB table for indexing and querying records by provider or model. If false then it is not possible to list records with a provider or model filter. This is a AWS S3Vectors limitation. Default is true. |
 | dynamodb-table | string | no | Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors". | 
 For example:
 
@@ -192,10 +193,6 @@ Under the hood this package uses the [aaronland/go-aws/v3/auth](https://github.c
 | `sts:{ARN}` | Assume the role defined by `{ARN}` using STS credentials. |
 | `{AWS_PROFILE_NAME}` | This this profile from the default AWS credentials location. |
 | `{AWS_CREDENTIALS_PATH}:{AWS_PROFILE_NAME}` | This this profile from a user-defined AWS credentials location. |
-
-#### Refreshing database properties "tags"
-
-The nature of the S3Vectors service means there is no way to quickly derive properties about a "database", like the list of unique models or providers, without crawling the entire data set. To account for this these data are compiled as necessary and stored as index-level "tags" which are read at start-up time to prevent excessive (and potentially expensive) repeated crawling of the index. If you need or want to explicitly refresh those data (tags) you can include the `?refesh-tags=true` query parameter with your URI constructor.
 
 ### IAM policies
 
@@ -252,6 +249,8 @@ The following are the _minimal_ IAM policies you will need to have to use an S3V
 
 #### DynamoDB
 
+Note the use of the `s3vectors` and `s3vectors_metadata` table names in the example below. These are the default values. If you reassign the value of the `s3vectors` table with the `?dynamodb-table={YOUR_TABLE}` parameter, described above, you will need to update this example to replace `s3vectors` and `s3vectors_metadata` with `{YOUR_TABLE}` and `{YOUR_TABLE}_metadata` respecitively.
+
 ```
 {
     "Version": "2012-10-17",
@@ -267,6 +266,8 @@ The following are the _minimal_ IAM policies you will need to have to use an S3V
             "Resource": [
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/*",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata/*",		
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/*"
             ]
         },
@@ -277,7 +278,10 @@ The following are the _minimal_ IAM policies you will need to have to use an S3V
                 "dynamodb:PutItem",
                 "dynamodb:DeleteItem"
             ],
-            "Resource": "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors"
+            "Resource": [
+	        "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+	        "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata"
+	    ]
         },
         {
             "Sid": "DynamoDBQueryOnTableAndGSI",
@@ -287,8 +291,10 @@ The following are the _minimal_ IAM policies you will need to have to use an S3V
             ],
             "Resource": [
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors",
+  		"arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata",		
                 "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_provider_model",
-                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_model_provider"
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors/index/by_model_provider",
+                "arn:aws:dynamodb:{AWS_REGION}:{AWS_ACCOUNT_ID}:table/s3vectors_metadata/index/GSI1"		
             ]
         }
     ]

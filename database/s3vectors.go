@@ -7,12 +7,9 @@ import (
 	"iter"
 	"log/slog"
 	"net/url"
-	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	aa_auth "github.com/aaronland/go-aws/v3/auth"
 	"github.com/aaronland/go-pagination"
@@ -40,11 +37,10 @@ type S3VectorsDatabase struct {
 	client          *s3vectors.Client
 	dynamodb_client *db_s3vectors.DynamoDBClient
 	index_arn       string
-	models          []string
-	providers       []string
 	mu              *sync.RWMutex
 	max_results     int32
 	max_distance    float32
+	metadata        *sync.Map
 }
 
 // S3VectorsDatabaseScheme is the URI scheme used to create
@@ -73,17 +69,12 @@ func init() {
 //   - `max-distance` – Update the default maximum distance when querying	for similar embeddings.	Default	is 1.0.
 //   - `max-results` – Update the default number of records to return when querying for similar embeddings. Default is 10.
 //   - `refresh-tags` - A boolean flag to update denormalized database properties in to index-specific "tags".
-//   - `with-dynamodb` – A boolean flag to use a DynamoDB table for indexing and querying records by provider or model.
-//     Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors". Default is true.
 //   - `dynamodb-table` – Use a custom DynamoDB table name for storing and querying record data. Default is "s3vectors".
 func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	dimensions := 512
 	max_results := int32(10)
 	max_distance := float32(1.0)
-
-	models := make([]string, 0)
-	providers := make([]string, 0)
 
 	u, err := url.Parse(uri)
 
@@ -179,76 +170,46 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 
 	var dynamodb_cl *db_s3vectors.DynamoDBClient
 
-	with_dynamodb := true
 	dynamodb_table := db_s3vectors.DynamoDBTableName
 
-	if q.Has("with-dynamodb") {
+	if q.Has("dynamodb-table") {
 
-		v, err := strconv.ParseBool(q.Get("with-dynamodb"))
+		v := q.Get("dynamodb-table")
 
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse ?with-dynamodb= parameter, %w", err)
+		if v == "" {
+			return nil, fmt.Errorf("?dynamodb-table= parameter may not be empty.")
 		}
 
-		with_dynamodb = v
+		dynamodb_table = v
+
+		cfg_u, _ := url.Parse(cfg_uri)
+		cfg_q := cfg_u.Query()
+
+		if cfg_q.Has("dynamodb-table") {
+			cfg_q.Del("dynamodb-table")
+		}
+
+		cfg_q.Set("dynamodb-table", dynamodb_table)
+
+		cfg_u.RawQuery = cfg_q.Encode()
+		cfg_uri = cfg_u.String()
 	}
 
-	if with_dynamodb {
-
-		if q.Has("dynamodb-table") {
-
-			v := q.Get("dynamodb-table")
-
-			if v == "" {
-				return nil, fmt.Errorf("?dynamodb-table= parameter may not be empty.")
-			}
-
-			dynamodb_table = v
-
-			cfg_u, _ := url.Parse(cfg_uri)
-			cfg_q := cfg_u.Query()
-
-			if cfg_q.Has("dynamodb-table") {
-				cfg_q.Del("dynamodb-table")
-			}
-
-			cfg_q.Set("dynamodb-table", dynamodb_table)
-
-			cfg_u.RawQuery = cfg_q.Encode()
-			cfg_uri = cfg_u.String()
-		}
-
-		d_cl, err := db_s3vectors.NewDynamoDBClient(ctx, cfg_uri)
-
-		if err != nil {
-			return nil, err
-		}
-
-		err = d_cl.SetupTable(ctx)
-
-		if err != nil {
-			return nil, err
-		}
-
-		dynamodb_cl = d_cl
-	}
-
-	//
-
-	// Try to pull in model and provider information from tags so we
-	// aren't constantly crawling the entire index. If absent we crawl
-	// the entire index below.
-
-	m, p, err := getModelAndProviderTags(ctx, cl, index_arn)
+	d_cl, err := db_s3vectors.NewDynamoDBClient(ctx, cfg_uri)
 
 	if err != nil {
-		slog.Error("Failed to read model and provider tags", "error", err)
-	} else {
-		slog.Debug("Assign models and providers from tags", "models", m, "providers", p)
-		models = m
-		providers = p
+		return nil, err
 	}
 
+	err = d_cl.SetupTables(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	dynamodb_cl = d_cl
+
+	metadata := new(sync.Map)
 	mu := new(sync.RWMutex)
 
 	db := &S3VectorsDatabase{
@@ -259,31 +220,10 @@ func NewS3VectorsDatabase(ctx context.Context, uri string) (Database, error) {
 		index:           index,
 		uri:             uri,
 		dimensions:      dimensions,
-		models:          models,
-		providers:       providers,
 		max_results:     max_results,
 		max_distance:    max_distance,
 		mu:              mu,
-	}
-
-	// Okay, crawl the index. Not great but it's the only way.
-
-	refresh_tags := false
-
-	if q.Has("refresh-tags") {
-
-		v, err := strconv.ParseBool(q.Get("refresh-tags"))
-
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse ?refresh-tags= parameter, %w", err)
-		}
-
-		refresh_tags = v
-	}
-
-	if len(models) == 0 || len(providers) == 0 || refresh_tags {
-		slog.Debug("Gather model and provider tags")
-		go db.gatherModelsAndProviders(ctx)
+		metadata:        metadata,
 	}
 
 	return db, nil
@@ -345,9 +285,28 @@ func (db *S3VectorsDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Re
 	}
 
 	go func() {
-		db.addModel(ctx, rec.Model)
-		db.addProvider(ctx, rec.Provider)
-		db.updateModelAndProviderTagsIfChanged(ctx)
+
+		ctx := context.Background()
+
+		// Don't do this more than once
+
+		k := fmt.Sprintf("%s-%s", rec.Provider, rec.Model)
+
+		_, exists := db.metadata.Load(k)
+
+		if exists {
+			return
+		}
+
+		// Okay, do this
+
+		err := db.dynamodb_client.AddModelProviderMetadata(ctx, rec.Model, rec.Provider)
+
+		if err != nil {
+			slog.Error("Failed to add model/provider metadata", "provider", rec.Provider, "model", rec.Model, "error", err)
+		}
+
+		db.metadata.Store(k, true)
 	}()
 
 	return false, nil
@@ -801,10 +760,9 @@ func (db *S3VectorsDatabase) listRecords(ctx context.Context, pg_opts pagination
 	return records, pg, nil
 }
 
-// IterateRecords returns a Go 1.21 seq that yields every
-// record stored in the database.  The sequence is
-// lazy and will continue until the context is cancelled
-// or an error occurs.
+// IterateRecords returns a [iter.Seq2[*embeddingsdb.Record, error]] that yields every
+// record stored in the database.  The sequence is lazy and will continue until the context
+// is cancelled or an error occurs.
 func (db *S3VectorsDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {
@@ -853,12 +811,14 @@ func (db *S3VectorsDatabase) Dimensions(ctx context.Context, opts ...options.Opt
 
 // Return the unique list of models, for zero (all) or more providers, across all the embeddings.
 func (db *S3VectorsDatabase) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
-	return db.models, nil
+
+	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "MODELS")
 }
 
 // Return the unique list of providers across all the embeddings.
 func (db *S3VectorsDatabase) Providers(ctx context.Context, opts ...options.Option) ([]string, error) {
-	return db.providers, nil
+
+	return db.dynamodb_client.GetUniqueMetadataProperty(ctx, "PROVIDERS")
 }
 
 // Return the pagination type used by the database.
@@ -869,7 +829,7 @@ func (db *S3VectorsDatabase) PaginationType(ctx context.Context, opts ...options
 // Close performs and terminating functions required by the database.
 func (db *S3VectorsDatabase) Close(ctx context.Context) error {
 
-	return db.updateModelAndProviderTagsIfChanged(ctx)
+	return nil
 }
 
 // s3VectorToRecord converts an S3 Vectors vector and metadata
@@ -939,168 +899,6 @@ func (db *S3VectorsDatabase) s3VectorToRecord(vec_data types.VectorData, vec_met
 
 	return rec, nil
 
-}
-
-// gatherModelsAndProviders walks the entire index and collects
-// the distinct model and provider names found in the vector metadata.
-// The results are cached in the database instance and, if changed,
-// the index tags are updated accordingly.
-func (db *S3VectorsDatabase) gatherModelsAndProviders(ctx context.Context) error {
-
-	t1 := time.Now()
-
-	defer func() {
-		slog.Debug("Time to get stuff", "time", time.Since(t1))
-	}()
-
-	wg := new(sync.WaitGroup)
-
-	list_opts := &s3vectors.ListVectorsInput{
-		VectorBucketName: aws.String(db.bucket),
-		IndexName:        aws.String(db.index),
-		ReturnMetadata:   true,
-	}
-
-	pg := s3vectors.NewListVectorsPaginator(db.client, list_opts)
-
-	for pg.HasMorePages() {
-
-		rsp, err := pg.NextPage(ctx)
-
-		if err != nil {
-			return err
-		}
-
-		for _, vec := range rsp.Vectors {
-
-			logger := slog.Default()
-			logger = logger.With("key", vec.Key)
-
-			wg.Go(func() {
-				meta := make(map[string]string)
-
-				err := vec.Metadata.UnmarshalSmithyDocument(&meta)
-
-				if err != nil {
-					slog.Error("Failed to unmarshal metadata", "error", err)
-					return
-				}
-
-				model, exists := meta["x-model"]
-
-				if !exists {
-					logger.Error("Metadata missing model")
-					return
-				}
-
-				provider, exists := meta["x-provider"]
-
-				if !exists {
-					logger.Error("Metadata missing provider")
-					return
-				}
-
-				db.addModel(ctx, model)
-				db.addProvider(ctx, provider)
-			})
-		}
-	}
-
-	wg.Wait()
-
-	err := db.updateModelAndProviderTagsIfChanged(ctx)
-
-	if err != nil {
-		slog.Error("Failed to update model provider tags", "error", err)
-	}
-
-	return nil
-}
-
-// addModel adds a model name to the local cache if it is not already present.
-// The method is thread safe.
-func (db *S3VectorsDatabase) addModel(ctx context.Context, model string) {
-
-	if slices.Contains(db.models, model) {
-		return
-	}
-
-	slog.Debug("Add model", "model", model)
-
-	db.mu.Lock()
-
-	if !slices.Contains(db.models, model) {
-		db.models = append(db.models, model)
-	}
-
-	db.mu.Unlock()
-}
-
-// addProvider adds a provider name to the local cache if it is not already present.
-// The method is thread safe.
-func (db *S3VectorsDatabase) addProvider(ctx context.Context, provider string) {
-
-	if slices.Contains(db.providers, provider) {
-		return
-	}
-
-	slog.Debug("Add provider", "provider", provider)
-
-	db.mu.Lock()
-
-	if !slices.Contains(db.providers, provider) {
-		db.providers = append(db.providers, provider)
-	}
-
-	db.mu.Unlock()
-}
-
-// updateModelAndProviderTagsIfChanged checks the current index tags
-// against the cached model and provider lists and updates the
-// tags if they differ.
-func (db *S3VectorsDatabase) updateModelAndProviderTagsIfChanged(ctx context.Context) error {
-
-	models, providers, err := getModelAndProviderTags(ctx, db.client, db.index_arn)
-
-	if err != nil {
-		return err
-	}
-
-	str_models := strings.Join(models, " ")
-	str_providers := strings.Join(providers, " ")
-
-	cmp_models := strings.Join(db.models, " ")
-	cmp_providers := strings.Join(db.providers, " ")
-
-	if str_models == cmp_models && str_providers == cmp_providers {
-		return nil
-	}
-
-	idx_tags := map[string]string{
-		"embeddingsdb_models":    str_models,
-		"embeddingsdb_providers": str_providers,
-	}
-
-	return db.addIndexTags(ctx, idx_tags)
-}
-
-// addIndexTags sets the supplied tags on the S3 Vectors index.
-func (db *S3VectorsDatabase) addIndexTags(ctx context.Context, tags map[string]string) error {
-
-	slog.Debug("tag resource", "arn", db.index_arn, "tags", tags)
-
-	tag_opts := &s3vectors.TagResourceInput{
-		ResourceArn: aws.String(db.index_arn),
-		Tags:        tags,
-	}
-
-	_, err := db.client.TagResource(ctx, tag_opts)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // setupS3VectorsBucketAndIndex ensures that the bucket and index exist,
@@ -1177,51 +975,4 @@ func setupS3VectorsBucketAndIndex(ctx context.Context, cl *s3vectors.Client, buc
 	}
 
 	return arn, nil
-}
-
-// getModelAndProviderTags retrieves the "embeddingsdb_models" and
-// "embeddingsdb_providers" tags from the specified index ARN.
-func getModelAndProviderTags(ctx context.Context, cl *s3vectors.Client, arn string) ([]string, []string, error) {
-
-	models := make([]string, 0)
-	providers := make([]string, 0)
-
-	tags, err := listIndexTags(ctx, cl, arn)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	str_models, exists := tags["embeddingsdb_models"]
-
-	if exists {
-		models = strings.Split(str_models, " ")
-	}
-
-	str_providers, exists := tags["embeddingsdb_providers"]
-
-	if exists {
-		providers = strings.Split(str_providers, " ")
-	}
-
-	sort.Strings(models)
-	sort.Strings(providers)
-
-	return models, providers, nil
-}
-
-// listIndexTags retrieves all tags attached to the specified index ARN.
-func listIndexTags(ctx context.Context, cl *s3vectors.Client, arn string) (map[string]string, error) {
-
-	list_opts := &s3vectors.ListTagsForResourceInput{
-		ResourceArn: aws.String(arn),
-	}
-
-	rsp, err := cl.ListTagsForResource(ctx, list_opts)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return rsp.Tags, nil
 }

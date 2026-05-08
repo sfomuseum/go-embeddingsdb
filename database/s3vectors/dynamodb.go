@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -30,6 +31,8 @@ import (
 // the record key, provider, model, depiction id and dimension count.
 const DynamoDBTableName string = "s3vectors"
 
+const DynamoDBTableNameMetadata string = "s3vectors_metadata"
+
 // DynamoDBRecord represents a minimal record stored in DynamoDB.
 // The primary key is the concatenated provider|model|depiction_id.
 type DynamoDBRecord struct {
@@ -43,8 +46,9 @@ type DynamoDBRecord struct {
 // DynamoDBClient wraps basic add and remove operations the DynamoDB table
 // used to mirror the S3 Vectors index.
 type DynamoDBClient struct {
-	client *dynamodb.Client
-	table  string
+	client         *dynamodb.Client
+	table          string
+	table_metadata string
 }
 
 // NewDynamoDBClient creates a DynamoDB client using the AWS
@@ -52,6 +56,7 @@ type DynamoDBClient struct {
 func NewDynamoDBClient(ctx context.Context, cfg_uri string) (*DynamoDBClient, error) {
 
 	dynamodb_table := DynamoDBTableName
+	dynamodb_table_metadata := DynamoDBTableNameMetadata
 
 	u, err := url.Parse(cfg_uri)
 
@@ -81,18 +86,21 @@ func NewDynamoDBClient(ctx context.Context, cfg_uri string) (*DynamoDBClient, er
 	dynamodb_cl := dynamodb.NewFromConfig(cfg)
 
 	cl := &DynamoDBClient{
-		client: dynamodb_cl,
-		table:  dynamodb_table,
+		client:         dynamodb_cl,
+		table:          dynamodb_table,
+		table_metadata: dynamodb_table_metadata,
 	}
 
 	return cl, nil
 }
 
-// SetupTable creates the DynamoDB table if it does not already exist.
-func (cl *DynamoDBClient) SetupTable(ctx context.Context) error {
+// SetupTables creates the necessary DynamoDB tables if they don't not already exist.
+func (cl *DynamoDBClient) SetupTables(ctx context.Context) error {
+
+	tables := DynamoDBTables(cl.table, cl.table_metadata)
 
 	table_opts := &aa_dynamodb.CreateTablesOptions{
-		Tables: DynamoDBTables(cl.table),
+		Tables: tables,
 	}
 
 	return aa_dynamodb.CreateTables(ctx, cl.client, table_opts)
@@ -272,6 +280,176 @@ func (cl *DynamoDBClient) queryRecords(ctx context.Context, query_opts *dynamodb
 
 	return records, pg_rsp, nil
 }
+
+//
+
+func (cl *DynamoDBClient) AddModelProviderMetadata(ctx context.Context, model string, provider string) error {
+
+	model_key := "MODEL#" + model
+	provider_key := "PROVIDER#" + provider
+
+	_, err := cl.client.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+		TransactItems: []types.TransactWriteItem{
+			// Create the relationship item
+			{
+				Put: &types.Put{
+					TableName: aws.String(cl.table_metadata),
+					Item: map[string]types.AttributeValue{
+						"PK": &types.AttributeValueMemberS{Value: provider_key},
+						"SK": &types.AttributeValueMemberS{Value: model_key},
+					},
+					ConditionExpression: aws.String("attribute_not_exists(PK)"),
+				},
+			},
+			// Ensure model exists in unique list
+			{
+				Put: &types.Put{
+					TableName: aws.String(cl.table_metadata),
+					Item: map[string]types.AttributeValue{
+						"PK": &types.AttributeValueMemberS{Value: "SUMMARY#MODELS"},
+						"SK": &types.AttributeValueMemberS{Value: model_key},
+					},
+				},
+			},
+			// Ensure provider exists in unique list
+			{
+				Put: &types.Put{
+					TableName: aws.String(cl.table_metadata),
+					Item: map[string]types.AttributeValue{
+						"PK": &types.AttributeValueMemberS{Value: "SUMMARY#PROVIDERS"},
+						"SK": &types.AttributeValueMemberS{Value: provider_key},
+					},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+
+		var tce *types.TransactionCanceledException
+
+		if errors.As(err, &tce) {
+			for _, reason := range tce.CancellationReasons {
+
+				if *reason.Code == "ConditionalCheckFailed" {
+					return nil
+				}
+			}
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (cl *DynamoDBClient) GetUniqueMetadataProperty(ctx context.Context, prop string) ([]string, error) {
+
+	pk := "SUMMARY#" + strings.ToUpper(prop)
+
+	out, err := cl.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(cl.table_metadata),
+		KeyConditionExpression: aws.String("PK = :pk"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pk": &types.AttributeValueMemberS{Value: pk},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var results []string
+
+	for _, item := range out.Items {
+
+		sk_value := item["SK"].(*types.AttributeValueMemberS).Value
+
+		delimiterIndex := strings.Index(sk_value, "#")
+
+		if delimiterIndex != -1 {
+			v := sk_value[delimiterIndex+1:]
+			results = append(results, v)
+		}
+	}
+
+	return results, nil
+}
+
+func (cl *DynamoDBClient) GetModelsForProvider(ctx context.Context, provider string) ([]string, error) {
+
+	out, err := cl.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(cl.table_metadata),
+		KeyConditionExpression: aws.String("PK = :pk AND begins_with(SK, :skPrefix)"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pk":       &types.AttributeValueMemberS{Value: "PROVIDER#" + provider},
+			":skPrefix": &types.AttributeValueMemberS{Value: "MODEL#"},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// ... (parse results similarly to GetUniqueList)
+	return parseSKs(out.Items), nil
+}
+
+func (cl *DynamoDBClient) GetProvidersForModel(ctx context.Context, model string) ([]string, error) {
+
+	out, err := cl.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String("ModelProviderTable"),
+		IndexName:              aws.String("GSI1"),
+		KeyConditionExpression: aws.String("SK = :sk AND begins_with(PK, :pkPrefix)"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":sk":       &types.AttributeValueMemberS{Value: "MODEL#" + model},
+			":pkPrefix": &types.AttributeValueMemberS{Value: "PROVIDER#"},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return parsePKs(out.Items), nil
+}
+
+func parseSKs(items []map[string]types.AttributeValue) []string {
+
+	results := make([]string, 0, len(items))
+
+	for _, item := range items {
+
+		if val, ok := item["SK"].(*types.AttributeValueMemberS); ok {
+
+			if idx := strings.Index(val.Value, "#"); idx != -1 {
+				results = append(results, val.Value[idx+1:])
+			}
+		}
+	}
+
+	return results
+}
+
+// parsePKs extracts values from the PK field (used for GSI queries)
+func parsePKs(items []map[string]types.AttributeValue) []string {
+
+	results := make([]string, 0, len(items))
+
+	for _, item := range items {
+
+		if val, ok := item["PK"].(*types.AttributeValueMemberS); ok {
+
+			if idx := strings.Index(val.Value, "#"); idx != -1 {
+				results = append(results, val.Value[idx+1:])
+			}
+		}
+	}
+
+	return results
+}
+
+//
 
 // recordAsDynamoDBRecord converts an embeddingsdb.Record into a DynamoDBRecord.
 func recordAsDynamoDBRecord(rec *embeddingsdb.Record) *DynamoDBRecord {
