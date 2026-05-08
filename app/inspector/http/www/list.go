@@ -42,16 +42,16 @@ type ListHandlerVars struct {
 	URIs                  *inspector_http.URIs
 }
 
-func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
+func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
-	t := list_opts.Templates.Lookup("list")
+	t := opts.Templates.Lookup("list")
 
 	if t == nil {
 		return nil, fmt.Errorf("Failed to load 'list' template")
 	}
 
 	ctx := context.Background()
-	pg_type, err := list_opts.Client.PaginationType(ctx)
+	pg_type, err := opts.Client.PaginationType(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to determine pagination type, %w", err)
@@ -69,7 +69,37 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		models, err := list_opts.Client.Models(ctx)
+		list_opts := make([]options.Option, 0)
+		models_opts := make([]options.Option, 0)
+		providers_opts := make([]options.Option, 0)				
+
+		model, err := sanitize.GetString(req, "model")
+
+		if err != nil {
+			logger.Error("Failed to derive model parameter", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if model != "" {
+			list_opts = append(list_opts, options.NewFilterOption("model", model))
+			providers_opts = append(providers_opts, options.NewModelOption(model))
+		}
+
+		provider, err := sanitize.GetString(req, "provider")
+
+		if err != nil {
+			logger.Error("Failed to derive provider parameter", "error", err)
+			http.Error(rsp, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		if provider != "" {
+			list_opts = append(list_opts, options.NewFilterOption("provider", provider))
+			models_opts = append(models_opts, options.NewProviderOption(provider))
+		}
+
+		models, err := opts.Client.Models(ctx, models_opts...)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -77,7 +107,7 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := list_opts.Client.Providers(ctx)
+		providers, err := opts.Client.Providers(ctx, providers_opts...)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)
@@ -147,35 +177,7 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		opts := make([]options.Option, 0)
-
-		model, err := sanitize.GetString(req, "model")
-
-		if err != nil {
-			logger.Error("Failed to derive model parameter", "error", err)
-			http.Error(rsp, "Bad request", http.StatusBadRequest)
-			return
-		}
-
-		if model != "" {
-			o := options.NewFilterOption("model", model)
-			opts = append(opts, o)
-		}
-
-		provider, err := sanitize.GetString(req, "provider")
-
-		if err != nil {
-			logger.Error("Failed to derive provider parameter", "error", err)
-			http.Error(rsp, "Bad request", http.StatusBadRequest)
-			return
-		}
-
-		if provider != "" {
-			o := options.NewFilterOption("provider", provider)
-			opts = append(opts, o)
-		}
-
-		records, pg_rsp, err := list_opts.Client.ListRecords(ctx, pg_opts, opts...)
+		records, pg_rsp, err := opts.Client.ListRecords(ctx, pg_opts, list_opts...)
 
 		if err != nil {
 			logger.Error("Failed to list records", "error", err)
@@ -186,7 +188,7 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 		var pg_next string
 		var pg_prev string
 
-		list_root := list_opts.URIs.List
+		list_root := opts.URIs.List
 
 		switch pg_type {
 		case database.CountablePaginationType:
@@ -231,8 +233,8 @@ func ListHandler(list_opts *ListHandlerOptions) (http.Handler, error) {
 			CurrentModel:          model,
 			CurrentProvider:       provider,
 			Providers:             providers,
-			EnableSearch:          list_opts.EnableSearch,
-			URIs:                  list_opts.URIs,
+			EnableSearch:          opts.EnableSearch,
+			URIs:                  opts.URIs,
 		}
 
 		err = t.Execute(rsp, vars)
