@@ -63,6 +63,8 @@ window.addEventListener('load', function(e){
 	s.set("model", model_select.value);
 	u.search = s
 
+	const current_p = provider_select.value;
+	
 	fetch(u.toString())
 	    .then(rsp => {
 		return rsp.json();
@@ -79,9 +81,15 @@ window.addEventListener('load', function(e){
 
 		for (var i=0; i < count; i++){
 
+		    const p = data[i];
 		    const opt = document.createElement("option");
-		    opt.setAttribute("value", data[i]);
-		    opt.appendChild(document.createTextNode(data[i]));
+		    opt.setAttribute("value", p);
+		    opt.appendChild(document.createTextNode(p));
+
+		    if (p == current_p){
+			opt.setAttribute("selected", "selected");
+		    }
+		    
 		    provider_select.appendChild(opt);
 		}
 		
@@ -101,6 +109,8 @@ window.addEventListener('load', function(e){
 	u.search = s;
 
 	console.debug("Get models for provider", u.toString());
+
+	const current_m = model_select.value;
 	
 	fetch(u.toString())
 	    .then(rsp => {
@@ -127,12 +137,18 @@ window.addEventListener('load', function(e){
 			const count = data.length;
 			
 			for (var i=0; i < count; i++){
-			    
-			    const opt = document.createElement("option");
-			    opt.setAttribute("value", data[i]);
 
-			    if (! record_models.includes(data[i])){
+			    const m = data[i];
+			    const opt = document.createElement("option");
+			    opt.setAttribute("value", m);
+
+			    if (! record_models.includes(m)){
 				opt.setAttribute("disabled", "disabled");
+			    } else {
+
+				if (m == current_m){
+				    opt.setAttribute("selected", "selected");
+				}
 			    }
 			    
 			    opt.appendChild(document.createTextNode(data[i]));
