@@ -220,10 +220,6 @@ func SearchHandler(opts *SearchHandlerOptions) (http.Handler, error) {
 			}
 
 			max32 := float32(max_dist)
-
-			// DEPRECATED
-			// similar_req.MaxDistance = &max32
-
 			custom_opts = append(custom_opts, options.NewMaxDistanceOption(max32))
 		}
 
