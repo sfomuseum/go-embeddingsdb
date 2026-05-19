@@ -21,13 +21,13 @@ require (
 	github.com/duckdb/duckdb-go/v2 v2.10502.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/mattn/go-sqlite3 v1.14.44
-	github.com/parquet-go/parquet-go v0.29.0
+	github.com/parquet-go/parquet-go v0.30.1
 	github.com/sfomuseum/go-database v0.0.18
-	github.com/sfomuseum/go-embeddings v0.4.1
+	github.com/sfomuseum/go-embeddings v0.5.0
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-template v1.11.0
 	golang.org/x/oauth2 v0.36.0
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 )
 

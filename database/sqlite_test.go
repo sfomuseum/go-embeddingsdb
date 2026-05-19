@@ -131,16 +131,14 @@ func TestSQLiteDatabase(t *testing.T) {
 			t.Fatalf("[%s] Unexpected providers length %d", compression, len(providers))
 		}
 
-		max_results := 10
-
 		similar_req := &embeddingsdb.SimilarRecordsRequest{
-			SimilarProvider: &rec2.Provider,
-			Model:           rec2.Model,
-			Embeddings:      rec2.Embeddings,
+			Model:      rec2.Model,
+			Embeddings: rec2.Embeddings,
 		}
 
 		opts := []options.Option{
-			options.NewMaxResultsOption(&max_results),
+			options.NewMaxResultsOption(int32(10)),
+			options.NewSimilarProviderOption(rec2.Provider),
 		}
 
 		similar_rsp, err := db.SimilarRecords(ctx, similar_req, opts...)

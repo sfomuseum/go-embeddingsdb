@@ -71,7 +71,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		list_opts := make([]options.Option, 0)
 		models_opts := make([]options.Option, 0)
-		providers_opts := make([]options.Option, 0)				
+		providers_opts := make([]options.Option, 0)
 
 		model, err := sanitize.GetString(req, "model")
 
