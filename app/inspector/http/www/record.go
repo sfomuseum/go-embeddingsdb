@@ -46,7 +46,19 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 		ctx := req.Context()
 		logger := slog.LoggerWithRequest(req, nil)
 
-		models, err := opts.Client.Models(ctx)
+		record, err := inspector_http.GetRecordFromRequest(req, opts.Client)
+
+		if err != nil {
+			logger.Error("Failed to get database record", "error", err)
+			http.Error(rsp, "Not found", http.StatusNotFound)
+			return
+		}
+
+		models_opts := []options.Option{
+			options.NewProviderOption(record.Provider),
+		}
+
+		models, err := opts.Client.Models(ctx, models_opts...)
 
 		if err != nil {
 			logger.Error("Failed to retrieve models", "error", err)
@@ -54,19 +66,15 @@ func RecordHandler(opts *RecordHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		providers, err := opts.Client.Providers(ctx)
+		providers_opts := []options.Option{
+			options.NewModelOption(record.Model),
+		}
+
+		providers, err := opts.Client.Providers(ctx, providers_opts...)
 
 		if err != nil {
 			logger.Error("Failed to retrieve providers", "error", err)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		record, err := inspector_http.GetRecordFromRequest(req, opts.Client)
-
-		if err != nil {
-			logger.Error("Failed to get database record", "error", err)
-			http.Error(rsp, "Not found", http.StatusNotFound)
 			return
 		}
 

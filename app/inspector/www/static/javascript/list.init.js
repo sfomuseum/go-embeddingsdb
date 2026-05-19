@@ -1,5 +1,8 @@
 window.addEventListener('load', function(e){
 
+    const main = document.querySelector("#main");
+    const list_uri = main.getAttribute("data-list-uri");
+    
     const list_controls = document.querySelector("#list-controls");
     const list_controls_models = document.querySelector("#list-controls-models");
     const list_controls_providers = document.querySelector("#list-controls-providers");        
@@ -32,8 +35,6 @@ window.addEventListener('load', function(e){
 	return;
     }
 
-    const main = document.querySelector("#main");
-    const list_uri = main.getAttribute("data-list-uri");
     
     list_controls_models.onchange = function(e){
 

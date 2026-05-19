@@ -1,5 +1,12 @@
 window.addEventListener('load', function(e){
 
+    const main = document.querySelector("#main");
+    const providers_uri = main.getAttribute("data-api-providers-uri");
+    const models_uri = main.getAttribute("data-api-models-uri");
+    const record_uri = main.getAttribute("data-record-uri");
+
+    const record_provider = main.getAttribute("data-record-provider");
+    
     const model_current = document.querySelector("#model-current");
     const model_select = document.querySelector("#model-select");
     const record_table = document.querySelector("#record-table");
@@ -9,7 +16,7 @@ window.addEventListener('load', function(e){
     const current_model = record_table.getAttribute("data-model");        
 
     const similar_controls = document.querySelector("#similar-controls");
-    const model_provider = document.querySelector("#model-provider");
+    const provider_select = document.querySelector("#provider-select");
 
     const max_distance = document.querySelector("#max-distance");
     const max_distance_wrapper = document.querySelector("#max-distance-wrapper");
@@ -46,11 +53,120 @@ window.addEventListener('load', function(e){
     });
     
     
-    const main = document.querySelector("#main");
-    const record_uri = main.getAttribute("data-record-uri");
-    
     const refine_btn = document.querySelector("#refine");
 
+    model_select.onchange = function(){
+
+	const u = new URL(providers_uri, location);
+	const s = new URLSearchParams();
+
+	s.set("model", model_select.value);
+	u.search = s
+
+	const current_p = provider_select.value;
+	
+	fetch(u.toString())
+	    .then(rsp => {
+		return rsp.json();
+	    }).then(data => {
+
+		provider_select.innerHTML = "";
+
+		const opt = document.createElement("option");
+		opt.setAttribute("value", "");
+		opt.appendChild(document.createTextNode("All providers"));
+		provider_select.appendChild(opt);
+		
+		const count = data.length;
+
+		for (var i=0; i < count; i++){
+
+		    const p = data[i];
+		    const opt = document.createElement("option");
+		    opt.setAttribute("value", p);
+		    opt.appendChild(document.createTextNode(p));
+
+		    if (p == current_p){
+			opt.setAttribute("selected", "selected");
+		    }
+		    
+		    provider_select.appendChild(opt);
+		}
+		
+	    }).catch(err => {
+		console.error("Failed to get model providers", err)
+	    });
+	
+	return false;
+    };
+
+    provider_select.onchange = function(){
+
+	const u = new URL(models_uri, location);
+	const s = new URLSearchParams();
+
+	s.set("provider", provider_select.value);
+	u.search = s;
+
+	console.debug("Get models for provider", u.toString());
+
+	const current_m = model_select.value;
+	
+	fetch(u.toString())
+	    .then(rsp => {
+		return rsp.json();
+	    }).then(data => {
+
+		// now get models for record provider
+
+		const u2 = new URL(models_uri, location);
+		const s2 = new URLSearchParams();
+		
+		s2.set("provider", record_provider);
+		u2.search = s2;
+
+		console.debug("Get record models", u2.toString());
+		
+		fetch(u2.toString())
+		    .then(rsp => {
+			return rsp.json();
+		    }).then(record_models => {
+		
+			model_select.innerHTML = "";
+			
+			const count = data.length;
+			
+			for (var i=0; i < count; i++){
+
+			    const m = data[i];
+			    const opt = document.createElement("option");
+			    opt.setAttribute("value", m);
+
+			    if (! record_models.includes(m)){
+				opt.setAttribute("disabled", "disabled");
+			    } else {
+
+				if (m == current_m){
+				    opt.setAttribute("selected", "selected");
+				}
+			    }
+			    
+			    opt.appendChild(document.createTextNode(data[i]));
+			    model_select.appendChild(opt);
+			}
+			
+		    }).catch(err => {
+			console.error("Failed to get record models", err);
+			throw err;
+		    });
+		
+	    }).catch(err => {
+		console.error("Failed to derive provider models", err)
+	    });
+	
+	return false;
+    };
+    
     refine_btn.onclick = function(){
 
 	const u = new URL("/", location);
@@ -62,8 +178,8 @@ window.addEventListener('load', function(e){
 	    s.set("model", model_select.value)
 	}
 	
-	if (model_provider.value != ""){
-	    s.set("similar-provider", model_provider.value);
+	if (provider_select.value != ""){
+	    s.set("similar-provider", provider_select.value);
 	}
 
 	if (custom_max_distance.checked){

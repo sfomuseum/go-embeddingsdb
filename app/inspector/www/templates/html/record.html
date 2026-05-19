@@ -2,7 +2,7 @@
 {{ template "inc_header" . -}}
 {{ $root := . }}
 
-<div class="container" id="main" data-record-uri="{{ .URIs.Record }}">
+<div class="container" id="main" data-record-provider="{{ .Record.Provider }}" data-record-uri="{{ .URIs.Record }}" data-api-models-uri="{{ .URIs.APIModels }}" data-api-providers-uri="{{ .URIs.APIProviders }}">
     
     <div class="row record-grid">
 
@@ -55,7 +55,7 @@
 
 		<div class="mb-3">
 		    <label for="model-provider" class="form-label">Filter similar records by provider</label>
-		    <select class="form-select" id="model-provider">
+		    <select class="form-select" id="provider-select">
 			<option value="">All providers</option>
 			{{ range $i, $p := .Providers -}}
 			<option value="{{ $p }}" {{ if eq $p $.SimilarProvider }}selected="selected"{{ end }}>{{ $p }}</option>

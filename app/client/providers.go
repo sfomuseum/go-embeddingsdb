@@ -17,17 +17,19 @@ import (
 func Providers(ctx context.Context, args []string) {
 
 	var client_uri string
-	var dimensions multi.MultiInt
+	var models multi.MultiString
 	var verbose bool
 
+	// var dimensions multi.MultiInt
 	// var database_uris multi.MultiString
 
 	fs := flagset.NewFlagSet("record")
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A validsfomuseum/go-embeddingsdb/client.Client URI.")
-	fs.Var(&dimensions, "dimensions", "...")
+	fs.Var(&models, "model", "Zero or more models to limit model selection by.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
+	// fs.Var(&dimensions, "dimensions", "...")
 	// fs.Var(&database_uris, "database-uri", "...")
 
 	fs.Usage = func() {
@@ -52,8 +54,14 @@ func Providers(ctx context.Context, args []string) {
 
 	opts := make([]options.Option, 0)
 
-	for _, d := range dimensions {
-		opts = append(opts, options.NewDimensionsOption(d))
+	/*
+		for _, d := range dimensions {
+			opts = append(opts, options.NewDimensionsOption(d))
+		}
+	*/
+
+	for _, m := range models {
+		opts = append(opts, options.NewModelOption(m))
 	}
 
 	providers, err := cl.Providers(ctx, opts...)
