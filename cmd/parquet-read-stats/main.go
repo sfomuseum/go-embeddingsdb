@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/parquet-go/parquet-go"
+	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -43,15 +43,11 @@ func main() {
 
 		defer r.Close()
 
-		info, _ := os.Stat(path)
-
-		f, err := parquet.OpenFile(r, info.Size())
+		meta, err := parquet.KeyValueMetadata(r)
 
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		meta := f.Metadata()
 
 		enc := json.NewEncoder(os.Stdout)
 		err = enc.Encode(meta)
