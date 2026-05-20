@@ -27,7 +27,7 @@ func ImportWithRange(ctx context.Context, cl client.Client, start int64, end int
 	count := int64(0)
 	total := int64(0)
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
 	go func() {

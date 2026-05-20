@@ -9,7 +9,8 @@ go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-server cmd/serv
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-inspector cmd/inspector/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-export/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
-go build -tags= -mod readonly -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-metadata cmd/parquet-metadata/main.go
 ```
 
 _Please be sure to read the [notes on building tools](../#build) for build tags related to specific database implementations and other "known knowns"._
@@ -32,6 +33,18 @@ A minimalist web-interface for inspecting documents stored in a `embeddingsdb-se
 
 Detailed documentation for this tool can be found in [inspector/README.md](inspector/README.md).
 
+### parquet-append-stats
+
+Append go-embeddingsdb statistics to one or more Parquet files.
+
+Detailed documentation for this tool can be found in [parquet-append-stats/README.md](parquet-append-stats/README.md).
+
+### parquet-gather-stats
+
+Gather embeddingsdb statistics from one or more Parquet files and write to STDOUT as JSON-encoded data..
+
+Detailed documentation for this tool can be found in [parquet-gather-stats/README.md](parquet-gather-stats/README.md).
+
 ### parquet-import
 
 Import parquet-encoded embeddingsdb records from one or more files and add them to an embeddingsdb instance.
@@ -49,3 +62,9 @@ Detailed documentation for this tool can be found in [parquet-export/README.md](
 Merge two or more go-embeddingsdb Parquet files in to a new Parquet file.
 
 Detailed documentation for this tool can be found in [parquet-merge/README.md](parquet-merge/README.md).
+
+### parquet-metadata
+
+Print JSON-encoded metadata for a Parquet file to STDOUT
+
+Detailed documentation for this tool can be found in [parquet-metadata/README.md](parquet-metadata/README.md).
