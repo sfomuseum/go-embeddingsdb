@@ -15,22 +15,25 @@ Valid options are:
 For example:
 
 ```
-$> ./bin/parquet-gather-stats  ./test2.parquet | jq
+$> ./bin/parquet-gather-stats /usr/local/data/embeddings/nga/20260502-nga-opendata-1152-siglip.parquet | jq
 {
   "models": [
-    "google/siglip2-so400m-patch14-384"
+    "google/siglip2-so400m-patch16-naflex"
   ],
   "providers": [
-    "sfomuseum-data-media-collection"
+    "nga"
   ],
   "model_providers": {
-    "google/siglip2-so400m-patch14-384": [
-      "sfomuseum-data-media-collection"
+    "google/siglip2-so400m-patch16-naflex": [
+      "nga"
     ]
   },
+  "model_dimensions": {
+    "google/siglip2-so400m-patch16-naflex": 1152
+  },
   "provider_models": {
-    "sfomuseum-data-media-collection": [
-      "google/siglip2-so400m-patch14-384"
+    "nga": [
+      "google/siglip2-so400m-patch16-naflex"
     ]
   }
 }

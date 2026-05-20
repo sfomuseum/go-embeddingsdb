@@ -17,18 +17,23 @@ Valid options are:
 For example:
 
 ```
-$> ./bin/parquet-append-stats -output test2.parquet test.parquet
+$> ./bin/parquet-append-stats -output nga.parquet /usr/local/data/embeddings/nga/20260413-nga-opendata.parquet
 ```
 
 And then:
 
 ```
-$> ./bin/parquet-metadata -key-value ./test2.parquet | jq
+$> ./bin/parquet-metadata -key-value ./nga.parquet | jq
 {
-  "embeddingsdb:model:google/siglip2-so400m-patch14-384:providers": "sfomuseum-data-media-collection",
-  "embeddingsdb:models": "google/siglip2-so400m-patch14-384",
-  "embeddingsdb:provider:sfomuseum-data-media-collection:models": "google/siglip2-so400m-patch14-384",
-  "embeddingsdb:providers": "sfomuseum-data-media-collection"
+  "embeddingsdb:model:apple/mobileclip_s0:dimensions": "512",
+  "embeddingsdb:model:apple/mobileclip_s0:providers": "nga",
+  "embeddingsdb:model:apple/mobileclip_s1:dimensions": "512",
+  "embeddingsdb:model:apple/mobileclip_s1:providers": "nga",
+  "embeddingsdb:model:apple/mobileclip_s2:dimensions": "512",
+  "embeddingsdb:model:apple/mobileclip_s2:providers": "nga",
+  "embeddingsdb:models": "apple/mobileclip_s2;apple/mobileclip_s1;apple/mobileclip_s0",
+  "embeddingsdb:provider:nga:models": "apple/mobileclip_s2;apple/mobileclip_s1;apple/mobileclip_s0",
+  "embeddingsdb:providers": "nga"
 }
 ```
 

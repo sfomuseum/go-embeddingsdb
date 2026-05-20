@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -11,11 +12,12 @@ import (
 )
 
 type Statistics struct {
-	Models         []string            `json:"models"`
-	Providers      []string            `json:"providers"`
-	ModelProviders map[string][]string `json:"model_providers"`
-	ProviderModels map[string][]string `json:"provider_models"`
-	mu             *sync.RWMutex
+	Models          []string            `json:"models"`
+	Providers       []string            `json:"providers"`
+	ModelProviders  map[string][]string `json:"model_providers"`
+	ModelDimensions map[string]int      `json:"model_dimensions"`
+	ProviderModels  map[string][]string `json:"provider_models"`
+	mu              *sync.RWMutex
 }
 
 func NewStatistics() *Statistics {
@@ -24,16 +26,18 @@ func NewStatistics() *Statistics {
 	providers := make([]string, 0)
 
 	model_providers := make(map[string][]string)
+	model_dimensions := make(map[string]int)
 	provider_models := make(map[string][]string)
 
 	mu := new(sync.RWMutex)
 
 	s := &Statistics{
-		Models:         models,
-		Providers:      providers,
-		ModelProviders: model_providers,
-		ProviderModels: provider_models,
-		mu:             mu,
+		Models:          models,
+		Providers:       providers,
+		ModelProviders:  model_providers,
+		ModelDimensions: model_dimensions,
+		ProviderModels:  provider_models,
+		mu:              mu,
 	}
 
 	return s
@@ -71,6 +75,12 @@ func (s *Statistics) AddRecord(r any) error {
 
 	s.ModelProviders[rec.Model] = model_providers
 
+	_, exists = s.ModelDimensions[rec.Model]
+
+	if !exists {
+		s.ModelDimensions[rec.Model] = len(rec.Embeddings)
+	}
+
 	provider_models, exists := s.ProviderModels[rec.Provider]
 
 	if !exists {
@@ -93,6 +103,10 @@ func (s *Statistics) AppendMetadata(wr *ParquetWriter) error {
 
 	p_wr.SetKeyValueMetadata("embeddingsdb:models", strings.Join(s.Models, ";"))
 	p_wr.SetKeyValueMetadata("embeddingsdb:providers", strings.Join(s.Providers, ";"))
+
+	for k, v := range s.ModelDimensions {
+		p_wr.SetKeyValueMetadata(fmt.Sprintf("embeddingsdb:model:%s:dimensions", k), strconv.Itoa(v))
+	}
 
 	for k, v := range s.ModelProviders {
 		p_wr.SetKeyValueMetadata(fmt.Sprintf("embeddingsdb:model:%s:providers", k), strings.Join(v, ";"))
