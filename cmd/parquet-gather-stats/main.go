@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,11 +17,10 @@ func main() {
 	var verbose bool
 
 	fs := flagset.NewFlagSet("import")
-
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "...\n")
+		fmt.Fprintf(os.Stderr, "Gather embeddingsdb statistics from one or more Parquet files and write to STDOUT as JSON-encoded data..\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] parquet_file(N) parquet_file(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
@@ -33,27 +33,20 @@ func main() {
 		slog.Debug("Verbose logging enabled")
 	}
 
-	for _, path := range fs.Args() {
+	ctx := context.Background()
 
-		r, err := os.Open(path)
+	uris := fs.Args()
 
-		if err != nil {
-			log.Fatal(err)
-		}
+	stats, err := parquet.GatherStatistics(ctx, uris...)
 
-		defer r.Close()
+	if err != nil {
+		log.Fatalf("Failed to merge files, %v", err)
+	}
 
-		meta, err := parquet.KeyValueMetadata(r)
+	enc := json.NewEncoder(os.Stdout)
+	err = enc.Encode(stats)
 
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		enc := json.NewEncoder(os.Stdout)
-		err = enc.Encode(meta)
-
-		if err != nil {
-			log.Fatal(err)
-		}
+	if err != nil {
+		log.Fatalf("Failed to encode statistics, %w", err)
 	}
 }
