@@ -8,22 +8,9 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
-func NewSigner(ctx context.Context, key *pgp_crypto.Key) (pgp_crypto.PGPSign, error) {
-
-	pgp := pgp_crypto.PGP()
-
-	signer, err := pgp.Sign().SigningKey(key).New()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return signer, nil
-}
-
 func SignRecord(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Record) ([]byte, error) {
 
-	signer, err := NewSigner(ctx, key)
+	signer, err := NewSigner(key)
 
 	if err != nil {
 		return nil, err

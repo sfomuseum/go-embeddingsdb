@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 
-	pgp_crypto "github.com/ProtonMail/gopenpgp/v3/crypto"
 	"github.com/sfomuseum/go-embeddingsdb/crypto"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
@@ -39,18 +38,30 @@ func main() {
 
 	uris := fs.Args()
 
-	pgp := pgp_crypto.PGP()
+	pswd := []byte("foobar")
 
-	k, err := pgp.KeyGeneration().
-		AddUserId("alice", "alice@alice.com").
-		New().
-		GenerateKey()
+	k, err := crypto.NewKey("alice", "alice@alice.com", pswd)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	signer, err := crypto.NewSigner(ctx, k)
+	is_locked, err := k.IsLocked()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if is_locked {
+
+		k, err = k.Unlock(pswd)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	signer, err := crypto.NewSigner(k)
 
 	if err != nil {
 		log.Fatal(err)
