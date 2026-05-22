@@ -50,13 +50,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	signer, err := crypto.NewSigner(ctx, k)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for rec, err := range parquet.Iterate(ctx, uris...) {
 
 		if err != nil {
 			log.Fatalf("Iterator yield an error, %v", err)
 		}
 
-		a, err := crypto.SignRecord(ctx, k, rec)
+		a, err := crypto.SignRecordWithSigner(ctx, signer, rec)
 
 		if err != nil {
 			log.Fatal(err)

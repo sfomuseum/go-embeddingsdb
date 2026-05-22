@@ -8,17 +8,33 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
-func SignRecord(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Record) ([]byte, error) {
+func NewSigner(ctx context.Context, key *pgp_crypto.Key) (pgp_crypto.PGPSign, error) {
 
-	enc, err := json.Marshal(rec)
+	pgp := pgp_crypto.PGP()
+
+	signer, err := pgp.Sign().SigningKey(key).New()
 
 	if err != nil {
 		return nil, err
 	}
 
-	pgp := pgp_crypto.PGP()
+	return signer, nil
+}
 
-	signer, err := pgp.Sign().SigningKey(key).New()
+func SignRecord(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Record) ([]byte, error) {
+
+	signer, err := NewSigner(ctx, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return SignRecordWithSigner(ctx, signer, rec)
+}
+
+func SignRecordWithSigner(ctx context.Context, signer pgp_crypto.PGPSign, rec *embeddingsdb.Record) ([]byte, error) {
+
+	enc, err := json.Marshal(rec)
 
 	if err != nil {
 		return nil, err
