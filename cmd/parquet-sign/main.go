@@ -14,9 +14,15 @@ import (
 
 func main() {
 
+	var key_uri string
+	var pswd_uri string
+
 	var verbose bool
 
 	fs := flagset.NewFlagSet("emit")
+
+	fs.StringVar(&key_uri, "key-uri", "", "...")
+	fs.StringVar(&pswd_uri, "password-uri", "", "...")
 
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
@@ -38,33 +44,16 @@ func main() {
 
 	uris := fs.Args()
 
-	pswd := []byte("foobar")
-
-	k, err := crypto.NewKey("alice", "alice@alice.com", pswd)
+	key, err := crypto.LoadKey(ctx, key_uri, pswd_uri)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to load key, %v", err)
 	}
 
-	is_locked, err := k.IsLocked()
+	signer, err := crypto.NewSigner(key)
 
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	if is_locked {
-
-		k, err = k.Unlock(pswd)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	signer, err := crypto.NewSigner(k)
-
-	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to create signer, %v", err)
 	}
 
 	for rec, err := range parquet.Iterate(ctx, uris...) {
@@ -76,7 +65,7 @@ func main() {
 		a, err := crypto.SignRecordWithSigner(ctx, signer, rec)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to sign record %s, %v", rec.Key(), err)
 		}
 
 		log.Println(string(a))
