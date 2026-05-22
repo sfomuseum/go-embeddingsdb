@@ -11,6 +11,7 @@ go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-export cmd/parquet-e
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-import/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-metadata cmd/parquet-metadata/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-emit cmd/parquet-emit/main.go
 ```
 
 _Please be sure to read the [notes on building tools](../#build) for build tags related to specific database implementations and other "known knowns"._
@@ -38,6 +39,12 @@ Detailed documentation for this tool can be found in [inspector/README.md](inspe
 Append go-embeddingsdb statistics to one or more Parquet files.
 
 Detailed documentation for this tool can be found in [parquet-append-stats/README.md](parquet-append-stats/README.md).
+
+### parquet-emit
+
+Emit embeddingsdb records in a Parquet as JSON-encoded data.
+
+Detailed documentation for this tool can be found in [parquet-emit/README.md](parquet-emit/README.md).
 
 ### parquet-gather-stats
 

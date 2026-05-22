@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -21,7 +22,7 @@ func main() {
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "...\n")
+		fmt.Fprintf(os.Stderr, "Emit embeddingsdb records in a Parquet as JSON-encoded data.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] parquet_file(N) parquet_file(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
@@ -38,22 +39,24 @@ func main() {
 
 	uris := fs.Args()
 
-	enc := json.NewEncoder(os.Stdout)
+	var wr io.Writer
+	wr = os.Stdout
 
-	for _, uri := range uris {
+	// Add more writer options here...
 
-		for rec, err := range parquet.Iterate(ctx, uri) {
+	enc := json.NewEncoder(wr)
 
-			if err != nil {
-				log.Fatalf("Iterator yield an error, %v", err)
-			}
+	for rec, err := range parquet.Iterate(ctx, uris...) {
 
-			err = enc.Encode(rec)
-
-			if err != nil {
-				log.Fatalf("Failed to marshal record, %v", err)
-			}
-
+		if err != nil {
+			log.Fatalf("Iterator yield an error, %v", err)
 		}
+
+		err = enc.Encode(rec)
+
+		if err != nil {
+			log.Fatalf("Failed to marshal record, %v", err)
+		}
+
 	}
 }

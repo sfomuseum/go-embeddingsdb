@@ -1,0 +1,21 @@
+## parquet-emit
+
+Emit embeddingsdb records in a Parquet as JSON-encoded data.
+
+```
+$> ./bin/parquet-emit -h
+Emit embeddingsdb records in a Parquet as JSON-encoded data.
+Usage:
+	./bin/parquet-emit [options] parquet_file(N) parquet_file(N)
+Valid options are:
+  -verbose
+    	Enable vebose (debug) logging.
+```
+
+For example:
+
+```
+$> ./bin/parquet-emit /usr/local/data/embeddings/nga-opendata-1152-siglip2-patch14-20260522.parquet
+
+{"provider":"nga","depiction_id":"09097eab-38aa-4673-8e09-552eb9d30b32","subject_id":"135179","model":"google/siglip2-so400m-patch14-384","embeddings":[-0.009846605,0.009466629,0.02289102,0.010883338,0.0009500196,0.010898322,0.06399064,-0.046567082,-0.019497676,-0.010746397,-0.005239395,-0.03045462,-0.038531844,-0.058945246,0.016141428,0.034073215,0.009441625,-0.012657479,0.010860452,-0.007970284,-0.06996283,-0.3674453,-0.004572616,-0.0057943244,0.003014805,-0.013989151,-0.14718099,-0.0066805896,0.008540933,-0.008917521,-0.0023392153,0.0032422498,0.003439766,-0.011003571,0.0073126154,-0.0018064006,0.0081463065,-0.043782778,-0.0042977333,-0.045895558,-0.02207153,-0.024592021,-0.01405164,0.006170399,0.03335361,-0.01319617,-0.0023967458,-0.013311187,0.0047314735,-0.03298944,-0.015036997,-0.015312884,0.013695127, and so on...
+```
