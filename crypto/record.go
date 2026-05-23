@@ -41,5 +41,5 @@ func SignRecordWithSigner(ctx context.Context, signer pgp_crypto.PGPSign, rec *e
 		return nil, err
 	}
 
-	return signer.SignCleartext(enc) //, crypto.Armor)
+	return signer.Sign(enc, pgp_crypto.Armor)
 }

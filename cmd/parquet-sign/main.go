@@ -21,13 +21,13 @@ func main() {
 
 	fs := flagset.NewFlagSet("emit")
 
-	fs.StringVar(&key_uri, "key-uri", "", "...")
-	fs.StringVar(&pswd_uri, "password-uri", "", "...")
+	fs.StringVar(&key_uri, "key-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to an ASCII‑armored key block.")
+	fs.StringVar(&pswd_uri, "password-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to the key's password. This is only necessary if the key is locked and, as such, may be left empty.")
 
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "...\n")
+		fmt.Fprintf(os.Stderr, "Generate \n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] parquet_file(N) parquet_file(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()

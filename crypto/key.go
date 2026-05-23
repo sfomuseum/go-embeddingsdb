@@ -66,8 +66,6 @@ func LoadKey(ctx context.Context, key_uri string, pass_uri string) (*pgp_crypto.
 // key elsewhere if desired.
 func NewKey(name string, email string, pswd []byte) (*pgp_crypto.Key, error) {
 
-	pgp := pgp_crypto.PGP()
-
 	builder := pgp.KeyGeneration()
 	builder = builder.AddUserId(name, email)
 	// builder.Lifetime(int32)
