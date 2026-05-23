@@ -10,7 +10,7 @@ import (
 	"github.com/aaronland/gocloud/runtimevar"
 )
 
-// LoadKey retrieves a PGP key from the supplied 'key_uri' and, if the
+// LoadSigningKey retrieves a PGP key from the supplied 'key_uri' and, if the
 // key is encrypted, unlocks it using the password found at 'pass_uri'.
 // Both the 'key_uri' and 'pass_uri' variables are expected to be registed
 // [gocloud.dev/runtimevar] URIs.
@@ -18,18 +18,12 @@ import (
 // 'key_uri' is expected to resolve an ASCII‑armored key block.
 // 'pass_uri' is expected to resolve to the key's password but is only processed
 // if the key is locked. As such an it may be an empty string.
-func LoadKey(ctx context.Context, key_uri string, pass_uri string) (*pgp_crypto.Key, error) {
+func LoadSigningKey(ctx context.Context, key_uri string, pass_uri string) (*pgp_crypto.Key, error) {
 
-	k_str, err := runtimevar.StringVar(ctx, key_uri)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to resolve key URI, %w", err)
-	}
-
-	k, err := pgp_crypto.NewKeyFromArmored(k_str)
+	k, err := loadKey(ctx, key_uri)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to derive key from armored, %w", err)
+		return nil, err
 	}
 
 	is_locked, err := k.IsLocked()

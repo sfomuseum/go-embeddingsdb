@@ -38,6 +38,7 @@ cli-parquet:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-gather-stats cmd/parquet-gather-stats/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-append-stats cmd/parquet-append-stats/main.go
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-emit cmd/parquet-emit/main.go
+	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/parquet-sign cmd/parquet-sign/main.go
 
 cli-inspector:
 	go build -tags=$(TAGS) -mod $(GOMOD) -ldflags="$(LDFLAGS)" -o bin/embeddingsdb-inspector cmd/inspector/main.go

@@ -43,3 +43,37 @@ func SignRecordWithSigner(ctx context.Context, signer pgp_crypto.PGPSign, rec *e
 
 	return signer.Sign(enc, pgp_crypto.Armor)
 }
+
+func VerifyRecordSignature(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Record, sig []byte) (bool, error) {
+
+	verifier, err := LoadVerificationHandlerWithKey(ctx, key)
+
+	if err != nil {
+		return false, err
+	}
+
+	return VerifyRecordSignatureWithVerifier(ctx, verifier, rec, sig)
+}
+
+func VerifyRecordSignatureWithVerifier(ctx context.Context, verifier pgp_crypto.PGPVerify, rec *embeddingsdb.Record, sig []byte) (bool, error) {
+
+	enc, err := json.Marshal(rec)
+
+	if err != nil {
+		return false, err
+	}
+
+	rsp, err := verifier.VerifyDetached(enc, sig, pgp_crypto.Armor)
+
+	if err != nil {
+		return false, err
+	}
+
+	err = rsp.SignatureError()
+
+	if err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
