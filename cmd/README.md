@@ -75,3 +75,9 @@ Detailed documentation for this tool can be found in [parquet-merge/README.md](p
 Print JSON-encoded metadata for a Parquet file to STDOUT
 
 Detailed documentation for this tool can be found in [parquet-metadata/README.md](parquet-metadata/README.md).
+
+### parquet-sign
+
+Generate a corresponding Parquet "signature" file with detached PGP/GPG signatures for embeddingsdb.Record records in one or more Parquet files.
+
+Detailed documentation for this tool can be found in [parquet-sign/README.md](parquet-sign/README.md).

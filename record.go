@@ -57,18 +57,18 @@ func (r *Record) Signature(record_sig []byte) (*Signature, error) {
 
 	// Validate armor syntax here?
 
-	hash, err := r.Hash()
+	record_hash, err := r.Hash()
 
 	if err != nil {
 		return nil, err
 	}
 
 	sig := &Signature{
-		Provider:    r.Provider,
-		Model:       r.Model,
-		DepictionId: r.DepictionId,
-		Hash:        hash,
-		Signature:   string(record_sig),
+		Provider:        r.Provider,
+		Model:           r.Model,
+		DepictionId:     r.DepictionId,
+		RecordHash:      record_hash,
+		RecordSignature: string(record_sig),
 	}
 
 	return sig, nil
