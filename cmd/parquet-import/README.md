@@ -16,6 +16,8 @@ Valid options are:
     	Starting offset for importing records. If '0' then records will be imported from the first record onwards.
   -verbose
     	Enable vebose (debug) logging.
+  -workers int
+    	The number of concurrent workers to use for importing records. (default 1)
 ```
 
 For example:
