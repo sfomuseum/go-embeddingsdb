@@ -20,7 +20,7 @@ import (
 // if the key is locked. As such an it may be an empty string.
 func LoadSigningKey(ctx context.Context, key_uri string, pass_uri string) (*pgp_crypto.Key, error) {
 
-	k, err := loadKey(ctx, key_uri)
+	k, err := LoadKey(ctx, key_uri)
 
 	if err != nil {
 		return nil, err

@@ -63,6 +63,11 @@ func VerifyRecordSignatureWithVerifier(ctx context.Context, verifier pgp_crypto.
 		return false, err
 	}
 
+	return VerifyRecordSignatureWithVerifierAndBody(ctx, verifier, enc, sig)
+}
+
+func VerifyRecordSignatureWithVerifierAndBody(ctx context.Context, verifier pgp_crypto.PGPVerify, enc []byte, sig []byte) (bool, error) {
+
 	rsp, err := verifier.VerifyDetached(enc, sig, pgp_crypto.Armor)
 
 	if err != nil {
