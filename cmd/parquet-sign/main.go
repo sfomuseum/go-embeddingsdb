@@ -153,7 +153,7 @@ func main() {
 
 	}
 
-	if len(p_buf) >= batch_size {
+	if len(p_buf) >= 0 {
 
 		_, err = p_wr.Write(p_buf)
 
