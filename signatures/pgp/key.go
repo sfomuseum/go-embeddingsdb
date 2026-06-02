@@ -1,4 +1,4 @@
-package crypto
+package pgp
 
 // gpg --full-generate-key
 

@@ -1,10 +1,10 @@
-package crypto
+package pgp
 
 import (
 	"context"
 	"encoding/json"
 
-	pgp_crypto "github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
 	"github.com/sfomuseum/go-embeddingsdb"
 )
 
@@ -16,7 +16,7 @@ import (
 // signed in cleartext mode (i.e. the output contains the cleartext
 // data followed by an ASCII‑armored signature).  The returned
 // slice contains the signed data.
-func SignRecord(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Record) ([]byte, error) {
+func SignRecord(ctx context.Context, key *crypto.Key, rec *embeddingsdb.Record) ([]byte, error) {
 
 	signer, err := NewSigner(key)
 
@@ -33,7 +33,7 @@ func SignRecord(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Reco
 //
 // The record is first marshalled to JSON, then signed in cleartext
 // mode.  The returned slice contains the signed data.
-func SignRecordWithSigner(ctx context.Context, signer pgp_crypto.PGPSign, rec *embeddingsdb.Record) ([]byte, error) {
+func SignRecordWithSigner(ctx context.Context, signer crypto.PGPSign, rec *embeddingsdb.Record) ([]byte, error) {
 
 	enc, err := json.Marshal(rec)
 
@@ -41,10 +41,10 @@ func SignRecordWithSigner(ctx context.Context, signer pgp_crypto.PGPSign, rec *e
 		return nil, err
 	}
 
-	return signer.Sign(enc, pgp_crypto.Armor)
+	return signer.Sign(enc, crypto.Armor)
 }
 
-func VerifyRecordSignature(ctx context.Context, key *pgp_crypto.Key, rec *embeddingsdb.Record, sig []byte) (bool, error) {
+func VerifyRecordSignature(ctx context.Context, key *crypto.Key, rec *embeddingsdb.Record, sig []byte) (bool, error) {
 
 	verifier, err := LoadVerificationHandlerWithKey(ctx, key)
 
@@ -55,7 +55,7 @@ func VerifyRecordSignature(ctx context.Context, key *pgp_crypto.Key, rec *embedd
 	return VerifyRecordSignatureWithVerifier(ctx, verifier, rec, sig)
 }
 
-func VerifyRecordSignatureWithVerifier(ctx context.Context, verifier pgp_crypto.PGPVerify, rec *embeddingsdb.Record, sig []byte) (bool, error) {
+func VerifyRecordSignatureWithVerifier(ctx context.Context, verifier crypto.PGPVerify, rec *embeddingsdb.Record, sig []byte) (bool, error) {
 
 	enc, err := json.Marshal(rec)
 
@@ -66,9 +66,9 @@ func VerifyRecordSignatureWithVerifier(ctx context.Context, verifier pgp_crypto.
 	return VerifyRecordSignatureWithVerifierAndBody(ctx, verifier, enc, sig)
 }
 
-func VerifyRecordSignatureWithVerifierAndBody(ctx context.Context, verifier pgp_crypto.PGPVerify, enc []byte, sig []byte) (bool, error) {
+func VerifyRecordSignatureWithVerifierAndBody(ctx context.Context, verifier crypto.PGPVerify, enc []byte, sig []byte) (bool, error) {
 
-	rsp, err := verifier.VerifyDetached(enc, sig, pgp_crypto.Armor)
+	rsp, err := verifier.VerifyDetached(enc, sig, crypto.Armor)
 
 	if err != nil {
 		return false, err

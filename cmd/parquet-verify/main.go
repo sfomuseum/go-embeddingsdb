@@ -22,8 +22,8 @@ import (
 
 	_ "github.com/duckdb/duckdb-go/v2"
 
-	"github.com/sfomuseum/go-embeddingsdb/crypto"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-embeddingsdb/signatures/pgp"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -66,7 +66,7 @@ func main() {
 
 	defer db.Close()
 
-	public_key_armor, err := crypto.LoadArmored(ctx, public_key_uri)
+	public_key_armor, err := pgp.LoadArmored(ctx, public_key_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to derive armored public key, %v", err)
@@ -187,7 +187,7 @@ func main() {
 			// but the verification builder stuff reads the armor
 			// every single time and this can lead to race conditions
 
-			public_key, err := crypto.LoadKeyFromArmor(ctx, public_key_armor)
+			public_key, err := pgp.LoadKeyFromArmor(ctx, public_key_armor)
 
 			if err != nil {
 				atomic.AddInt64(&errors, 1)
@@ -195,7 +195,7 @@ func main() {
 				return
 			}
 
-			verifier, err := crypto.LoadVerificationHandlerWithKey(ctx, public_key)
+			verifier, err := pgp.LoadVerificationHandlerWithKey(ctx, public_key)
 
 			if err != nil {
 				atomic.AddInt64(&errors, 1)
@@ -205,7 +205,7 @@ func main() {
 
 			// END OF I really don't love this
 
-			ok, err := crypto.VerifyRecordSignatureWithVerifierAndBody(ctx, verifier, enc, []byte(record_sig))
+			ok, err := pgp.VerifyRecordSignatureWithVerifierAndBody(ctx, verifier, enc, []byte(record_sig))
 
 			if err != nil {
 				atomic.AddInt64(&errors, 1)

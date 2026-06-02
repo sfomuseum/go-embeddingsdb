@@ -1,12 +1,12 @@
-package crypto
+package pgp
 
 import (
 	"context"
 
-	pgp_crypto "github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
 )
 
-func LoadVerificationHandler(ctx context.Context, key_uri string) (pgp_crypto.PGPVerify, error) {
+func LoadVerificationHandler(ctx context.Context, key_uri string) (crypto.PGPVerify, error) {
 
 	k, err := LoadKey(ctx, key_uri)
 
@@ -30,7 +30,7 @@ func LoadVerificationHandler(ctx context.Context, key_uri string) (pgp_crypto.PG
 	return LoadVerificationHandlerWithKey(ctx, pub_k)
 }
 
-func LoadVerificationHandlerWithKey(ctx context.Context, pub_k *pgp_crypto.Key) (pgp_crypto.PGPVerify, error) {
+func LoadVerificationHandlerWithKey(ctx context.Context, pub_k *crypto.Key) (crypto.PGPVerify, error) {
 
 	builder := pgp.Verify()
 	builder = builder.VerificationKey(pub_k)

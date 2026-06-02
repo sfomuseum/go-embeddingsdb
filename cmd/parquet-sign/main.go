@@ -8,11 +8,11 @@ import (
 	"log/slog"
 	"os"
 
-	pgp_crypto "github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/crypto"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-embeddingsdb/signatures/pgp"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -50,23 +50,23 @@ func main() {
 
 	ctx := context.Background()
 
-	key, err := crypto.LoadSigningKey(ctx, key_uri, pswd_uri)
+	key, err := pgp.LoadSigningKey(ctx, key_uri, pswd_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to load key, %v", err)
 	}
 
-	signer, err := crypto.NewSigner(key)
+	signer, err := pgp.NewSigner(key)
 
 	if err != nil {
 		log.Fatalf("Failed to create signer, %v", err)
 	}
 
-	var verifier pgp_crypto.PGPVerify
+	var verifier crypto.PGPVerify
 
 	if verify {
 
-		v, err := crypto.LoadVerificationHandlerWithKey(ctx, key)
+		v, err := pgp.LoadVerificationHandlerWithKey(ctx, key)
 
 		if err != nil {
 			log.Fatalf("Failed to create verification handler, %v", err)
@@ -113,7 +113,7 @@ func main() {
 			log.Fatalf("Iterator yield an error, %v", err)
 		}
 
-		record_sig, err := crypto.SignRecordWithSigner(ctx, signer, rec)
+		record_sig, err := pgp.SignRecordWithSigner(ctx, signer, rec)
 
 		if err != nil {
 			log.Fatalf("Failed to sign record %s, %v", rec.Key(), err)
@@ -121,7 +121,7 @@ func main() {
 
 		if verify {
 
-			ok, err := crypto.VerifyRecordSignatureWithVerifier(ctx, verifier, rec, record_sig)
+			ok, err := pgp.VerifyRecordSignatureWithVerifier(ctx, verifier, rec, record_sig)
 
 			if err != nil {
 				log.Fatalf("Failed to verify signature for record %s, %v", rec.Key(), err)
