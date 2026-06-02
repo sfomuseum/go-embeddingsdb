@@ -61,13 +61,15 @@ func NewPGPSigner(ctx context.Context, uri string) (Signer, error) {
 
 func NewPGPSignerWithKey(ctx context.Context, key *crypto.Key) (Signer, error) {
 
-	signer, err := crypto.Sign().SigningKey(key).Detached().New()
+	pgp_ctx := crypto.PGP()
+
+	signer, err := pgp_ctx.Sign().SigningKey(key).Detached().New()
 
 	if err != nil {
 		return nil, err
 	}
 
-	s := PGPSigner{
+	s := &PGPSigner{
 		key:    key,
 		signer: signer,
 	}
@@ -79,6 +81,6 @@ func (s *PGPSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 	return s.signer.Sign(data, crypto.Armor)
 }
 
-func (s PGPSigner) Verifier(ctx context.Context) (Verifier, error) {
+func (s *PGPSigner) Verifier(ctx context.Context) (Verifier, error) {
 	return NewPGPVerifierWithKey(ctx, s.key)
 }

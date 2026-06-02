@@ -8,8 +8,6 @@ import (
 	"github.com/aaronland/gocloud/runtimevar"
 )
 
-var pgp = crypto.PGP()
-
 func LoadArmored(ctx context.Context, key_uri string) (string, error) {
 
 	return runtimevar.StringVar(ctx, key_uri)

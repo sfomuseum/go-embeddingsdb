@@ -30,14 +30,14 @@ import (
 
 func main() {
 
-	var signatures multi.MultiString
+	var signature_files multi.MultiString
 	var verbose bool
 	var verifier_uri string
 	var workers int
 
 	fs := flagset.NewFlagSet("verify")
 
-	fs.Var(&signatures, "signature", "One or more Parquet files containing signature data (for example, as produced by the parquet-sign tool).")
+	fs.Var(&signature_files, "signature", "One or more Parquet files containing signature data (for example, as produced by the parquet-sign tool).")
 	fs.StringVar(&verifier_uri, "verifier-uri", "", "...")
 	fs.IntVar(&workers, "workers", runtime.NumCPU(), "The maximum number of concurrent worker to verify records with.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
@@ -66,16 +66,16 @@ func main() {
 
 	defer db.Close()
 
-	verifier, err := signatures.NewVerfier(ctx, verifier_uri)
+	verifier, err := signatures.NewVerifier(ctx, verifier_uri)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	sigs := make([]string, len(signatures))
+	sigs := make([]string, len(signature_files))
 
-	for i := 0; i < len(signatures); i++ {
-		sigs[i] = fmt.Sprintf("'%s'", signatures[i])
+	for i := 0; i < len(signature_files); i++ {
+		sigs[i] = fmt.Sprintf("'%s'", signature_files[i])
 	}
 
 	str_sigs := strings.Join(sigs, ",")

@@ -8,7 +8,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/pgp"
 )
 
-type PGPVerfier struct {
+type PGPVerifier struct {
 	Verifier
 	key      *crypto.Key
 	verifier crypto.PGPVerify
@@ -50,7 +50,9 @@ func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 func NewPGPVerifierWithKey(ctx context.Context, key *crypto.Key) (Verifier, error) {
 
-	builder := pgp.Verify()
+	pgp_ctx := crypto.PGP()
+
+	builder := pgp_ctx.Verify()
 	builder = builder.VerificationKey(key)
 
 	verifier, err := builder.New()
