@@ -22,7 +22,6 @@ import (
 
 	_ "github.com/duckdb/duckdb-go/v2"
 
-	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb/crypto"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
 	"github.com/sfomuseum/go-flags/flagset"
@@ -44,7 +43,7 @@ func main() {
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Verify the PGP/GPG signatures associated with one or more go-embeddingsdb Parquet files.\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] parquet_file(N) parquet_file(N)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Valid options are:\n")
 		fs.PrintDefaults()
@@ -67,7 +66,7 @@ func main() {
 
 	defer db.Close()
 
-	public_key_armor, err := runtimevar.StringVar(ctx, public_key_uri)
+	public_key_armor, err := crypto.LoadArmored(ctx, public_key_uri)
 
 	if err != nil {
 		log.Fatalf("Failed to derive armored public key, %v", err)
@@ -130,7 +129,6 @@ func main() {
 		index := atomic.AddInt64(&count, 1)
 
 		logger := slog.Default()
-		logger = logger.With("uri", uri)
 		logger = logger.With("index", index)
 		logger = logger.With("record", key)
 

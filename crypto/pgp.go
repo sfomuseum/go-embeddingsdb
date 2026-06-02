@@ -10,15 +10,20 @@ import (
 
 var pgp = pgp_crypto.PGP()
 
+func LoadArmored(ctx context.Context, key_uri string) (string, error) {
+
+	return runtimevar.StringVar(ctx, key_uri)
+}
+
 func LoadKey(ctx context.Context, key_uri string) (*pgp_crypto.Key, error) {
 
-	k_str, err := runtimevar.StringVar(ctx, key_uri)
+	armored, err := LoadArmored(ctx, key_uri)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve key URI, %w", err)
 	}
 
-	return LoadKeyFromArmor(ctx, k_str)
+	return LoadKeyFromArmor(ctx, armored)
 }
 
 func LoadKeyFromArmor(ctx context.Context, k_str string) (*pgp_crypto.Key, error) {

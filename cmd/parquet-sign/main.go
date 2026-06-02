@@ -27,8 +27,8 @@ func main() {
 
 	fs := flagset.NewFlagSet("emit")
 
-	fs.StringVar(&key_uri, "key-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to an ASCII‑armored key block.")
-	fs.StringVar(&pswd_uri, "password-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to the key's password. This is only necessary if the key is locked and, as such, may be left empty.")
+	fs.StringVar(&key_uri, "private-key-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to an ASCII‑armored key block.")
+	fs.StringVar(&pswd_uri, "private-key-password-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to the key's password. This is only necessary if the key is locked and, as such, may be left empty.")
 	fs.StringVar(&output, "output", "", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 
 	fs.BoolVar(&verify, "verify", true, "Verify signature before recording.")
