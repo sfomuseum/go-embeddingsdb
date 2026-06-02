@@ -1,4 +1,4 @@
-package tls
+package signatures
 
 import (
 	"context"
@@ -11,15 +11,15 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/sfomuseum/go-embeddingsdb/signatures"
+	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
 type TLSVerifier struct {
-	signatures.Verifier
+	Verifier
 	cert *x509.Certificate
 }
 
-func NewTLSVerifier(ctx context.Context, uri string) (signatures.Verifier, error) {
+func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)
 
@@ -31,7 +31,7 @@ func NewTLSVerifier(ctx context.Context, uri string) (signatures.Verifier, error
 
 	cert_uri := q.Get("certificate-uri")
 
-	cert, err := LoadCertFromURI(ctx, cert_uri)
+	cert, err := tls.LoadCertFromURI(ctx, cert_uri)
 
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func NewTLSVerifier(ctx context.Context, uri string) (signatures.Verifier, error
 	return NewTLSVerifierWithCertificate(ctx, cert)
 }
 
-func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) (signatures.Verifier, error) {
+func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) (Verifier, error) {
 
 	v := &TLSVerifier{
 		cert: cert,
@@ -67,6 +67,7 @@ func (v *TLSVerifier) Verify(ctx context.Context, data []byte, sig []byte) (bool
 		return true, nil
 
 	case *ecdsa.PublicKey:
+
 		ok := ecdsa.VerifyASN1(pub, hash[:], sig)
 
 		if !ok {

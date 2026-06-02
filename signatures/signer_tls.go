@@ -1,4 +1,4 @@
-package tls
+package signatures
 
 import (
 	"context"
@@ -12,18 +12,18 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/sfomuseum/go-embeddingsdb/signatures"
+	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
 // TLSSigner knows how to sign data with the private key that
 // belongs to a TLS (X.509) certificate.
 type TLSSigner struct {
-	signatures.Signer
+	Signer
 	cert *x509.Certificate
 	key  crypto.PrivateKey
 }
 
-func NewTLSSigner(ctx context.Context, uri string) (signatures.Signer, error) {
+func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)
 
@@ -36,13 +36,13 @@ func NewTLSSigner(ctx context.Context, uri string) (signatures.Signer, error) {
 	cert_uri := q.Get("certificate-uri")
 	key_uri := q.Get("key-uri")
 
-	cert, err := LoadCertFromURI(ctx, cert_uri)
+	cert, err := tls.LoadCertFromURI(ctx, cert_uri)
 
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := LoadKeyFromURI(ctx, key_uri)
+	key, err := tls.LoadKeyFromURI(ctx, key_uri)
 
 	if err != nil {
 		return nil, err
@@ -57,15 +57,15 @@ func NewTLSSigner(ctx context.Context, uri string) (signatures.Signer, error) {
 }
 
 // NewTLSSignerFromPEM loads a cert and its key from two PEM buffers.
-func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (signatures.Signer, error) {
+func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (Signer, error) {
 
-	cert, err := LoadCertFromPEM(ctx, cert_pem)
+	cert, err := tls.LoadCertFromPEM(ctx, cert_pem)
 
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := LoadKeyFromPEM(ctx, key_pem)
+	key, err := tls.LoadKeyFromPEM(ctx, key_pem)
 
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (
 	return s, nil
 }
 
-func (s *TLSSigner) Verifier(ctx context.Context) (signatures.Verifier, error) {
+func (s *TLSSigner) Verifier(ctx context.Context) (Verifier, error) {
 	return NewTLSVerifierWithCertificate(ctx, s.cert)
 }
 

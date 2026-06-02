@@ -23,7 +23,7 @@ import (
 	_ "github.com/duckdb/duckdb-go/v2"
 
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
-	"github.com/sfomuseum/go-embeddingsdb/signatures/pgp"
+	"github.com/sfomuseum/go-embeddingsdb/signatures"
 	"github.com/sfomuseum/go-flags/flagset"
 	"github.com/sfomuseum/go-flags/multi"
 )
@@ -32,13 +32,13 @@ func main() {
 
 	var signatures multi.MultiString
 	var verbose bool
-	var public_key_uri string
+	var verifier_uri string
 	var workers int
 
 	fs := flagset.NewFlagSet("verify")
 
 	fs.Var(&signatures, "signature", "One or more Parquet files containing signature data (for example, as produced by the parquet-sign tool).")
-	fs.StringVar(&public_key_uri, "public-key-uri", "", "A registered gocloud.dev/runtimevar URI that resolves to the GPG public key (armored) use to verify signatures.")
+	fs.StringVar(&verifier_uri, "verifier-uri", "", "...")
 	fs.IntVar(&workers, "workers", runtime.NumCPU(), "The maximum number of concurrent worker to verify records with.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 
@@ -66,10 +66,10 @@ func main() {
 
 	defer db.Close()
 
-	public_key_armor, err := pgp.LoadArmored(ctx, public_key_uri)
+	verifier, err := signatures.NewVerfier(ctx, verifier_uri)
 
 	if err != nil {
-		log.Fatalf("Failed to derive armored public key, %v", err)
+		log.Fatal(err)
 	}
 
 	sigs := make([]string, len(signatures))
@@ -166,9 +166,9 @@ func main() {
 
 			row := db.QueryRowContext(ctx, q, hash)
 
-			var record_sig string
+			var sig []byte
 
-			err = row.Scan(&record_sig)
+			err = row.Scan(&sig)
 
 			if err != nil {
 
@@ -183,29 +183,7 @@ func main() {
 				return
 			}
 
-			// START OF I really don't love this
-			// but the verification builder stuff reads the armor
-			// every single time and this can lead to race conditions
-
-			public_key, err := pgp.LoadKeyFromArmor(ctx, public_key_armor)
-
-			if err != nil {
-				atomic.AddInt64(&errors, 1)
-				logger.Error("Failed to load public key", "error", err)
-				return
-			}
-
-			verifier, err := pgp.LoadVerificationHandlerWithKey(ctx, public_key)
-
-			if err != nil {
-				atomic.AddInt64(&errors, 1)
-				logger.Error("Failed to create verifier", "error", err)
-				return
-			}
-
-			// END OF I really don't love this
-
-			ok, err := pgp.VerifyRecordSignatureWithVerifierAndBody(ctx, verifier, enc, []byte(record_sig))
+			ok, err := verifier.Verify(ctx, enc, sig)
 
 			if err != nil {
 				atomic.AddInt64(&errors, 1)

@@ -8,27 +8,26 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/ProtonMail/gopenpgp/v3/crypto"
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/parquet"
-	"github.com/sfomuseum/go-embeddingsdb/signatures/pgp"
+	"github.com/sfomuseum/go-embeddingsdb/signatures"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
 func main() {
 
 	var output string
-	var key_uri string
-	var pswd_uri string
+
+	var signer_uri string
 
 	var verify bool
 	var verbose bool
 
 	fs := flagset.NewFlagSet("emit")
 
-	fs.StringVar(&key_uri, "private-key-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to an ASCII‑armored key block.")
-	fs.StringVar(&pswd_uri, "private-key-password-uri", "", "A registered gocloud.dev/runtimevar URI which is expected to resolve to the key's password. This is only necessary if the key is locked and, as such, may be left empty.")
+	fs.StringVar(&signer_uri, "signer-uri", "", "...")
+
 	fs.StringVar(&output, "output", "", "The path where Parquet-encoded data should be written. If \"-\" then data will be written to STDOUT.")
 
 	fs.BoolVar(&verify, "verify", true, "Verify signature before recording.")
@@ -50,23 +49,17 @@ func main() {
 
 	ctx := context.Background()
 
-	key, err := pgp.LoadSigningKey(ctx, key_uri, pswd_uri)
+	signer, err := signatures.NewSigner(ctx, signer_uri)
 
 	if err != nil {
-		log.Fatalf("Failed to load key, %v", err)
+		log.Fatalf("Failed to load new signer, %v", err)
 	}
 
-	signer, err := pgp.NewSigner(key)
-
-	if err != nil {
-		log.Fatalf("Failed to create signer, %v", err)
-	}
-
-	var verifier crypto.PGPVerify
+	var verifier signatures.Verifier
 
 	if verify {
 
-		v, err := pgp.LoadVerificationHandlerWithKey(ctx, key)
+		v, err := signer.Verifier(ctx)
 
 		if err != nil {
 			log.Fatalf("Failed to create verification handler, %v", err)
@@ -113,7 +106,13 @@ func main() {
 			log.Fatalf("Iterator yield an error, %v", err)
 		}
 
-		record_sig, err := pgp.SignRecordWithSigner(ctx, signer, rec)
+		data, err := json.Marshal(rec)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		record_sig, err := signer.Sign(ctx, data)
 
 		if err != nil {
 			log.Fatalf("Failed to sign record %s, %v", rec.Key(), err)
@@ -121,7 +120,7 @@ func main() {
 
 		if verify {
 
-			ok, err := pgp.VerifyRecordSignatureWithVerifier(ctx, verifier, rec, record_sig)
+			ok, err := verifier.Verify(ctx, data, record_sig)
 
 			if err != nil {
 				log.Fatalf("Failed to verify signature for record %s, %v", rec.Key(), err)
