@@ -233,5 +233,7 @@ func main() {
 		}
 	}
 
+	// Something something something write signer.PublicKey() somewhere
+	
 	// END OF move this in to a "run" function (or equivalent)
 }
