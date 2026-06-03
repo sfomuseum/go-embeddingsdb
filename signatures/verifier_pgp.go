@@ -8,6 +8,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/pgp"
 )
 
+// PGPVerifier implements the Verifier interface using OpenPGP keys.
 type PGPVerifier struct {
 	Verifier
 	key      *crypto.Key
@@ -23,6 +24,9 @@ func init() {
 	}
 }
 
+
+// NewPGPVerifier creates a new PGPVerifier from a URI string.
+// The URI must contain a 'certificate-uri' query parameter.
 func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)
@@ -57,6 +61,7 @@ func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 	return NewPGPVerifierWithKey(ctx, pub_k)
 }
 
+// NewPGPVerifierWithKey creates a new PGPVerifier using a pre-loaded crypto.Key.
 func NewPGPVerifierWithKey(ctx context.Context, key *crypto.Key) (Verifier, error) {
 
 	pgp_ctx := crypto.PGP()
@@ -78,6 +83,7 @@ func NewPGPVerifierWithKey(ctx context.Context, key *crypto.Key) (Verifier, erro
 	return v, nil
 }
 
+// Verify checks the validity of a PGP signature against the provided data.
 func (v *PGPVerifier) Verify(ctx context.Context, data []byte, sig []byte) (bool, error) {
 
 	rsp, err := v.verifier.VerifyDetached(data, sig, crypto.Armor)

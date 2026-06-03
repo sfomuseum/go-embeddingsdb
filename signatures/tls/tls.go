@@ -11,9 +11,14 @@ import (
 	"github.com/aaronland/gocloud/runtimevar"
 )
 
+// CERTIFICATE is the PEM block type used for certificates.
 const CERTIFICATE string = "CERTIFICATE"
+
+// SIGNATURE is the PEM block type used for signature data.
 const SIGNATURE string = "SIGNATURE"
 
+// LoadCertFromURI retrieves an x509.Certificate from a gocloud.dev/runtimevar URI.
+// It expects the URI to point to a valid PEM-encoded certificate.
 func LoadCertFromURI(ctx context.Context, uri string) (*x509.Certificate, error) {
 
 	cert_body, err := runtimevar.StringVar(ctx, uri)
@@ -26,6 +31,8 @@ func LoadCertFromURI(ctx context.Context, uri string) (*x509.Certificate, error)
 	return LoadCertFromPEM(ctx, []byte(cert_body))
 }
 
+// LoadKeyFromURI retrieves a crypto.PrivateKey from a gocloud.dev/runtimevar URI.
+// It expects the URI to point to a valid PEM-encoded private key.
 func LoadKeyFromURI(ctx context.Context, uri string) (crypto.PrivateKey, error) {
 
 	key_body, err := runtimevar.StringVar(ctx, uri)
@@ -38,6 +45,7 @@ func LoadKeyFromURI(ctx context.Context, uri string) (crypto.PrivateKey, error) 
 	return LoadKeyFromPEM(ctx, []byte(key_body))
 }
 
+// LoadCertFromPEM parses an x509.Certificate from a raw PEM-encoded byte slice.
 func LoadCertFromPEM(ctx context.Context, data []byte) (*x509.Certificate, error) {
 
 	block, _ := pem.Decode(data)
@@ -49,6 +57,8 @@ func LoadCertFromPEM(ctx context.Context, data []byte) (*x509.Certificate, error
 	return x509.ParseCertificate(block.Bytes)
 }
 
+// LoadKeyFromPEM parses a crypto.PrivateKey from a raw PEM-encoded byte slice, 
+// attempting to parse it as PKCS8, then PKCS1, and finally EC.
 func LoadKeyFromPEM(ctx context.Context, data []byte) (crypto.PrivateKey, error) {
 
 	block, _ := pem.Decode(data)
@@ -84,6 +94,8 @@ func IsArmored(data []byte) bool {
 	return block != nil
 }
 
+// EncodeSignature wraps the provided raw signature bytes into a PEM block 
+// of type "SIGNATURE".
 func EncodeSignature(data []byte) []byte {
 
 	pem_block := &pem.Block{
@@ -94,6 +106,8 @@ func EncodeSignature(data []byte) []byte {
 	return pem.EncodeToMemory(pem_block)
 }
 
+// DecodeSignature extracts raw signature bytes from a PEM-encoded block. 
+// If the input is not a valid PEM block, it returns the original bytes.
 func DecodeSignature(data []byte) ([]byte, error) {
 
 	if !IsArmored(data) {

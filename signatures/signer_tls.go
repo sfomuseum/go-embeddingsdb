@@ -16,7 +16,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
-// // TLSSigner implements the Signer interface using an X.509 certificate and private key.
+// TLSSigner implements the Signer interface using an X.509 certificate and private key.
 type TLSSigner struct {
 	Signer
 	cert *x509.Certificate

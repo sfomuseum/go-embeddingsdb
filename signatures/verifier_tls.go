@@ -14,6 +14,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
+// TLSVerifier implements the Verifier interface using X.509 certificates.
 type TLSVerifier struct {
 	Verifier
 	cert *x509.Certificate
@@ -28,6 +29,8 @@ func init() {
 	}
 }
 
+// NewTLSVerifier creates a new TLSVerifier from a URI string.
+// The URI must contain a 'certificate-uri' query parameter.
 func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)
@@ -49,6 +52,7 @@ func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
 	return NewTLSVerifierWithCertificate(ctx, cert)
 }
 
+// NewTLSVerifierWithCertificate creates a new TLSVerifier using a pre-loaded x509.Certificate.
 func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) (Verifier, error) {
 
 	v := &TLSVerifier{
@@ -58,6 +62,8 @@ func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) 
 	return v, nil
 }
 
+// Verify checks the validity of a signature against the provided data using 
+// the public key found in the certificate (supporting RSA, ECDSA, and Ed25519).
 func (v *TLSVerifier) Verify(ctx context.Context, data []byte, sig []byte) (bool, error) {
 
 	sig, err := tls.DecodeSignature(sig)
