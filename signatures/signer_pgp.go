@@ -93,3 +93,20 @@ func (s *PGPSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 func (s *PGPSigner) Verifier(ctx context.Context) (Verifier, error) {
 	return NewPGPVerifierWithKey(ctx, s.key)
 }
+
+func (s *PGPSigner) PublicKey(ctx context.Context) ([]byte, error) {
+
+	pub_key, err := s.key.ToPublic()
+
+	if err != nil {
+		return nil, err
+	}
+
+	armor, err := pub_key.Armor()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(armor), nil
+}

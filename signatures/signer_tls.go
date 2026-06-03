@@ -9,6 +9,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net/url"
 
@@ -117,4 +118,14 @@ func (s *TLSSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 	}
 
 	return tls.EncodeSignature(sig), nil
+}
+
+func (s *TLSSigner) PublicKey(ctx context.Context) ([]byte, error) {
+
+	block := &pem.Block{
+		Type:  tls.CERTIFICATE,
+		Bytes: s.cert.Raw,
+	}
+
+	return pem.EncodeToMemory(block), nil
 }

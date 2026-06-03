@@ -13,6 +13,7 @@ import (
 type Signer interface {
 	Sign(context.Context, []byte) ([]byte, error)
 	Verifier(context.Context) (Verifier, error)
+	PublicKey(context.Context) ([]byte, error)
 }
 
 // SignerInitializationFunc is a function defined by individual signer package and used to create
