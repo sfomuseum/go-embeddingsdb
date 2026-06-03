@@ -16,8 +16,7 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
-// TLSSigner knows how to sign data with the private key that
-// belongs to a TLS (X.509) certificate.
+// // TLSSigner implements the Signer interface using an X.509 certificate and private key.
 type TLSSigner struct {
 	Signer
 	cert *x509.Certificate
@@ -33,6 +32,7 @@ func init() {
 	}
 }
 
+// NewTLSSigner creates a new Signer instance using an X.509 certificate and key defined by the provided URI. 
 func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)
@@ -66,7 +66,7 @@ func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 	return s, nil
 }
 
-// NewTLSSignerFromPEM loads a cert and its key from two PEM buffers.
+// NewTLSSignerFromPEM creates a new Signer instance from raw PEM-encoded certificate and key buffers.
 func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (Signer, error) {
 
 	cert, err := tls.LoadCertFromPEM(ctx, cert_pem)
@@ -89,12 +89,13 @@ func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (
 	return s, nil
 }
 
+// Verifier returns a Verifier implementation for the underlying TLS certificate.
 func (s *TLSSigner) Verifier(ctx context.Context) (Verifier, error) {
 	return NewTLSVerifierWithCertificate(ctx, s.cert)
 }
 
 // Sign produces a raw detached signature of the supplied data.
-// The signature algorithm is inferred from the key type.
+// The signature algorithm is inferred from the key type (RSA, ECDSA, or Ed25519).
 func (s *TLSSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 
 	hash := sha256.Sum256(data)
@@ -120,6 +121,7 @@ func (s *TLSSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 	return tls.EncodeSignature(sig), nil
 }
 
+// PublicKey returns the PEM-encoded X.509 certificate as the public key representation.
 func (s *TLSSigner) PublicKey(ctx context.Context) ([]byte, error) {
 
 	block := &pem.Block{

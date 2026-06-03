@@ -10,9 +10,13 @@ import (
 	"github.com/aaronland/go-roster"
 )
 
+// Signer defines the interface for creating digital signatures.
 type Signer interface {
+	// Sign takes a byte slice and returns the resulting signature.
 	Sign(context.Context, []byte) ([]byte, error)
+	// Verifier returns a Verifier for the underlying credentials.
 	Verifier(context.Context) (Verifier, error)
+	// PublicKey returns the public representation of the signing key.
 	PublicKey(context.Context) ([]byte, error)
 }
 
