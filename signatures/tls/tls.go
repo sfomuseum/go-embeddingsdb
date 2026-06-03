@@ -12,6 +12,7 @@ import (
 )
 
 const CERTIFICATE string = "CERTIFICATE"
+const SIGNATURE string = "SIGNATURE"
 
 func LoadCertFromURI(ctx context.Context, uri string) (*x509.Certificate, error) {
 
@@ -75,4 +76,39 @@ func LoadKeyFromPEM(ctx context.Context, data []byte) (crypto.PrivateKey, error)
 	}
 
 	return nil, err
+}
+
+// IsArmored checks if the input byte slice contains at least one valid PEM block.
+func IsArmored(data []byte) bool {
+	block, _ := pem.Decode(data)
+	return block != nil
+}
+
+func EncodeSignature(data []byte) []byte {
+
+	pem_block := &pem.Block{
+		Type:  SIGNATURE,
+		Bytes: data,
+	}
+
+	return pem.EncodeToMemory(pem_block)
+}
+
+func DecodeSignature(data []byte) ([]byte, error) {
+
+	if !IsArmored(data) {
+		return data, nil
+	}
+
+	block, _ := pem.Decode(data)
+
+	if block == nil {
+		return nil, fmt.Errorf("Failed to parse PEM")
+	}
+
+	if block.Type != SIGNATURE {
+		return nil, fmt.Errorf("Invalid block type %s", block.Type)
+	}
+
+	return block.Bytes, nil
 }

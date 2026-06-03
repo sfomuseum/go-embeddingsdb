@@ -89,14 +89,23 @@ func (s *TLSSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 
 	hash := sha256.Sum256(data)
 
+	var sig []byte
+	var err error
+
 	switch k := s.key.(type) {
 	case *rsa.PrivateKey:
-		return rsa.SignPKCS1v15(rand.Reader, k, crypto.SHA256, hash[:])
+		sig, err = rsa.SignPKCS1v15(rand.Reader, k, crypto.SHA256, hash[:])
 	case *ecdsa.PrivateKey:
-		return ecdsa.SignASN1(rand.Reader, k, hash[:])
+		sig, err = ecdsa.SignASN1(rand.Reader, k, hash[:])
 	case ed25519.PrivateKey:
-		return ed25519.Sign(k, data), nil
+		sig, err = ed25519.Sign(k, data), nil
 	default:
 		return nil, fmt.Errorf("Unsupported private key type")
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tls.EncodeSignature(sig), nil
 }

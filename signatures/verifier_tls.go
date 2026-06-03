@@ -51,7 +51,12 @@ func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) 
 
 func (v *TLSVerifier) Verify(ctx context.Context, data []byte, sig []byte) (bool, error) {
 
-	// Hash the data – the same hash algorithm that was used when signing
+	sig, err := tls.DecodeSignature(sig)
+
+	if err != nil {
+		return false, err
+	}
+
 	hash := sha256.Sum256(data)
 
 	switch pub := v.cert.PublicKey.(type) {
