@@ -8,6 +8,8 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"sync/atomic"
+	"time"
 
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -89,6 +91,33 @@ func main() {
 		wr = w
 	}
 
+	count := int64(0)
+	errors := int64(0)
+	signed := int64(0)
+	verified := int64(0)
+	completed := int64(0)
+
+	done_ch := make(chan bool)
+
+	report_metrics := func(msg string) {
+		slog.Info(msg, "count", atomic.LoadInt64(&count), "signed", atomic.LoadInt64(&signed), "verified", atomic.LoadInt64(&verified), "completed", atomic.LoadInt64(&completed), "errors", atomic.LoadInt64(&errors))
+	}
+
+	go func() {
+
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-done_ch:
+				return
+			case <-ticker.C:
+				report_metrics("Processing")
+			}
+		}
+	}()
+
 	// END OF update to use gocloud.dev/blob
 
 	p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Signature](wr)
@@ -107,35 +136,54 @@ func main() {
 			log.Fatalf("Iterator yield an error, %v", err)
 		}
 
+		logger := slog.Default()
+		logger = logger.With("key", rec.Key())
+
+		atomic.AddInt64(&count, 1)
+
 		data, err := json.Marshal(rec)
 
 		if err != nil {
-			log.Fatal(err)
+			atomic.AddInt64(&errors, 1)
+			logger.Error("Failed to marshal record", "error", err)
+			continue
 		}
 
 		record_sig, err := signer.Sign(ctx, data)
 
 		if err != nil {
-			log.Fatalf("Failed to sign record %s, %v", rec.Key(), err)
+			atomic.AddInt64(&errors, 1)
+			logger.Error("Failed to sign record", "error", err)
+			continue
 		}
+
+		atomic.AddInt64(&signed, 1)
 
 		if verify {
 
 			ok, err := verifier.Verify(ctx, data, record_sig)
 
 			if err != nil {
-				log.Fatalf("Failed to verify signature for record %s, %v", rec.Key(), err)
+				atomic.AddInt64(&errors, 1)
+				logger.Error("Failed to verify record", "error", err)
+				continue
 			}
 
 			if !ok {
-				log.Fatalf("Failed to verify signature for record %s, undefined error", rec.Key())
+				atomic.AddInt64(&errors, 1)
+				logger.Error("Record failed verification", "error", err)
+				continue
 			}
+
+			atomic.AddInt64(&verified, 1)
 		}
 
 		sig, err := rec.Signature(record_sig)
 
 		if err != nil {
-			log.Fatalf("Failed to hash record, %v", err)
+			atomic.AddInt64(&errors, 1)
+			logger.Error("Failed to create record signature", "error", err)
+			continue
 		}
 
 		p_buf = append(p_buf, sig)
@@ -151,7 +199,10 @@ func main() {
 			p_buf = make([]*embeddingsdb.Signature, 0)
 		}
 
+		atomic.AddInt64(&completed, 1)
 	}
+
+	report_metrics("Completed")
 
 	if len(p_buf) >= 0 {
 

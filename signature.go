@@ -14,8 +14,6 @@ type Signature struct {
 	RecordHash string `json:"record_hash" parquet:"record_hash,dict,zstd" bleve:"store"`
 	// Return the detached signature associated with the signed record as an ASCII armor-encoded string
 	RecordSignature string `json:"record_signature" parquet:"record_signature,dict,zstd" bleve:"store"`
-	// A string label indicating the signature type. Valid options are: PGP, TLS
-	SignatureType string `json:"signature_type"  parquet:"signature_type,dict,zstd" bleve:"store"`
 }
 
 func (s *Signature) Key() string {
