@@ -33,7 +33,7 @@ func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	q := u.Query()
 
-	key_uri := q.Get("key-uri")
+	key_uri := q.Get("certificate-uri")
 
 	k, err := pgp.LoadKey(ctx, key_uri)
 
