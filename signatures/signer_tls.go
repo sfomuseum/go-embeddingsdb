@@ -23,6 +23,15 @@ type TLSSigner struct {
 	key  crypto.PrivateKey
 }
 
+func init() {
+
+	err := RegisterSigner(context.Background(), "tls", NewTLSSigner)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
 func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)

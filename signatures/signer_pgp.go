@@ -16,6 +16,15 @@ type PGPSigner struct {
 	signer crypto.PGPSign
 }
 
+func init() {
+
+	err := RegisterSigner(context.Background(), "pgp", NewPGPSigner)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
 func NewPGPSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)

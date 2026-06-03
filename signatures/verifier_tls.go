@@ -19,6 +19,15 @@ type TLSVerifier struct {
 	cert *x509.Certificate
 }
 
+func init() {
+
+	err := RegisterVerifier(context.Background(), "tls", NewTLSVerifier)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
 func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)

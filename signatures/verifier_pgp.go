@@ -14,6 +14,15 @@ type PGPVerifier struct {
 	verifier crypto.PGPVerify
 }
 
+func init() {
+
+	err := RegisterVerifier(context.Background(), "pgp", NewPGPVerifier)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
 func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)
