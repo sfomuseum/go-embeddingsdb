@@ -10,6 +10,7 @@ import (
 
 var target_bucket_uri string
 var signer_uri string
+var embed_public_key bool
 
 var verify bool
 var verbose bool
@@ -22,6 +23,8 @@ func DefaultFlagSet() *flag.FlagSet {
 
 	fs.StringVar(&target_bucket_uri, "target-bucket-uri", "cwd://", "The URI where signature files and public keys will be written. One of the following: A valid gocloud.dev/blob.Bucket URI; The path to a folder on the local filesystem; \"cwd://\" which will cause files to be written to the current directory.")
 
+	fs.BoolVar(&embed_public_key, "embed-public-key", false, "If true the public key (certicate) used to verify signatures will be written to the signature Parquet file in the \"embeddingsdb:signatures:public_key\" metadata key.")
+	
 	fs.BoolVar(&verify, "verify", true, "Verify signature before recording.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 

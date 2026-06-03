@@ -206,7 +206,9 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 		p_wr.Flush()
 
-		// write pub key as metadata?
+		if embed_public_key {
+			p_wr.SetKeyValueMetadata("embeddingsdb:signatures:public_key", string(pubkey))
+		}
 
 		err = p_wr.Close()
 

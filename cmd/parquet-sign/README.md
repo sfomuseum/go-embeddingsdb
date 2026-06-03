@@ -8,6 +8,8 @@ Generate a corresponding Parquet "signature" file with PGP/GPG or TLS detached s
 Usage:
 	./bin/parquet-sign [options] parquet_file(N) parquet_file(N)
 Valid options are:
+  -embed-public-key
+    	If true the public key (certicate) used to verify signatures will be written to the signature Parquet file in the "embeddingsdb:signatures:public_key" metadata key.
   -signer-uri string
     	A valid sfomuseum/go-embeddingsdb/signatures.Signer URI.
   -target-bucket-uri string
