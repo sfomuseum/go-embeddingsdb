@@ -4,28 +4,57 @@ Generate a corresponding Parquet "signature" file with detached PGP/GPG signatur
 
 ```
 $> ./bin/parquet-sign -h
-Generate a corresponding Parquet "signature" file with detached PGP/GPG signatures for embeddingsdb.Record records in one or more Parquet files.
+Generate a corresponding Parquet "signature" file with PGP/GPG or TLS detached signatures for embeddingsdb.Record records in one or more Parquet files.
 Usage:
 	./bin/parquet-sign [options] parquet_file(N) parquet_file(N)
 Valid options are:
-  -output string
-    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT.
-  -private-key-uri string
-    	A registered gocloud.dev/runtimevar URI which is expected to resolve to an ASCII‑armored private key.
-  -private-key-password-uri string
-    	A registered gocloud.dev/runtimevar URI which is expected to resolve to the key's password. This is only necessary if the key is locked and, as such, may be left empty.
+  -signer-uri string
+    	A valid sfomuseum/go-embeddingsdb/signatures.Signer URI.
+  -target-bucket-uri string
+    	The URI where signature files and public keys will be written. One of the following: A valid gocloud.dev/blob.Bucket URI; The path to a folder on the local filesystem; "cwd://" which will cause files to be written to the current directory. (default "cwd://")
   -verbose
     	Enable vebose (debug) logging.
   -verify
     	Verify signature before recording. (default true)
 ```
 
-For example
+For example:
 
 ```
 $> ./bin/parquet-sign \
-	-private-key-uri file:///path/to/private/gpg.key \
-	-private-key-password-uri 'constant://?val=s33kret' \
-	-output sfomuseum-collection-1152-siglip2-naflex-220604230-sig.parquet
+	-verbose \
+	-signer-uri 'tls://?certificate-uri=file:///usr/local/sfomuseum/tls-certificate.pub&key-uri=file:///usr/local/sfomuseum/tls-certificate.key' \
 	/usr/local/data/embeddings/sfomuseum-collection-1152-siglip2-naflex-22060423.parquet
+	
+2026/06/03 14:41:00 DEBUG Verbose logging enabled
+2026/06/03 14:42:00 INFO Processing count=52815 signed=52814 verified=52814 completed=52814 errors=0
+2026/06/03 14:42:25 INFO Completed count=74700 signed=74700 verified=74700 completed=74700 errors=0
 ```
+
+This will produce two files:
+
+1. A Parquet file containing hashed `embeddingsdb.Record` entries and a "detached" signature.
+2. The public key (or certificate) which can be used to verify those signatures.
+
+For example:
+
+```
+$> ls -al sfomuseum-collection-1152-siglip2-naflex-22060423-signatures.*
+-rw-r--r--  1 asc  staff  250945 Jun  3 14:42 sfomuseum-collection-1152-siglip2-naflex-22060423-signatures.parquet
+-rw-r--r--  1 asc  staff    2589 Jun  3 14:42 sfomuseum-collection-1152-siglip2-naflex-22060423-signatures.pub
+```
+
+The naming conventions for these files is to strip the ".parquet" extension from the input file and then append "-signatures.parquet" or "-signatures.pub" to the signature and public key files, respectively.
+
+To use those signatures and the public key to verify records you would do something like this:
+
+```
+$> ./bin/parquet-verify \
+	-signatures sfomuseum-collection-1152-siglip2-naflex-22060423-signatures.parquet \
+	-verifier-uri 'tls://?certificate-uri=sfomuseum-collection-1152-siglip2-naflex-22060423-signatures.pub' \
+	/usr/local/data/embeddings/sfomuseum-collection-1152-siglip2-naflex-22060423.parquet
+
+2026/06/03 15:00:05 INFO Completed count=74700 valid=74700 invalid=0 missing=0 errors=0
+```
+
+_See the [cmd/parquet-verify](../parquet-verify) documentation for details.
