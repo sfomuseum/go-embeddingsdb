@@ -25,8 +25,13 @@ func init() {
 }
 
 
-// NewPGPVerifier creates a new PGPVerifier from a URI string.
-// The URI must contain a 'certificate-uri' query parameter.
+// NewPGPVerifier creates a new PGPVerifier derived from 'uri' which
+// is expected to take the form of:
+// Where valid query parameters are:
+// * `public-key-uri` – A URI pointing to a PEM-encoded PGP public key. (required)
+//
+// URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
+// {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
 func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)
@@ -37,7 +42,7 @@ func NewPGPVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	q := u.Query()
 
-	key_uri := q.Get("certificate-uri")
+	key_uri := q.Get("public-key-uri")
 
 	k, err := pgp.LoadKey(ctx, key_uri)
 

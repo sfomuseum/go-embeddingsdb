@@ -32,7 +32,17 @@ func init() {
 	}
 }
 
-// NewTLSSigner creates a new Signer instance using an X.509 certificate and key defined by the provided URI. 
+// NewTLSSigner creates a new Signer instance using an X.509 certificate and key defined by 'uri'
+// which is expected to take the form of:
+//
+//	tls://?{QUERY_PARAMETERS}
+//
+// Where valid query parameters are:
+// * `certificate-uri` – A URI pointing to a PEM-encoded x509 certificate. (required)
+// * `key-uri` – A URI pointing to a PEM-encoded private key file. (required)
+//
+// In both cases URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
+// {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
 func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)

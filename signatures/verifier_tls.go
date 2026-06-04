@@ -29,8 +29,16 @@ func init() {
 	}
 }
 
-// NewTLSVerifier creates a new TLSVerifier from a URI string.
-// The URI must contain a 'certificate-uri' query parameter.
+// NewTLSVerifier creates a new TLSVerifier derived from 'uri' which is expected to
+// take the form of:
+//
+//	tls://?{QUERY_PARAMETERS}
+//
+// Where valid query parameters are:
+// * `certificate-uri` – A URI pointing to a PEM-encoded x509 certificate. (required)
+//
+// URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
+// {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
 func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)

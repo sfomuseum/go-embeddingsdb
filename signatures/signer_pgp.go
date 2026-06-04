@@ -26,8 +26,17 @@ func init() {
 	}
 }
 
-// NewPGPSigner creates a new Signer instance using a PGP key defined by the provided URI.
-// The URI should contain "key-uri" and, if the key is locked, a "key-password-uri".
+// NewPGPSigner creates a new Signer instance using a PGP key defined by 'uri' which
+// is expected to take the form of:
+//
+//	pgp://?{QUERY_PARAMETERS}
+//
+// Where valid query parameters are:
+// * `key-uri` – A URI pointing to a PEM-encoded PGP private key file. (required)
+// * `key-password-uri` – A URI pointing to the password for unlocking the PGP private key.
+//
+// In both cases URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
+// {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
 func NewPGPSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)

@@ -20,7 +20,7 @@ func DefaultFlagSet() *flag.FlagSet {
 	fs := flagset.NewFlagSet("verify")
 
 	fs.Var(&signature_files, "signatures", "One or more Parquet files containing signature data (for example, as produced by the parquet-sign tool).")
-	fs.StringVar(&verifier_uri, "verifier-uri", "", "...")
+	fs.StringVar(&verifier_uri, "verifier-uri", "", "A valid sfomuseum/go-embeddingsdb/signatures.Verifier URI.")
 	fs.IntVar(&workers, "workers", runtime.NumCPU(), "The maximum number of concurrent worker to verify records with.")
 	fs.BoolVar(&verbose, "verbose", false, "Enable vebose (debug) logging.")
 

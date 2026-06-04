@@ -20,6 +20,8 @@ Valid options are:
     	Verify signature before recording. (default true)
 ```
 
+_For details on the form that that the `-signer-uri` flag should take consult the [signatures/README.md](../../signatures/README.md) documentation._
+
 For example:
 
 ```
