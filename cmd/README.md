@@ -12,6 +12,8 @@ go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-import cmd/parquet-i
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-merge cmd/parquet-merge/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-metadata cmd/parquet-metadata/main.go
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-emit cmd/parquet-emit/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-sign cmd/parquet-sign/main.go
+go build -tags= -mod vendor -ldflags="-s -w" -o bin/parquet-verify cmd/parquet-verify/main.go
 ```
 
 _Please be sure to read the [notes on building tools](../#build) for build tags related to specific database implementations and other "known knowns"._
@@ -75,3 +77,15 @@ Detailed documentation for this tool can be found in [parquet-merge/README.md](p
 Print JSON-encoded metadata for a Parquet file to STDOUT
 
 Detailed documentation for this tool can be found in [parquet-metadata/README.md](parquet-metadata/README.md).
+
+### parquet-sign
+
+Generate a corresponding Parquet "signature" file with detached PGP/GPG signatures for embeddingsdb.Record records in one or more Parquet files.
+
+Detailed documentation for this tool can be found in [parquet-sign/README.md](parquet-sign/README.md).
+
+### parquet-verify
+
+Verify the PGP/GPG signatures associated with one or more go-embeddingsdb Parquet files.
+
+Detailed documentation for this tool can be found in [parquet-verify/README.md](parquet-verify/README.md).

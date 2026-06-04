@@ -46,7 +46,7 @@ func main() {
 	r, err := os.Open(path)
 
 	if err != nil {
-		log.Fatalf("Failed to open file for reading, %w", err)
+		log.Fatalf("Failed to open file for reading, %v", err)
 	}
 
 	defer r.Close()
@@ -58,7 +58,7 @@ func main() {
 		kv, err := parquet.KeyValueMetadata(r)
 
 		if err != nil {
-			log.Fatalf("Failed to read key value metadata, %w", err)
+			log.Fatalf("Failed to read key value metadata, %v", err)
 		}
 
 		meta = kv
@@ -68,7 +68,7 @@ func main() {
 		m, err := parquet.Metadata(r)
 
 		if err != nil {
-			log.Fatalf("Failed to read metadata, %w", err)
+			log.Fatalf("Failed to read metadata, %v", err)
 		}
 
 		meta = m
@@ -78,6 +78,6 @@ func main() {
 	err = enc.Encode(meta)
 
 	if err != nil {
-		log.Fatalf("Failed to encode metadata, %w", err)
+		log.Fatalf("Failed to encode metadata, %v", err)
 	}
 }

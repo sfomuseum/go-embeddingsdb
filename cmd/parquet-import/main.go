@@ -18,10 +18,11 @@ import (
 func main() {
 
 	var client_uri string
+	var workers int
 	// var database_uris multi.MultiString
 
-	start := int64(0)
-	end := int64(0)
+	var start int64
+	var end int64
 
 	var verbose bool
 
@@ -29,6 +30,7 @@ func main() {
 
 	fs.StringVar(&client_uri, "client-uri", "grpc://localhost:8080", "A registered sfomuseum/go-embeddingsdb/client.Client URI.")
 	// fs.Var(&database_uris, "database-uri", "...")
+	fs.IntVar(&workers, "workers", 1, "The number of concurrent workers to use for importing records.")
 	fs.Int64Var(&start, "start", 0, "Starting offset for importing records. If '0' then records will be imported from the first record onwards.")
 	fs.Int64Var(&end, "end", 0, "Ending offset for import records. If '0' then records will be imported up to and including the last record.")
 
@@ -75,7 +77,14 @@ func main() {
 
 	uris := fs.Args()
 
-	count, err := parquet.ImportWithRange(ctx, cl, start, end, uris...)
+	opts := &parquet.ImportOptions{
+		Client:  cl,
+		Start:   start,
+		End:     end,
+		Workers: workers,
+	}
+
+	count, err := parquet.ImportWithOptions(ctx, opts, uris...)
 
 	if err != nil {
 		log.Fatal(err)
