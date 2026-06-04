@@ -47,6 +47,6 @@ func main() {
 	err = enc.Encode(stats)
 
 	if err != nil {
-		log.Fatalf("Failed to encode statistics, %w", err)
+		log.Fatalf("Failed to encode statistics, %v", err)
 	}
 }

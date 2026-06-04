@@ -13,6 +13,6 @@ func main() {
 	err := sign.Run(ctx)
 
 	if err != nil {
-		log.Fatal("Failed to run sign application, %v", err)
+		log.Fatalf("Failed to run sign application, %v", err)
 	}
 }

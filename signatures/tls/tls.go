@@ -57,7 +57,7 @@ func LoadCertFromPEM(ctx context.Context, data []byte) (*x509.Certificate, error
 	return x509.ParseCertificate(block.Bytes)
 }
 
-// LoadKeyFromPEM parses a crypto.PrivateKey from a raw PEM-encoded byte slice, 
+// LoadKeyFromPEM parses a crypto.PrivateKey from a raw PEM-encoded byte slice,
 // attempting to parse it as PKCS8, then PKCS1, and finally EC.
 func LoadKeyFromPEM(ctx context.Context, data []byte) (crypto.PrivateKey, error) {
 
@@ -94,7 +94,7 @@ func IsArmored(data []byte) bool {
 	return block != nil
 }
 
-// EncodeSignature wraps the provided raw signature bytes into a PEM block 
+// EncodeSignature wraps the provided raw signature bytes into a PEM block
 // of type "SIGNATURE".
 func EncodeSignature(data []byte) []byte {
 
@@ -106,7 +106,7 @@ func EncodeSignature(data []byte) []byte {
 	return pem.EncodeToMemory(pem_block)
 }
 
-// DecodeSignature extracts raw signature bytes from a PEM-encoded block. 
+// DecodeSignature extracts raw signature bytes from a PEM-encoded block.
 // If the input is not a valid PEM block, it returns the original bytes.
 func DecodeSignature(data []byte) ([]byte, error) {
 

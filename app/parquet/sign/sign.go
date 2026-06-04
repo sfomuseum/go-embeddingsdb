@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -114,7 +113,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 		wr, err := writer.NewWriterWithACL(ctx, target_bucket, fname_sigs, "public-read")
 
 		if err != nil {
-			log.Fatal("Failed to create new writer for %s, %w", fname_sigs, err)
+			return fmt.Errorf("Failed to create new writer for %s, %w", fname_sigs, err)
 		}
 
 		p_wr := parquet_go.NewGenericWriter[*embeddingsdb.Signature](wr)

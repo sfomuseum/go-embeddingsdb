@@ -24,7 +24,6 @@ func init() {
 	}
 }
 
-
 // NewPGPVerifier creates a new PGPVerifier derived from 'uri' which
 // is expected to take the form of:
 // Where valid query parameters are:

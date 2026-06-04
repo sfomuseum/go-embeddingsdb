@@ -10,7 +10,7 @@ import (
 	"github.com/aaronland/go-roster"
 )
 
-// Verifier defines the interface for validating digital signatures against 
+// Verifier defines the interface for validating digital signatures against
 // raw data payloads.
 type Verifier interface {
 	// Verify checks if the provided signature is valid for the given data.

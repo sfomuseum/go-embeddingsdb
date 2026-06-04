@@ -14,7 +14,7 @@ func LoadArmored(ctx context.Context, key_uri string) (string, error) {
 	return runtimevar.StringVar(ctx, key_uri)
 }
 
-// LoadKey retrieves a PGP key by first resolving the provided gocloud.dev/runtimevar URI to an 
+// LoadKey retrieves a PGP key by first resolving the provided gocloud.dev/runtimevar URI to an
 // armored string and then parsing that string into a crypto.Key.
 func LoadKey(ctx context.Context, key_uri string) (*crypto.Key, error) {
 

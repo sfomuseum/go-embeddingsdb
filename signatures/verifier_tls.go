@@ -70,7 +70,7 @@ func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) 
 	return v, nil
 }
 
-// Verify checks the validity of a signature against the provided data using 
+// Verify checks the validity of a signature against the provided data using
 // the public key found in the certificate (supporting RSA, ECDSA, and Ed25519).
 func (v *TLSVerifier) Verify(ctx context.Context, data []byte, sig []byte) (bool, error) {
 
