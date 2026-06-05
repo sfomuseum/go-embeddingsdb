@@ -26,11 +26,13 @@ type Verifier interface {
 
 ## Signer
 
-To create a Signer, you provide a URI. The scheme of the URI determines which implementation is used:
+To create a `Signer`, you provide a URI. The scheme of the URI determines which implementation is used:
 
-* `pgp://` Uses OpenPGP keys.
-* `x509://` Uses X.509 certificates and private keys.
-* `acm://` Uses X.509 certificates stored in the AWS Certificate Manager service
+| Scheme | Description |
+| --- | --- |
+| `pgp://` | Uses OpenPGP keys. |
+| `x509://` | Uses X.509 certificates and private keys. |
+| `acm://` | Uses X.509 certificates stored in the AWS Certificate Manager service |
 
 ### PGP Signing
 
@@ -56,7 +58,7 @@ _Error handling omitted for the sake of brevity._
 
 ### x509 Signing
 
-To use x509 your URI must include `certificate-uri` and `key-uri` query paramters. For example:
+To use x509 certificates/keys to sign records your URI must include `certificate-uri` and `key-uri` query paramters. For example:
 
 ```
 import(
@@ -76,7 +78,50 @@ sig, _ := signer.Sign(ctx, data)
 
 _Error handling omitted for the sake of brevity._
 
+### x509 Signing (with AWS Certificate Manager)
+
+To use x509 certificates/keys, derived from an AWS Certificate Manager listing, to sign records your URI must include `region`, `credentials` and `arn` query paramters. For example:
+
+```
+import(
+	"context"
+	
+	"github.com/sfomuseum/go-embeddingsdb/signatures"
+)
+
+ctx := context.Background()
+uri := "acm://?region={AWS_REGION}&credentials={AWS_CREDENTIALS}&arn={AWS_CERTIFICATE_MANAGER_ARN}"
+
+signer, _ := signatures.NewSigner(ctx, uri)
+
+data := []byte("message to sign")
+sig, _ := signer.Sign(ctx, data)
+```
+
+_Error handling omitted for the sake of brevity._
+
+### Credentials
+
+Under the hood this package uses the [aaronland/go-aws/v3/auth](https://github.com/aaronland/go-aws/tree/main/auth#credentials) credentials strings to authenticate with AWS services. Valid options are:
+
+| Label | Description |
+| --- | --- |
+| `anon:` | Empty or anonymous credentials. |
+| `env:` | Read credentials from AWS defined environment variables. |
+| `iam:` | Assume AWS IAM credentials are in effect. |
+| `iam:{REGION}:{ARN}` | Assume AWS IAM credentials are in effect after assuming the IAM Role defined by `{ARN}` (in `{REGION}`). |
+| `sts:{ARN}` | Assume the role defined by `{ARN}` using STS credentials. |
+| `{AWS_PROFILE_NAME}` | This this profile from the default AWS credentials location. |
+| `{AWS_CREDENTIALS_PATH}:{AWS_PROFILE_NAME}` | This this profile from a user-defined AWS credentials location. |
+
 ## Verifier
+
+To create a `Verifier`, you provide a URI. The scheme of the URI determines which implementation is used:
+
+| Scheme | Description |
+| --- | --- |
+| `pgp://` | Uses OpenPGP keys. |
+| `x509://` | Uses X.509 certificates and private keys. |
 
 ### PGP Verification
 
