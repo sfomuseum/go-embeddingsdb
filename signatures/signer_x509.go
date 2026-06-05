@@ -16,8 +16,8 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
-// TLSSigner implements the Signer interface using an X.509 certificate and private key.
-type TLSSigner struct {
+// X509Signer implements the Signer interface using an X.509 certificate and private key.
+type X509Signer struct {
 	Signer
 	cert *x509.Certificate
 	key  crypto.PrivateKey
@@ -25,14 +25,14 @@ type TLSSigner struct {
 
 func init() {
 
-	err := RegisterSigner(context.Background(), "tls", NewTLSSigner)
+	err := RegisterSigner(context.Background(), "x509", NewX509Signer)
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-// NewTLSSigner creates a new Signer instance using an X.509 certificate and key defined by 'uri'
+// NewX509Signer creates a new Signer instance using an X.509 certificate and key defined by 'uri'
 // which is expected to take the form of:
 //
 //	tls://?{QUERY_PARAMETERS}
@@ -43,7 +43,7 @@ func init() {
 //
 // In both cases URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
 // {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
-func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
+func NewX509Signer(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)
 
@@ -68,7 +68,7 @@ func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 		return nil, err
 	}
 
-	s := &TLSSigner{
+	s := &X509Signer{
 		cert: cert,
 		key:  key,
 	}
@@ -76,8 +76,8 @@ func NewTLSSigner(ctx context.Context, uri string) (Signer, error) {
 	return s, nil
 }
 
-// NewTLSSignerFromPEM creates a new Signer instance from raw PEM-encoded certificate and key buffers.
-func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (Signer, error) {
+// NewX509SignerFromPEM creates a new Signer instance from raw PEM-encoded certificate and key buffers.
+func NewX509SignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (Signer, error) {
 
 	cert, err := tls.LoadCertFromPEM(ctx, cert_pem)
 
@@ -91,7 +91,7 @@ func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (
 		return nil, err
 	}
 
-	s := &TLSSigner{
+	s := &X509Signer{
 		cert: cert,
 		key:  key,
 	}
@@ -100,13 +100,13 @@ func NewTLSSignerFromPEM(ctx context.Context, cert_pem []byte, key_pem []byte) (
 }
 
 // Verifier returns a Verifier implementation for the underlying TLS certificate.
-func (s *TLSSigner) Verifier(ctx context.Context) (Verifier, error) {
-	return NewTLSVerifierWithCertificate(ctx, s.cert)
+func (s *X509Signer) Verifier(ctx context.Context) (Verifier, error) {
+	return NewX509VerifierWithCertificate(ctx, s.cert)
 }
 
 // Sign produces a raw detached signature of the supplied data.
 // The signature algorithm is inferred from the key type (RSA, ECDSA, or Ed25519).
-func (s *TLSSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
+func (s *X509Signer) Sign(ctx context.Context, data []byte) ([]byte, error) {
 
 	hash := sha256.Sum256(data)
 
@@ -132,7 +132,7 @@ func (s *TLSSigner) Sign(ctx context.Context, data []byte) ([]byte, error) {
 }
 
 // PublicKey returns the PEM-encoded X.509 certificate as the public key representation.
-func (s *TLSSigner) PublicKey(ctx context.Context) ([]byte, error) {
+func (s *X509Signer) PublicKey(ctx context.Context) ([]byte, error) {
 
 	block := &pem.Block{
 		Type:  tls.CERTIFICATE,

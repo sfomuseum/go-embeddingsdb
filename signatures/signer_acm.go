@@ -2,7 +2,7 @@ package signatures
 
 import (
 	"context"
-	_ "fmt"
+	"fmt"
 	"net/url"
 
 	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
@@ -18,23 +18,22 @@ func init() {
 	}
 }
 
-// NewTLSSigner creates a new Signer instance using an X.509 certificate and key defined by 'uri'
+// NewACMSigner creates a new Signer instance using an X.509 certificate stored in the AWS
+// Certificate Manager service and key defined by 'uri'
 // which is expected to take the form of:
 //
-//	tls://?{QUERY_PARAMETERS}
+//	acm://?{QUERY_PARAMETERS}
 //
 // Where valid query parameters are:
-// * `certificate-uri` – A URI pointing to a PEM-encoded x509 certificate. (required)
-// * `key-uri` – A URI pointing to a PEM-encoded private key file. (required)
-//
-// In both cases URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
-// {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
+// * `region` – The AWS region to connect to. (require)
+// * `credentials` – A recognized `aaronland/go-aws/v3/auth` credentials string to use with the AWS API. (required)
+// * `arn` - The AWS Certificate Manager ARN for the certificate you want to use to sign records. (required)
 func NewACMSigner(ctx context.Context, uri string) (Signer, error) {
 
 	u, err := url.Parse(uri)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to parse URI, %w", err)
 	}
 
 	q := u.Query()
@@ -42,7 +41,7 @@ func NewACMSigner(ctx context.Context, uri string) (Signer, error) {
 	cl, err := acm.NewClient(ctx, uri)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to create ACM client, %w", err)
 	}
 
 	arn := q.Get("arn")
@@ -50,22 +49,22 @@ func NewACMSigner(ctx context.Context, uri string) (Signer, error) {
 	acm_cert, err := acm.ExportCertificateNoPassword(ctx, cl, arn)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to export ACM certificate, %w", err)
 	}
 
 	cert, err := tls.LoadCertFromPEM(ctx, acm_cert.Certificate)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to load certificate, %w", err)
 	}
 
 	key, err := tls.LoadKeyFromPEM(ctx, acm_cert.PrivateKey)
 	
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to load private key, %w", err)
 	}
 
-	s := &TLSSigner{
+	s := &X509Signer{
 		cert: cert,
 		key:  key,
 	}

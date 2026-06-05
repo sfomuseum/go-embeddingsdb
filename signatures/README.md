@@ -29,7 +29,8 @@ type Verifier interface {
 To create a Signer, you provide a URI. The scheme of the URI determines which implementation is used:
 
 * `pgp://` Uses OpenPGP keys.
-* `tls://` Uses X.509 certificates and private keys.
+* `x509://` Uses X.509 certificates and private keys.
+* `acm://` Uses X.509 certificates stored in the AWS Certificate Manager service
 
 ### PGP Signing
 
@@ -53,9 +54,9 @@ sig, _ := signer.Sign(ctx, data)
 
 _Error handling omitted for the sake of brevity._
 
-### TLS Signing
+### x509 Signing
 
-To use TLS, your URI must include `certificate-uri` and `key-uri` query paramters. For example:
+To use x509 your URI must include `certificate-uri` and `key-uri` query paramters. For example:
 
 ```
 import(
@@ -65,7 +66,7 @@ import(
 )
 
 ctx := context.Background()
-uri := "tls://?certificate-uri=file:///path/to/cert.pem&key-uri=file:///path/to/key.pem"
+uri := "x509://?certificate-uri=file:///path/to/cert.pem&key-uri=file:///path/to/key.pem"
 
 signer, _ := signatures.NewSigner(ctx, uri)
 
@@ -101,9 +102,9 @@ is_valid, _ := verifier.Verify(ctx, data, sig)
 
 _Error handling omitted for the sake of brevity._
 
-### TLS Verification
+### x509 Verification
 
-To verify using a TLS certificate, your URI must include a `certificate-uri` query parameter. For example:
+To verify using a x509 certificate, your URI must include a `certificate-uri` query parameter. For example:
 
 ```
 import(
@@ -113,7 +114,7 @@ import(
 )
 
 ctx := context.Background()
-uri := "tls://?certificate-uri=file:///path/to/cert.pem"
+uri := "x509://?certificate-uri=file:///path/to/cert.pem"
 
 verifier, _ := signatures.NewVerifier(ctx, uri)
 

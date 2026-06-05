@@ -14,22 +14,22 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
-// TLSVerifier implements the Verifier interface using X.509 certificates.
-type TLSVerifier struct {
+// X509Verifier implements the Verifier interface using X.509 certificates.
+type X509Verifier struct {
 	Verifier
 	cert *x509.Certificate
 }
 
 func init() {
 
-	err := RegisterVerifier(context.Background(), "tls", NewTLSVerifier)
+	err := RegisterVerifier(context.Background(), "x509", NewX509Verifier)
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-// NewTLSVerifier creates a new TLSVerifier derived from 'uri' which is expected to
+// NewX509Verifier creates a new X509Verifier derived from 'uri' which is expected to
 // take the form of:
 //
 //	tls://?{QUERY_PARAMETERS}
@@ -39,7 +39,7 @@ func init() {
 //
 // URIs may be: A path on the local filesystem "cwd://{PATH}" which will look for
 // {PATH} in the current directory; A valid gocloud.dev/runtimevar URI.
-func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
+func NewX509Verifier(ctx context.Context, uri string) (Verifier, error) {
 
 	u, err := url.Parse(uri)
 
@@ -57,13 +57,13 @@ func NewTLSVerifier(ctx context.Context, uri string) (Verifier, error) {
 		return nil, err
 	}
 
-	return NewTLSVerifierWithCertificate(ctx, cert)
+	return NewX509VerifierWithCertificate(ctx, cert)
 }
 
-// NewTLSVerifierWithCertificate creates a new TLSVerifier using a pre-loaded x509.Certificate.
-func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) (Verifier, error) {
+// NewX509VerifierWithCertificate creates a new X509Verifier using a pre-loaded x509.Certificate.
+func NewX509VerifierWithCertificate(ctx context.Context, cert *x509.Certificate) (Verifier, error) {
 
-	v := &TLSVerifier{
+	v := &X509Verifier{
 		cert: cert,
 	}
 
@@ -72,7 +72,7 @@ func NewTLSVerifierWithCertificate(ctx context.Context, cert *x509.Certificate) 
 
 // Verify checks the validity of a signature against the provided data using
 // the public key found in the certificate (supporting RSA, ECDSA, and Ed25519).
-func (v *TLSVerifier) Verify(ctx context.Context, data []byte, sig []byte) (bool, error) {
+func (v *X509Verifier) Verify(ctx context.Context, data []byte, sig []byte) (bool, error) {
 
 	sig, err := tls.DecodeSignature(sig)
 
