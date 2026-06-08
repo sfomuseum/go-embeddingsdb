@@ -260,12 +260,16 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	max_distance := options.GetMaxDistanceFromOptions(ctx, opts...)
 	max_results := options.GetMaxResultsFromOptions(ctx, opts...)
+
+	slog.Info("WTF", "max r 1", *max_results)
 	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
 
 	if max_results == nil {
 		max_results = &db.max_results
 	}
 
+	slog.Info("WTF", "max r 2", *max_results)
+	
 	if max_distance == nil {
 		max_distance = &db.max_distance
 	}
@@ -309,7 +313,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 
 	q := fmt.Sprintf(`SELECT provider, depiction_id, subject_id, attributes, array_distance(vec, ?::FLOAT[%d]) AS distance
 			  FROM embeddings WHERE %s ORDER BY distance ASC LIMIT %d`,
-		db.dimensions, str_conditions, max_results)
+		db.dimensions, str_conditions, *max_results)
 
 	slog.Debug("Query similar", "query", q, "distance", max_distance)
 

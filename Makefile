@@ -2,6 +2,7 @@ GOMOD=$(shell test -f "go.work" && echo "readonly" || echo "vendor")
 LDFLAGS=-s -w
 
 TAGS=
+EMBEDDINGS_CLIENT=mobileclip://?client-uri=grpc://localhost:8080
 
 vuln:
 	govulncheck -show verbose ./...
@@ -58,8 +59,8 @@ inspector:
 		cmd/inspector/main.go \
 		-verbose \
 		-client-uri 'grpc://localhost:8081' \
-		-enable-uploads \
-		-embeddings-client-uri 'mobileclip://?client-uri=grpc://localhost:8080' \
+		-enable-search \
+		-embeddings-client-uri "$(EMBEDDINGS_CLIENT)" \
 		-server-uri http://localhost:8082
 
 lambda-inspector:
