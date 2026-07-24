@@ -1,3 +1,38 @@
+# v1.10.0 (2026-07-21)
+
+* **Feature**: Add an option to clients to disable clock skew
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.9.1 (2026-07-13)
+
+* No change notes available for this release.
+
+# v1.9.0 (2026-07-06)
+
+* **Feature**: Add request serialization snapshot tests.
+
+# v1.8.2 (2026-07-01)
+
+* **Bug Fix**: Bump smithy-go to 1.27.3, fix JSON encorder for document.Number, endpoint host label format validation and CBOR union serialization on new serde
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.8.1 (2026-06-29)
+
+* No change notes available for this release.
+
+# v1.8.0 (2026-06-16)
+
+* **Feature**: Amazon S3 Vectors now supports paginated QueryVectors requests, returning up to 10,000 results per query.
+
+# v1.7.6 (2026-06-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.7.5 (2026-06-04)
+
+* **Dependency Update**: Update to smithy-go v1.27.1 to fix several union-related deserialization bugs in schema-serde-enabled services.
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.7.4 (2026-06-03)
 
 * **Dependency Update**: Updated to the latest SDK module versions

@@ -4,6 +4,7 @@ Generate a corresponding Parquet "signature" file with detached PGP/GPG signatur
 
 ```
 $> ./bin/parquet-sign -h
+<<<<<<< HEAD
 Generate a corresponding Parquet "signature" file with PGP/GPG or TLS detached signatures for embeddingsdb.Record records in one or more Parquet files.
 Usage:
 	./bin/parquet-sign [options] parquet_file(N) parquet_file(N)
@@ -14,12 +15,25 @@ Valid options are:
     	A valid sfomuseum/go-embeddingsdb/signatures.Signer URI.
   -target-bucket-uri string
     	The URI where signature files and public keys will be written. One of the following: A valid gocloud.dev/blob.Bucket URI; The path to a folder on the local filesystem; "cwd://" which will cause files to be written to the current directory. (default "cwd://")
+=======
+Generate a corresponding Parquet "signature" file with detached PGP/GPG signatures for embeddingsdb.Record records in one or more Parquet files.
+Usage:
+	./bin/parquet-sign [options] parquet_file(N) parquet_file(N)
+Valid options are:
+  -output string
+    	The path where Parquet-encoded data should be written. If "-" then data will be written to STDOUT.
+  -private-key-uri string
+    	A registered gocloud.dev/runtimevar URI which is expected to resolve to an ASCII‑armored private key.
+  -private-key-password-uri string
+    	A registered gocloud.dev/runtimevar URI which is expected to resolve to the key's password. This is only necessary if the key is locked and, as such, may be left empty.
+>>>>>>> 86fe2b437fce7ac70eb0a9ff5187be241bee257b
   -verbose
     	Enable vebose (debug) logging.
   -verify
     	Verify signature before recording. (default true)
 ```
 
+<<<<<<< HEAD
 _For details on the form that that the `-signer-uri` flag should take consult the [signatures/README.md](../../signatures/README.md) documentation._
 
 For example:
@@ -62,3 +76,14 @@ $> ./bin/parquet-verify \
 ```
 
 _See the [cmd/parquet-verify](../parquet-verify) documentation for details.
+=======
+For example
+
+```
+$> ./bin/parquet-sign \
+	-private-key-uri file:///path/to/private/gpg.key \
+	-private-key-password-uri 'constant://?val=s33kret' \
+	-output sfomuseum-collection-1152-siglip2-naflex-220604230-sig.parquet
+	/usr/local/data/embeddings/sfomuseum-collection-1152-siglip2-naflex-22060423.parquet
+```
+>>>>>>> 86fe2b437fce7ac70eb0a9ff5187be241bee257b

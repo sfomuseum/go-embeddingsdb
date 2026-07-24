@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 	"github.com/aaronland/go-aws/v3/acm"
+	"github.com/sfomuseum/go-embeddingsdb/signatures/tls"
 )
 
 func init() {
@@ -59,7 +59,7 @@ func NewACMSigner(ctx context.Context, uri string) (Signer, error) {
 	}
 
 	key, err := tls.LoadKeyFromPEM(ctx, acm_cert.PrivateKey)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load private key, %w", err)
 	}

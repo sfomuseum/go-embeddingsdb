@@ -269,7 +269,7 @@ func (db *DuckDBDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	}
 
 	slog.Info("WTF", "max r 2", *max_results)
-	
+
 	if max_distance == nil {
 		max_distance = &db.max_distance
 	}
