@@ -4,10 +4,9 @@ package acm
 
 import (
 	"context"
-	"fmt"
-	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/aws/smithy-go/ptr"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
@@ -15,6 +14,9 @@ import (
 // pair. If you do not specify the value portion of the tag when calling this
 // function, the tag will be removed regardless of value. If you specify a value,
 // the tag is removed only if it is associated with the specified value.
+//
+// This action applies only to the certificate resource type. For all other ACM
+// resource types, use UntagResourceinstead.
 //
 // To add tags to a certificate, use the AddTagsToCertificate action. To view all of the tags that
 // have been applied to a specific ACM certificate, use the ListTagsForCertificateaction.
@@ -55,6 +57,11 @@ type RemoveTagsFromCertificateInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *RemoveTagsFromCertificateInput) bindEndpointParams(p *EndpointParameters) {
+
+	p.ServiceType = ptr.String("ACM")
+}
+
 type RemoveTagsFromCertificateOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -63,9 +70,6 @@ type RemoveTagsFromCertificateOutput struct {
 }
 
 func (c *Client) addOperationRemoveTagsFromCertificateMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
-		return err
-	}
 	err = stack.Serialize.Add(&awsAwsjson11_serializeOpRemoveTagsFromCertificate{}, middleware.After)
 	if err != nil {
 		return err
@@ -74,17 +78,8 @@ func (c *Client) addOperationRemoveTagsFromCertificateMiddlewares(stack *middlew
 	if err != nil {
 		return err
 	}
-	if err := addProtocolFinalizerMiddlewares(stack, options, "RemoveTagsFromCertificate"); err != nil {
-		return fmt.Errorf("add protocol finalizers: %v", err)
-	}
 
 	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addSetLoggerMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addClientRequestID(stack); err != nil {
 		return err
 	}
 	if err = addComputeContentLength(stack); err != nil {
@@ -96,19 +91,7 @@ func (c *Client) addOperationRemoveTagsFromCertificateMiddlewares(stack *middlew
 	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options, c); err != nil {
-		return err
-	}
-	if err = addRawResponseToMetadata(stack); err != nil {
-		return err
-	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
-		return err
-	}
-	if err = addClientUserAgent(stack, options); err != nil {
+	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -117,22 +100,13 @@ func (c *Client) addOperationRemoveTagsFromCertificateMiddlewares(stack *middlew
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpRemoveTagsFromCertificateValidationMiddleware(stack); err != nil {
 		return err
 	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opRemoveTagsFromCertificate(options.Region), middleware.Before); err != nil {
-		return err
-	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "RemoveTagsFromCertificate"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -147,22 +121,8 @@ func (c *Client) addOperationRemoveTagsFromCertificateMiddlewares(stack *middlew
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addInterceptBeforeRetryLoop(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAttempt(stack, options); err != nil {
-		return err
-	}
 	if err = addInterceptors(stack, options); err != nil {
 		return err
 	}
 	return nil
-}
-
-func newServiceMetadataMiddleware_opRemoveTagsFromCertificate(region string) *awsmiddleware.RegisterServiceMetadata {
-	return &awsmiddleware.RegisterServiceMetadata{
-		Region:        region,
-		ServiceID:     ServiceID,
-		OperationName: "RemoveTagsFromCertificate",
-	}
 }

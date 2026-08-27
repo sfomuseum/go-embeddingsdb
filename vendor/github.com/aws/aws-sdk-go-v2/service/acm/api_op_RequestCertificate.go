@@ -4,10 +4,9 @@ package acm
 
 import (
 	"context"
-	"fmt"
-	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/aws/smithy-go/ptr"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
@@ -122,19 +121,17 @@ type RequestCertificateInput struct {
 	// by ACM.
 	ManagedBy types.CertificateManagedBy
 
-	// You can use this parameter to specify whether to add the certificate to a
-	// certificate transparency log and export your certificate.
+	// You can use this parameter to specify whether to export your certificate.
 	//
-	// Certificate transparency makes it possible to detect SSL/TLS certificates that
-	// have been mistakenly or maliciously issued. Certificates that have not been
-	// logged typically produce an error message in a browser. For more information,
-	// see [Opting Out of Certificate Transparency Logging].
+	// Certificate transparency logging opt-out is no longer available. All public
+	// certificates are recorded in a certificate transparency log. For more
+	// information, see [Certificate Transparency Logging].
 	//
 	// You can export public ACM certificates to use with Amazon Web Services services
 	// as well as outside the Amazon Web Services Cloud. For more information, see [Certificate Manager exportable public certificate].
 	//
-	// [Opting Out of Certificate Transparency Logging]: https://docs.aws.amazon.com/acm/latest/userguide/acm-bestpractices.html#best-practices-transparency
 	// [Certificate Manager exportable public certificate]: https://docs.aws.amazon.com/acm/latest/userguide/acm-exportable-certificates.html
+	// [Certificate Transparency Logging]: https://docs.aws.amazon.com/acm/latest/userguide/acm-concepts.html#concept-transparency
 	Options *types.CertificateOptions
 
 	// Additional FQDNs to be included in the Subject Alternative Name extension of
@@ -176,6 +173,11 @@ type RequestCertificateInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *RequestCertificateInput) bindEndpointParams(p *EndpointParameters) {
+
+	p.ServiceType = ptr.String("ACM")
+}
+
 type RequestCertificateOutput struct {
 
 	// String that contains the ARN of the issued certificate. This must be of the
@@ -191,9 +193,6 @@ type RequestCertificateOutput struct {
 }
 
 func (c *Client) addOperationRequestCertificateMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
-		return err
-	}
 	err = stack.Serialize.Add(&awsAwsjson11_serializeOpRequestCertificate{}, middleware.After)
 	if err != nil {
 		return err
@@ -202,17 +201,8 @@ func (c *Client) addOperationRequestCertificateMiddlewares(stack *middleware.Sta
 	if err != nil {
 		return err
 	}
-	if err := addProtocolFinalizerMiddlewares(stack, options, "RequestCertificate"); err != nil {
-		return fmt.Errorf("add protocol finalizers: %v", err)
-	}
 
 	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addSetLoggerMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addClientRequestID(stack); err != nil {
 		return err
 	}
 	if err = addComputeContentLength(stack); err != nil {
@@ -224,19 +214,7 @@ func (c *Client) addOperationRequestCertificateMiddlewares(stack *middleware.Sta
 	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options, c); err != nil {
-		return err
-	}
-	if err = addRawResponseToMetadata(stack); err != nil {
-		return err
-	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
-		return err
-	}
-	if err = addClientUserAgent(stack, options); err != nil {
+	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -245,22 +223,13 @@ func (c *Client) addOperationRequestCertificateMiddlewares(stack *middleware.Sta
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpRequestCertificateValidationMiddleware(stack); err != nil {
 		return err
 	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opRequestCertificate(options.Region), middleware.Before); err != nil {
-		return err
-	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "RequestCertificate"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -275,22 +244,8 @@ func (c *Client) addOperationRequestCertificateMiddlewares(stack *middleware.Sta
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addInterceptBeforeRetryLoop(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAttempt(stack, options); err != nil {
-		return err
-	}
 	if err = addInterceptors(stack, options); err != nil {
 		return err
 	}
 	return nil
-}
-
-func newServiceMetadataMiddleware_opRequestCertificate(region string) *awsmiddleware.RegisterServiceMetadata {
-	return &awsmiddleware.RegisterServiceMetadata{
-		Region:        region,
-		ServiceID:     ServiceID,
-		OperationName: "RequestCertificate",
-	}
 }

@@ -1,3 +1,16 @@
+# v1.62.2 (2026-07-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.62.1 (2026-07-28)
+
+* **Dependency Update**: Update to smithy-go v1.27.5.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.62.0 (2026-07-24)
+
+* **Feature**: Endpoint test standardizations
+
 # v1.61.0 (2026-07-21)
 
 * **Feature**: Add an option to clients to disable clock skew

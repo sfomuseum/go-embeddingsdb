@@ -1,3 +1,46 @@
+# v1.43.2 (2026-07-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.43.1 (2026-07-28)
+
+* **Dependency Update**: Update to smithy-go v1.27.5.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.43.0 (2026-07-21)
+
+* **Feature**: Add an option to clients to disable clock skew
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.42.1 (2026-07-13)
+
+* No change notes available for this release.
+
+# v1.42.0 (2026-07-06)
+
+* **Feature**: Add request serialization snapshot tests.
+
+# v1.41.1 (2026-07-01)
+
+* **Bug Fix**: Bump smithy-go to 1.27.3, fix JSON encorder for document.Number, endpoint host label format validation and CBOR union serialization on new serde
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.41.0 (2026-06-30)
+
+* **Feature**: AWS Certificate Manager now supports the Automatic Certificate Management Environment (ACME) protocol to issue public certificates. ACME is an industry-standard protocol for automating certificate lifecycle on customer-managed infrastructure such as on-premises servers and Kubernetes clusters.
+
+# v1.40.1 (2026-06-29)
+
+* No change notes available for this release.
+
+# v1.40.0 (2026-06-12)
+
+* **Feature**: Certificate transparency logging opt-out is no longer available. Per compliance requirements, all public ACM certificates are automatically recorded in certificate transparency logs. The CertificateTransparencyLoggingPreference option is deprecated.
+
+# v1.39.6 (2026-06-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.39.5 (2026-06-04)
 
 * **Dependency Update**: Update to smithy-go v1.27.1 to fix several union-related deserialization bugs in schema-serde-enabled services.

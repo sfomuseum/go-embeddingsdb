@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -39,6 +40,8 @@ type GrpcServer struct {
 	db_uri string
 	token  *string
 	cert   *tls.Certificate
+	// maxRecvMsgSize sets the max message size in bytes the gRPC server can receive. If this is not set, gRPC uses the default 4MB. 
+	max_msg_size int
 }
 
 func init() {
@@ -60,6 +63,7 @@ func init() {
 // * `token-uri` – A registered `gocloud.dev/runtimevar` URI used to stored a shared authentication to require with client requests.
 // * `tls-certificate` – The path to a valid TLS certificate to use for encrypted connections.
 // * `tls-key` – The path to a valid TLS key file to use for encrypted connections.
+// * `max-msg-size` - The maximum message size in bytes the gRPC server can receive. Default is 4MB.
 func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 
 	u, err := url.Parse(uri)
@@ -113,6 +117,17 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 		s.cert = &cert
 	}
 
+	if q.Has("max-msg-size") {
+
+		v, err := strconv.Atoi(q.Get("max-msg-size"))
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse ?max-msg-size= parameter, %w", err)
+		}
+
+		s.max_msg_size = v
+	}
+	
 	return s, nil
 }
 
@@ -270,6 +285,10 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 		// opts = append(opts, grpc.WithInsecure())
 	}
 
+	if s.max_msg_size > 0 {
+		opts = append(opts, grpc.MaxRecvMsgSize(s.max_msg_size))
+	}
+	
 	svr := grpc.NewServer(opts...)
 
 	embeddings_grpc.RegisterEmbeddingsDBServiceServer(svr, svc)

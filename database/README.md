@@ -69,7 +69,7 @@ _Note: As of this writing only the Go-language [CGO bindings](https://github.com
 
 ### bleve://
 
-Manage embeddings use the [Bleve](https://blevesearch.com/) document store.
+Manage embeddings use the [Bleve](https://blevesearch.com/) document store. **Support for Bleve should be considered experimental at best.** As of this writing, I can't get it to build pending changes to `libfaiss`, the `libfaiss` bindings, Bleve's fork of `libfaiss` or all (or some) of the above. It has started to feel like a "whack-a-mole" exercise and it's not clear that it worth the effort.
 
 ```
 bleve://{PATH}?{QUERY_PARAMETERS}

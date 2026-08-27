@@ -14,10 +14,10 @@ godoc:
 	godoc -http=:6060
 
 test:
-	go test -tags sqlite,vectors,bleve -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
+	go test -tags sqlite -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
 
 fix:
-	go fix -tags sqlite,vectors,bleve -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
+	go fix -tags sqlite -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
 
 cli:
 	@make cli-server
@@ -72,7 +72,7 @@ lambda-inspector:
 
 
 server-bundle:
-	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=bleve,vectors,duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="$(LDFLAGS) -r /usr/local/lib" -o bin/embeddingsdb-server cmd/server/main.go
+	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="$(LDFLAGS) -r /usr/local/lib" -o bin/embeddingsdb-server cmd/server/main.go
 
 # https://developers.google.com/protocol-buffers/docs/reference/go-generated
 # go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
