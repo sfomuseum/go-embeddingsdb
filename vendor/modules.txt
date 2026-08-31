@@ -582,9 +582,10 @@ github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec
 ## explicit; go 1.12
 github.com/remyoudompheng/bigfft
-# github.com/sfomuseum/go-database v0.0.21
+# github.com/sfomuseum/go-database v0.0.22
 ## explicit; go 1.26.5
 github.com/sfomuseum/go-database/sql
+github.com/sfomuseum/go-database/sql/sqlite
 # github.com/sfomuseum/go-embeddings v0.5.2
 ## explicit; go 1.26.6
 github.com/sfomuseum/go-embeddings

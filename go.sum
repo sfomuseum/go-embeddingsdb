@@ -280,8 +280,8 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
-github.com/sfomuseum/go-database v0.0.21 h1:Q/HymBbI7L2NDudPy7BvJR83vVREoWQiuGMnqYmRIhw=
-github.com/sfomuseum/go-database v0.0.21/go.mod h1:bp7w0NhPVHWyWapw4RKJKhhCvxWC+boaQuJKA7mJ4kU=
+github.com/sfomuseum/go-database v0.0.22 h1:xosrkMBardcXZHJbSR2x2lc8SjGbj2la6WjKw/C6UcI=
+github.com/sfomuseum/go-database v0.0.22/go.mod h1:bp7w0NhPVHWyWapw4RKJKhhCvxWC+boaQuJKA7mJ4kU=
 github.com/sfomuseum/go-embeddings v0.5.2 h1:p4kpeIhVc2bNhn6u/x3+InunsJ1QwBn6+JB9UxgF+bw=
 github.com/sfomuseum/go-embeddings v0.5.2/go.mod h1:+CDau45Td6Cjfu4eECXiApKdNzdOXbbx+Yu+vSQQ2Rs=
 github.com/sfomuseum/go-encoderfile v0.0.1 h1:ht0GYR0b/KuljcmPIas5/0/nGNKxl9h/TewAtNfhM2c=

@@ -21,7 +21,7 @@ require (
 	github.com/duckdb/duckdb-go/v2 v2.10505.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/parquet-go/parquet-go v0.32.0
-	github.com/sfomuseum/go-database v0.0.21
+	github.com/sfomuseum/go-database v0.0.22
 	github.com/sfomuseum/go-embeddings v0.5.2
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-template v1.11.0
