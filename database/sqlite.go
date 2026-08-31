@@ -15,16 +15,16 @@ import (
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"	
+	_ "modernc.org/sqlite"
 
 	"github.com/aaronland/go-pagination"
 	pagination_sql "github.com/aaronland/go-pagination-sql"
-	// sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
-	sqlite_vec "modernc.org/sqlite/vec"	
 	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
+	sfom_sqlite "github.com/sfomuseum/go-database/sql/sqlite"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
+	sqlite_vec "modernc.org/sqlite/vec"
 )
 
 //go:embed sqlite_*_schema.txt
@@ -76,8 +76,6 @@ func init() {
 // * `compression` - The type of compression to use when storing embeddings. Options are: none, quantized, matroyshka. Default is "none".
 func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 
-	sqlite_vec.Auto()
-
 	u, err := url.Parse(uri)
 
 	if err != nil {
@@ -89,7 +87,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	dimensions := 512
 	max_distance := float32(1.0)
 	max_results := int32(10)
-	compression := sqlite_vec_default_compression
+	compression := sfom_sqlite.VectorDefaultCompression
 
 	if q.Has("dimensions") {
 
@@ -131,7 +129,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 
 		compression = q.Get("compression")
 
-		if !IsValidSQLiteCompression(compression) {
+		if !sfom_sqlite.IsValidVectorCompression(compression) {
 			return nil, fmt.Errorf("Invalid or unsupported compression '%s'", compression)
 		}
 
@@ -221,7 +219,7 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 		return false, err
 	}
 
-	enc_e, err := sqlite_vec.SerializeFloat32(rec.Embeddings)
+	enc_e, err := sfom_sqlite.SerializeFloat32Vec(rec.Embeddings)
 
 	if err != nil {
 		return false, err
@@ -230,11 +228,11 @@ func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Recor
 	var vec_q string
 
 	switch db.compression {
-	case sqlite_vec_quantize_compression:
+	case sfom_sqlite.VectorQuantizeCompression:
 		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_quantize_binary(?))", db.vec_table.Name())
-	case sqlite_vec_matroyshka_compression:
-		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), matroyshka_dimensions)
-	case sqlite_vec_default_compression:
+	case sfom_sqlite.VectorMatroyshkaCompression:
+		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), sfom_sqlite.VectorMatroyshkaDimensions)
+	case sfom_sqlite.VectorDefaultCompression:
 		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 	default:
 		return false, fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
@@ -315,7 +313,7 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 		max_results = &db.max_results
 	}
 
-	enc_e, err := sqlite_vec.SerializeFloat32(req.Embeddings)
+	enc_e, err := sfom_sqlite.SerializeFloat32Vec(req.Embeddings)
 
 	if err != nil {
 		return nil, err
@@ -332,19 +330,19 @@ func (db *SQLiteDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.
 	var q string
 
 	switch db.compression {
-	case sqlite_vec_quantize_compression:
+	case sfom_sqlite.VectorQuantizeCompression:
 
 		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v", db.records_table.Name(), db.vec_table.Name())
 
 		conditions = append(conditions, "v.embedding MATCH vec_quantize_binary(?) AND r.id = v.rowid")
 
-	case sqlite_vec_matroyshka_compression:
+	case sfom_sqlite.VectorMatroyshkaCompression:
 
 		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v", db.records_table.Name(), db.vec_table.Name())
 
-		conditions = append(conditions, fmt.Sprintf("v.embedding MATCH vec_normalize(vec_slice(?, 0, %d)) AND r.id = v.rowid", matroyshka_dimensions))
+		conditions = append(conditions, fmt.Sprintf("v.embedding MATCH vec_normalize(vec_slice(?, 0, %d)) AND r.id = v.rowid", sfom_sqlite.VectorMatroyshkaDimensions))
 
-	case sqlite_vec_default_compression:
+	case sfom_sqlite.VectorDefaultCompression:
 
 		q = fmt.Sprintf("SELECT v.distance, r.provider, r.depiction_id, r.subject_id, r.attributes FROM %s r, %s v", db.records_table.Name(), db.vec_table.Name())
 
@@ -721,10 +719,10 @@ func (db *SQLiteDatabase) inflateRecord(ctx context.Context, rows any) (*embeddi
 	}
 
 	switch db.compression {
-	case sqlite_vec_quantize_compression:
-		r.Embeddings = DeserializeQuantizedBinary(enc_embeddings)
+	case sfom_sqlite.VectorQuantizeCompression:
+		r.Embeddings = sfom_sqlite.DeserializeQuantizedBinaryVec(enc_embeddings)
 	default:
-		e32, err := DeserializeFloat32(enc_embeddings)
+		e32, err := sfom_sqlite.DeserializeFloat32Vec(enc_embeddings)
 
 		if err != nil {
 			return nil, err

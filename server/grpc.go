@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"net"
 	"net/url"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aaronland/gocloud/runtimevar"
@@ -40,7 +40,7 @@ type GrpcServer struct {
 	db_uri string
 	token  *string
 	cert   *tls.Certificate
-	// maxRecvMsgSize sets the max message size in bytes the gRPC server can receive. If this is not set, gRPC uses the default 4MB. 
+	// maxRecvMsgSize sets the max message size in bytes the gRPC server can receive. If this is not set, gRPC uses the default 4MB.
 	max_msg_size int
 }
 
@@ -127,7 +127,7 @@ func NewGrpcServer(ctx context.Context, uri string) (Server, error) {
 
 		s.max_msg_size = v
 	}
-	
+
 	return s, nil
 }
 
@@ -288,7 +288,7 @@ func (s *GrpcServer) ListenAndServe(ctx context.Context) error {
 	if s.max_msg_size > 0 {
 		opts = append(opts, grpc.MaxRecvMsgSize(s.max_msg_size))
 	}
-	
+
 	svr := grpc.NewServer(opts...)
 
 	embeddings_grpc.RegisterEmbeddingsDBServiceServer(svr, svc)
