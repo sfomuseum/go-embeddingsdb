@@ -15,11 +15,12 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"	
 
 	"github.com/aaronland/go-pagination"
 	pagination_sql "github.com/aaronland/go-pagination-sql"
-	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	// sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	sqlite_vec "modernc.org/sqlite/vec"	
 	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 	"github.com/sfomuseum/go-embeddingsdb"
