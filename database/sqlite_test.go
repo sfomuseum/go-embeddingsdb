@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	sfom_sqlite "github.com/sfomuseum/go-database/sql/sqlite"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
@@ -19,19 +20,19 @@ func TestSQLiteDatabase(t *testing.T) {
 
 	ctx := context.Background()
 
-	for _, compression := range sqlite_vec_compressions {
+	for _, compression := range sfom_sqlite.VectorCompressions {
 
 		dims := 16
 
-		if compression == sqlite_vec_quantize_compression {
+		if compression == sfom_sqlite.VectorQuantizeCompression {
 			// continue
 		}
 
-		if compression == sqlite_vec_matroyshka_compression {
-			dims = matroyshka_dimensions
+		if compression == sfom_sqlite.VectorMatroyshkaCompression {
+			dims = sfom_sqlite.VectorMatroyshkaDimensions
 		}
 
-		db_uri := fmt.Sprintf("sqlite3://?dsn=:memory:&dimensions=%d&compression=%s&max-distance=10", dims, compression)
+		db_uri := fmt.Sprintf("sqlite://?dsn=:memory:&dimensions=%d&compression=%s&max-distance=10", dims, compression)
 
 		db, err := NewSQLiteDatabase(ctx, db_uri)
 

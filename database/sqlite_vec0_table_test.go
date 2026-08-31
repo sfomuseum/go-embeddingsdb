@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"testing"
+
+	sfom_sqlite "github.com/sfomuseum/go-database/sql/sqlite"
 )
 
 func TestSQLiteVec0Table(t *testing.T) {
 
 	ctx := context.Background()
 
-	for _, compression := range sqlite_vec_compressions {
+	for _, compression := range sfom_sqlite.VectorCompressions {
 
 		tb_uri := fmt.Sprintf("sqlite://?dimensions=512&compression=%s", compression)
 

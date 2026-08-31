@@ -16,6 +16,7 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite/vec"
 
 	"github.com/aaronland/go-pagination"
 	pagination_sql "github.com/aaronland/go-pagination-sql"
@@ -24,7 +25,6 @@ import (
 	sfom_sqlite "github.com/sfomuseum/go-database/sql/sqlite"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
-	sqlite_vec "modernc.org/sqlite/vec"
 )
 
 //go:embed sqlite_*_schema.txt
@@ -136,7 +136,7 @@ func NewSQLiteDatabase(ctx context.Context, uri string) (Database, error) {
 	}
 
 	dsn := q.Get("dsn")
-	vec_db, err := sql.Open("sqlite3", dsn)
+	vec_db, err := sql.Open("sqlite", dsn)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to open database connection, %w", err)
