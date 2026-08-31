@@ -101,9 +101,6 @@ github.com/apache/arrow-go/v18/internal/bitutils
 github.com/apache/arrow-go/v18/internal/hashing
 github.com/apache/arrow-go/v18/internal/json
 github.com/apache/arrow-go/v18/internal/utils
-# github.com/asg017/sqlite-vec-go-bindings v0.1.6
-## explicit; go 1.22.5
-github.com/asg017/sqlite-vec-go-bindings/cgo
 # github.com/aws/aws-lambda-go v1.54.0
 ## explicit; go 1.18
 github.com/aws/aws-lambda-go/events

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	sqlite_vec "modernc.org/sqlite/vec"
 )
 
 func TestDeserializeFloat32(t *testing.T) {
