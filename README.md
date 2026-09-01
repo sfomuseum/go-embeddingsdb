@@ -15,6 +15,51 @@ For background, please consult the following blog posts:
 * [Updates (and additions) to machine-learning tools running on consumer hardware](https://millsfield.sfomuseum.org/blog/2026/02/10/docent/), February 2026
 * [Similar object images derived using the MobileCLIP computer-vision models](https://millsfield.sfomuseum.org/blog/2026/01/09/similar/), January 2026
 
+## tl;dr
+
+This package provides a number of tools written in Go. You will need to [download and install Go](https://go.dev/dl) to use them.
+
+### Create a new database
+
+Start the `server` tool which will create a new database and expose access to it over a `gRPC` endpoint.
+
+```
+$> go run ./cmd/server/main.go \
+	-server-uri 'grpc://localhost:8081?database-uri={database}' \
+	-database-uri 'sqlite://?dsn=test.db&dimensions=1152'
+```
+
+Two thing to note:
+
+1. This command creates a new SQLite database stored in `test.db`
+2. It creates the database for storing vector embeddings with 1152 dimensions. This is relevant for importing data in to the server (below).
+
+### Import some data
+
+Import the [SFO Museum Instagram 1152-dimension vector embeddings](https://static.sfomuseum.org/embeddings/index.html#sfomuseum). These can be imported from a local file on disk or from a remote URL (as in this example).
+
+```
+$> go run cmd/parquet-import/main.go \
+	-client-uri grpc://localhost:8081 \
+	https://static.sfomuseum.org/embeddings/sfomuseum-instagram-1152-siglip2-naflex-20260424.parquet
+```
+
+### Look at the data
+
+Start the `inspector` tool which will serve a simple web application for browsing the data stored (and exposed) by the `server` tool above.
+
+```
+$> go run cmd/inspector/main.go \
+	-client-uri grpc://localhost:8081 \
+	-server-uri http://localhost:8080
+```
+
+This launches a web application at `http://localhost:8080`. When you load that URL in your web browser you will see something like this:
+
+![](docs/images/go-embeddingsdb-tldr-inspector.png)
+
+![](docs/images/go-embeddingsdb-tldr-inspector-detail.png)
+
 ## Documentation
 
 At this time `godoc` documentation is incomplete.
