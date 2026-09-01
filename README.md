@@ -17,7 +17,7 @@ For background, please consult the following blog posts:
 
 ## tl;dr
 
-This package provides a number of tools written in Go. You will need to [download and install Go](https://go.dev/dl) to use them.
+This section documents some simple cop-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
 
 ### Create a new database
 
@@ -44,6 +44,8 @@ $> go run cmd/parquet-import/main.go \
 	https://static.sfomuseum.org/embeddings/sfomuseum-instagram-1152-siglip2-naflex-20260424.parquet
 ```
 
+You can repeat this process for as many different data sources as you'd like so long as their "dimensionality" is 1152. For example. vector embedding data from the [National Gallery of Art](https://static.sfomuseum.org/embeddings/index.html#nga), the [Museum of Modern Art](https://static.sfomuseum.org/embeddings/index.html#moma), the [Smithsonian](https://static.sfomuseum.org/embeddings/index.html#si) or the [Metropolitan Museum of Art](https://huggingface.co/metmuseum/datasets).
+
 ### Look at the data
 
 Start the `inspector` tool which will serve a simple web application for browsing the data stored (and exposed) by the `server` tool above.
@@ -57,6 +59,8 @@ $> go run cmd/inspector/main.go \
 This launches a web application at `http://localhost:8080`. When you load that URL in your web browser you will see something like this:
 
 ![](docs/images/go-embeddingsdb-tldr-inspector.png)
+
+Clicking on an image's "depiction ID" will show you that image and other images with similar vector embeddings:
 
 ![](docs/images/go-embeddingsdb-tldr-inspector-detail.png)
 
