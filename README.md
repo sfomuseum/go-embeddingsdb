@@ -15,9 +15,64 @@ For background, please consult the following blog posts:
 * [Updates (and additions) to machine-learning tools running on consumer hardware](https://millsfield.sfomuseum.org/blog/2026/02/10/docent/), February 2026
 * [Similar object images derived using the MobileCLIP computer-vision models](https://millsfield.sfomuseum.org/blog/2026/01/09/similar/), January 2026
 
-## Documentation
+## tl;dr
 
-At this time `godoc` documentation is incomplete.
+This section documents some simple copy-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
+
+### Unfortunate hoop-jumping
+
+There is unfortunately still one extra thing you'll need to do before getting started. Under the hood these tools use a tool called [DuckDB](https://duckdb.org/). That dependency is not _bundled_ with this code because the files it uses are too large for inclusion. You will need to type the following command in order to fetch them (this is only necessary to do once).
+
+```
+$> go mod tidy && go mod vendor
+```
+
+### Create a new database
+
+Start the `server` tool which will create a new database and expose access to it over a `gRPC` endpoint.
+
+```
+$> go run ./cmd/server/main.go \
+	-server-uri 'grpc://localhost:8081?database-uri={database}' \
+	-database-uri 'sqlite://?dsn=test.db&dimensions=1152'
+```
+
+Two thing to note:
+
+1. This command creates a new SQLite database stored in `test.db`. In-memory databases are not supported at this time (this is a bug).
+2. It creates the database for storing vector embeddings with 1152 dimensions. This is relevant for importing data in to the server (below).
+
+### Import some data
+
+Import the [SFO Museum Instagram 1152-dimension vector embeddings](https://static.sfomuseum.org/embeddings/index.html#sfomuseum). These can be imported from a local file on disk or from a remote URL (as in this example).
+
+```
+$> go run cmd/parquet-import/main.go \
+	-client-uri grpc://localhost:8081 \
+	https://static.sfomuseum.org/embeddings/sfomuseum-instagram-1152-siglip2-naflex-20260424.parquet
+```
+
+You can repeat this process for as many different data sources as you'd like so long as their "dimensionality" is 1152. For example. vector embedding data from the [National Gallery of Art](https://static.sfomuseum.org/embeddings/index.html#nga), the [Museum of Modern Art](https://static.sfomuseum.org/embeddings/index.html#moma), the [Smithsonian](https://static.sfomuseum.org/embeddings/index.html#si) or the [Metropolitan Museum of Art](https://huggingface.co/metmuseum/datasets).
+
+### Look at the data
+
+Start the `inspector` tool which will serve a simple web application for browsing the data stored (and exposed) by the `server` tool above.
+
+```
+$> go run cmd/inspector/main.go \
+	-client-uri grpc://localhost:8081 \
+	-server-uri http://localhost:8080
+```
+
+This launches a web application at `http://localhost:8080`. When you load that URL in your web browser you will see something like this:
+
+![](docs/images/go-embeddingsdb-tldr-inspector.png)
+
+Clicking on an image's "depiction ID" will show you that image and other images with similar vector embeddings:
+
+![](docs/images/go-embeddingsdb-tldr-inspector-detail.png)
+
+While it technically possible to search these vector embeddings with custom text or image-based queries that requires starting an entirely _other_ service (in order to generate vector embeddings to compare against) and, as such, is out of scope for this example.
 
 ## Concepts
 
@@ -209,12 +264,6 @@ The `bleve` tag adds support for [Bleve](https://blevesearch.com/) document stor
 #### no_duckdb
 
 The `no_duckdb` tag disables the availability of DuckDB as a database source. This is mostly so that the `embeddingsdb-inspector` tool can be compiled to run as an AWS Lambda function.
-
-#### sqlite
-
-The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://alexgarcia.xyz/sqlite-vec/) extension for vector embeddings support.
-
-_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
 
 #### vectors
 
