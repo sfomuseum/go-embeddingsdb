@@ -210,10 +210,6 @@ The `bleve` tag adds support for [Bleve](https://blevesearch.com/) document stor
 
 The `no_duckdb` tag disables the availability of DuckDB as a database source. This is mostly so that the `embeddingsdb-inspector` tool can be compiled to run as an AWS Lambda function.
 
-#### sqlite
-
-The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://pkg.go.dev/modernc.org/sqlite/vec) extension for vector embeddings support.
-
 #### vectors
 
 The `vectors` tag is necessary to compile `libfaiss` code when building Bleve document store support. This is a compliement to the `bleve` tag.
