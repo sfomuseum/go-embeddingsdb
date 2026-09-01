@@ -212,9 +212,7 @@ The `no_duckdb` tag disables the availability of DuckDB as a database source. Th
 
 #### sqlite
 
-The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://alexgarcia.xyz/sqlite-vec/) extension for vector embeddings support.
-
-_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
+The `sqlite` tag adds support for the [SQLite](https://sqlite.org/) database as an embeddings database. This uses the [sqlite-vec](https://pkg.go.dev/modernc.org/sqlite/vec) extension for vector embeddings support.
 
 #### vectors
 

@@ -3,7 +3,7 @@
 There are currently (4) supported database implemetations:
 
 * [DuckDB](#duckdb) - manages vector embeddings using the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension. This is the default implementation.
-* [SQLite](#sqlite) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
+* [SQLite](#sqlite) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://pkg.go.dev/modernc.org/sqlite/vec) extension.
 * [Bleve](#bleve) - manages vector embeddings using the [Bleve](https://github.com/blevesearch/bleve) database and the [faiss](https://github.com/blevesearch/faiss) library.
 * [S3Vectors](#s3vectors) - manages vector embeddings using the Amazon Web Services [S3Vectors](https://aws.amazon.com/s3/features/vectors/) service.
 
@@ -43,7 +43,7 @@ duckdb:///usr/local/data/embeddings
 
 ### sqlite://
 
-Manage embeddings use the [SQLite](https://www.sqlite.org/) database and the [sqlite-vec](https://github.com/asg017/sqlite-vec/tree/main) extension.
+Manage embeddings use the [SQLite](https://www.sqlite.org/) database and the [sqlite-vec](https://pkg.go.dev/modernc.org/sqlite/vec) extension.
 
 ```
 sqlite://?{QUERY_PARAMETERS}
@@ -64,8 +64,6 @@ For example:
 ```
 sqlite://?dsn=file:/usr/local/data/embeddings.db
 ```
-
-_Note: As of this writing only the Go-language [CGO bindings](https://github.com/asg017/sqlite-vec-go-bindings?tab=readme-ov-file#cgo-bindings) are supported. Support for "pure Go" bindings will be added in future releases._
 
 ### bleve://
 
@@ -141,8 +139,8 @@ $> go test -ldflags "-r /usr/local/lib" ./... -tags=vectors
 Assuming that all the tests pass you can build the tools in _this_ package. Remember that you also need to include the `-tags vectors` and `-ldflags -r /usr/local/lib` when you build things. For example:
 
 ```
-$> make cli TAGS=sqlite,bleve,vectors LDFLAGS='-s -w -r /usr/local/lib'
-go build -tags=sqlite,bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/lib" -o bin/embeddingsdb-client cmd/client/main.go
+$> make cli TAGS=bleve,vectors LDFLAGS='-s -w -r /usr/local/lib'
+go build -tags=bleve,vectors -mod readonly -ldflags="-s -w -r /usr/local/lib" -o bin/embeddingsdb-client cmd/client/main.go
 ...and so on
 ```
 

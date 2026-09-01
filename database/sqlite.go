@@ -1,5 +1,3 @@
-//go:build sqlite
-
 package database
 
 import (
@@ -20,7 +18,6 @@ import (
 
 	"github.com/aaronland/go-pagination"
 	pagination_sql "github.com/aaronland/go-pagination-sql"
-	"github.com/bwmarrin/snowflake"
 	sfom_sql "github.com/sfomuseum/go-database/sql"
 	sfom_sqlite "github.com/sfomuseum/go-database/sql/sqlite"
 	"github.com/sfomuseum/go-embeddingsdb"
@@ -29,8 +26,6 @@ import (
 
 //go:embed sqlite_*_schema.txt
 var sqlite_schema_fs embed.FS
-
-var snowflake_node *snowflake.Node
 
 // SQLiteDatabase implements the [Database] interface using a SQLite database and the `sqlite-vec` extension.
 type SQLiteDatabase struct {
@@ -53,14 +48,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
-	n, err := snowflake.NewNode(1)
-
-	if err != nil {
-		panic(err)
-	}
-
-	snowflake_node = n
 }
 
 // NewSQLiteDatabase returns an implementation of the [Database] interface using the `sqlite-vec`
@@ -213,49 +200,105 @@ func (db *SQLiteDatabase) Export(ctx context.Context, uri string, opts ...option
 // Add adds a [embeddingsdb.Record] instance to the SQLite database.
 func (db *SQLiteDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record, opts ...options.Option) (bool, error) {
 
-	id, err := db.uidForRecord(ctx, rec.Provider, rec.DepictionId, rec.Model)
+	key := rec.Key()
+
+	logger := slog.Default()
+	logger = logger.With("record", key)
+
+	tx, err := db.vec_db.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelDefault,
+		ReadOnly:  false,
+	})
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to begin transaction, %w", err)
 	}
+
+	defer func() {
+
+		tx.Rollback()
+
+		if err != nil && err != sql.ErrTxDone {
+			logger.Error("Failed to rollback transaction", "error", err)
+		}
+	}()
 
 	enc_e, err := sfom_sqlite.SerializeFloat32Vec(rec.Embeddings)
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to serialize embeddings for record '%s', %w", key, err)
+	}
+
+	enc_attrs, err := json.Marshal(rec.Attributes)
+
+	if err != nil {
+		return false, fmt.Errorf("Failed to marshal attributes for record '%s', %w", key, err)
+	}
+
+	now := time.Now()
+	lastmod := now.Unix()
+
+	q := fmt.Sprintf("SELECT id FROM %s WHERE provider= ? AND depiction_id = ? AND model = ?", db.records_table.Name())
+
+	row := tx.QueryRowContext(ctx, q, rec.Provider, rec.DepictionId, rec.Model)
+
+	var rowid int64
+	err = row.Scan(&rowid)
+
+	if err != nil {
+
+		records_q := fmt.Sprintf("INSERT OR REPLACE INTO %s (provider, depiction_id, subject_id, model, attributes, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id", db.records_table.Name())
+
+		rsp := tx.QueryRowContext(ctx, records_q, rec.Provider, rec.DepictionId, rec.SubjectId, rec.Model, string(enc_attrs), rec.Created, lastmod)
+
+		var new_id int64
+		err = rsp.Scan(&new_id)
+
+		if err != nil {
+			return false, fmt.Errorf("Failed to derive ID, %w", err)
+		}
+
+		rowid = new_id
+
+	} else {
+
+		update_q := fmt.Sprintf("UPDATE %s SET attributes = ?, lastmodified = ? WHERE id = ?", db.records_table.Name())
+
+		_, err := tx.ExecContext(ctx, update_q, string(enc_attrs), lastmod, rowid)
+
+		if err != nil {
+			return false, fmt.Errorf("Failed to update record %d, %w", rowid, err)
+		}
+	}
+
+	del_q := fmt.Sprintf("DELETE FROM %s WHERE rowid = ?", db.vec_table.Name())
+
+	_, err = tx.ExecContext(ctx, del_q, rowid)
+
+	if err != nil {
+		return false, fmt.Errorf("Failed to remove existing embeddings, %w", err)
 	}
 
 	var vec_q string
 
 	switch db.compression {
 	case sfom_sqlite.VectorQuantizeCompression:
-		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_quantize_binary(?))", db.vec_table.Name())
+		vec_q = fmt.Sprintf("INSERT INTO %s (rowid, embedding) VALUES (?, vec_quantize_binary(?))", db.vec_table.Name())
 	case sfom_sqlite.VectorMatroyshkaCompression:
-		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), sfom_sqlite.VectorMatroyshkaDimensions)
+		vec_q = fmt.Sprintf("INSERT INTO %s (rowid, embedding) VALUES (?, vec_normalize(vec_slice(?, 0, %d)))", db.vec_table.Name(), sfom_sqlite.VectorMatroyshkaDimensions)
 	case sfom_sqlite.VectorDefaultCompression:
-		vec_q = fmt.Sprintf("INSERT OR REPLACE INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
+		vec_q = fmt.Sprintf("INSERT INTO %s (rowid, embedding) VALUES (?, ?)", db.vec_table.Name())
 	default:
 		return false, fmt.Errorf("Invalid or unsupported compression, '%s'", db.compression)
 	}
 
-	_, err = db.vec_db.ExecContext(ctx, vec_q, id, enc_e)
+	_, err = tx.ExecContext(ctx, vec_q, rowid, enc_e)
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Failed to add embeddings for record '%s', %w", key, err)
 	}
 
-	enc_attrs, err := json.Marshal(rec.Attributes)
-
-	if err != nil {
-		return false, err
-	}
-
-	now := time.Now()
-	lastmod := now.Unix()
-
-	records_q := fmt.Sprintf("INSERT OR REPLACE INTO %s (id, provider, depiction_id, subject_id, model, attributes, created, lastmodified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", db.records_table.Name())
-
-	_, err = db.vec_db.ExecContext(ctx, records_q, id, rec.Provider, rec.DepictionId, rec.SubjectId, rec.Model, string(enc_attrs), rec.Created, lastmod)
+	err = tx.Commit()
 
 	if err != nil {
 		return false, err
@@ -275,7 +318,12 @@ func (db *SQLiteDatabase) AddBatchedRecord(ctx context.Context, opts ...options.
 // Return the [embeddingsdb.Record] record matching 'provider', 'depiction_id' and 'model'.
 func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
 
-	id, err := db.uidForRecord(ctx, req.Provider, req.DepictionId, req.Model)
+	q := fmt.Sprintf("SELECT id FROM %s WHERE provider= ? AND depiction_id = ? AND model = ?", db.records_table.Name())
+
+	row := db.vec_db.QueryRowContext(ctx, q, req.Provider, req.DepictionId, req.Model)
+
+	var id int64
+	err := row.Scan(&id)
 
 	if err != nil {
 		return nil, err
@@ -283,15 +331,9 @@ func (db *SQLiteDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRe
 
 	records_q := fmt.Sprintf("SELECT v.embedding, r.provider, r.depiction_id, r.subject_id, r.model, r.created, r.attributes FROM %s r, %s v  WHERE r.id = v.rowid AND r.id = ?", db.records_table.Name(), db.vec_table.Name())
 
-	row := db.vec_db.QueryRowContext(ctx, records_q, id)
+	row = db.vec_db.QueryRowContext(ctx, records_q, id)
 
-	rec, err := db.inflateRecord(ctx, row)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return rec, nil
+	return db.inflateRecord(ctx, row)
 }
 
 func (db *SQLiteDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
@@ -448,15 +490,7 @@ func (db *SQLiteDatabase) LastUpdate(ctx context.Context, opts ...options.Option
 	var lastmod int64
 	err := row.Scan(&lastmod)
 
-	switch {
-	case err == sql.ErrNoRows:
-		new_id := snowflake_node.Generate()
-		return new_id.Int64(), nil
-	case err != nil:
-		return 0, err
-	default:
-		return lastmod, nil
-	}
+	return lastmod, err
 }
 
 // Return the URI string used to instantiate the SQLite database.
@@ -732,24 +766,4 @@ func (db *SQLiteDatabase) inflateRecord(ctx context.Context, rows any) (*embeddi
 	}
 
 	return r, nil
-}
-
-func (db *SQLiteDatabase) uidForRecord(ctx context.Context, provider string, depiction_id string, model string) (int64, error) {
-
-	q := fmt.Sprintf("SELECT id FROM %s WHERE provider= ? AND depiction_id = ? AND model = ?", db.records_table.Name())
-
-	row := db.vec_db.QueryRowContext(ctx, q, provider, depiction_id, model)
-
-	var id int64
-	err := row.Scan(&id)
-
-	switch {
-	case err == sql.ErrNoRows:
-		new_id := snowflake_node.Generate()
-		return new_id.Int64(), nil
-	case err != nil:
-		return 0, err
-	default:
-		return id, nil
-	}
 }

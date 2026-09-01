@@ -1,13 +1,9 @@
-//go:build sqlite
-
 package database
 
 import (
 	"context"
-	_ "encoding/json"
 	"fmt"
 	"math/rand"
-	_ "os"
 	"testing"
 	"time"
 
