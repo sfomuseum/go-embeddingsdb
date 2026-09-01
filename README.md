@@ -19,6 +19,14 @@ For background, please consult the following blog posts:
 
 This section documents some simple copy-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
 
+### Unfortunate hoop-jumping
+
+There is unfortunately still one extra thing you'll need to do before getting started. Under the hood these tools use a tool called [DuckDB](https://duckdb.org/). That dependency is not _bundled_ with this code because the files it uses are too large for inclusion. You will need to type the following command in order to fetch them (this is only necessary to do once).
+
+```
+$> go mod tidy && go mod vendor
+```
+
 ### Create a new database
 
 Start the `server` tool which will create a new database and expose access to it over a `gRPC` endpoint.
@@ -31,7 +39,7 @@ $> go run ./cmd/server/main.go \
 
 Two thing to note:
 
-1. This command creates a new SQLite database stored in `test.db`
+1. This command creates a new SQLite database stored in `test.db`. In-memory databases are not supported at this time (this is a bug).
 2. It creates the database for storing vector embeddings with 1152 dimensions. This is relevant for importing data in to the server (below).
 
 ### Import some data
