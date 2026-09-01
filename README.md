@@ -64,6 +64,8 @@ Clicking on an image's "depiction ID" will show you that image and other images 
 
 ![](docs/images/go-embeddingsdb-tldr-inspector-detail.png)
 
+While it technically possible to search these vector embeddings with custom text or image-based queries that requires starting an entirely _other_ service (in order to generate vector embeddings to compare against) and, as such, is out of scope for this example.
+
 ## Documentation
 
 At this time `godoc` documentation is incomplete.
