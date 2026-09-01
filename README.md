@@ -17,7 +17,7 @@ For background, please consult the following blog posts:
 
 ## tl;dr
 
-This section documents some simple cop-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
+This section documents some simple copy-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
 
 ### Create a new database
 
@@ -65,10 +65,6 @@ Clicking on an image's "depiction ID" will show you that image and other images 
 ![](docs/images/go-embeddingsdb-tldr-inspector-detail.png)
 
 While it technically possible to search these vector embeddings with custom text or image-based queries that requires starting an entirely _other_ service (in order to generate vector embeddings to compare against) and, as such, is out of scope for this example.
-
-## Documentation
-
-At this time `godoc` documentation is incomplete.
 
 ## Concepts
 
