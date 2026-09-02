@@ -62,7 +62,10 @@ func (s *grpcService) GetRecord(ctx context.Context, req *grpc.GetRecordRequest)
 	logger = logger.With("model", req.Model)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to get record", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to get record", "time", time.Since(t1))
+	}()
 
 	db_req := &embeddingsdb.GetRecordRequest{
 		Provider:    req.Provider,
@@ -97,7 +100,10 @@ func (s *grpcService) RemoveRecord(ctx context.Context, req *grpc.RemoveRecordRe
 	logger = logger.With("model", req.Model)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to remove record", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to remove record", "time", time.Since(t1))
+	}()
 
 	db_req := &embeddingsdb.RemoveRecordRequest{
 		Provider:    req.Provider,
@@ -243,7 +249,10 @@ func (s *grpcService) SimilarRecordsById(ctx context.Context, req *grpc.SimilarR
 	logger = logger.With("model", req.Model)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to retrieve similar records by ID", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to retrieve similar records by ID", "time", time.Since(t1))
+	}()
 
 	record_req := &embeddingsdb.GetRecordRequest{
 		Provider:    req.Provider,
@@ -279,7 +288,10 @@ func (s *grpcService) GetModels(ctx context.Context, req *grpc.GetModelsRequest)
 	logger := s.Logger(ctx)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to list models", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to list models", "time", time.Since(t1))
+	}()
 
 	opts := make([]options.Option, len(req.Provider))
 
@@ -307,7 +319,10 @@ func (s *grpcService) GetProviders(ctx context.Context, req *grpc.GetProvidersRe
 	logger := s.Logger(ctx)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to list providers", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to list providers", "time", time.Since(t1))
+	}()
 
 	providers, err := s.db.Providers(ctx)
 
@@ -329,7 +344,10 @@ func (s *grpcService) GetDimensions(ctx context.Context, req *grpc.GetDimensions
 	logger := s.Logger(ctx)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to list dimensions", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to list dimensions", "time", time.Since(t1))
+	}()
 
 	// options...
 
@@ -360,7 +378,10 @@ func (s *grpcService) GetPaginationType(ctx context.Context, req *grpc.GetPagina
 	logger := s.Logger(ctx)
 
 	t1 := time.Now()
-	defer logger.Debug("Time to get pagination type", "time", time.Since(t1))
+
+	defer func() {
+		logger.Debug("Time to get pagination type", "time", time.Since(t1))
+	}()
 
 	// options...
 
