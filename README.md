@@ -19,14 +19,6 @@ For background, please consult the following blog posts:
 
 This section documents some simple copy-and-paste steps for creating a new database, adding some data to it and viewing the results in a web application. Since these tools are written in Go you will need to [download and install Go](https://go.dev/dl) to use them.
 
-### Unfortunate hoop-jumping
-
-There is unfortunately still one extra thing you'll need to do before getting started. Under the hood these tools use a tool called [DuckDB](https://duckdb.org/). That dependency is not _bundled_ with this code because the files it uses are too large for inclusion. You will need to type the following command in order to fetch them (this is only necessary to do once).
-
-```
-$> go mod tidy && go mod vendor
-```
-
 ### Create a new database
 
 Start the `server` tool which will create a new database and expose access to it over a `gRPC` endpoint.
@@ -202,7 +194,6 @@ type Client interface {
 
 ## Databases
 
-
 Database documentation has been moved in to [database/README.md](database/README.md) but here's the "tl;dr".
 
 The DuckDB implementation is generally faster than the SQLite but requires that all your data be stored in memory. That data is periodically exported to disk in order that it may be re-imported without indexing all the data from scratch but it takes a noticeable amount of time to import that data at start up time.
@@ -223,12 +214,11 @@ Client documentation has been moved in to [client/README.md](client/README.md)
 
 ## Tools
 
-The easiest way to build the included tools is to run the handy `cli` Makefile target (after you've run `go mod tidy && go mod vendor` for reasons described below). For example:
+The easiest way to build the included tools is to run the handy `cli` Makefile target. For example:
 
 ```
 $> git clone git@github.com:sfomuseum/go-embeddingsdb.git
 $> cd go-embeddingsdb
-$> go mod tidy && go mod vendor
 
 $> make cli
 go build -tags= -mod vendor -ldflags="-s -w" -o bin/embeddingsdb-client cmd/client/main.go
@@ -245,14 +235,6 @@ Tools documentation has been moved in to [cmd/README.md](cmd/README.md)
 
 What follows are "known knowns", gotchas and other details that may creep when building tools. This gets in to the technical weeds so if that's not your thing you can stop reading now.
 
-### DuckDB
-
-DuckDB is a dependency regardless of build tags (described below).
-
-This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
-
-Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See below [for details](#).
-
 ### Build tags
 
 Build tags are used to enable support for various features. The default set of tags is empty but you can override those defaults by passing in a custom `TAGS` variable when calling the Makefile targets.
@@ -261,9 +243,17 @@ Build tags are used to enable support for various features. The default set of t
 
 The `bleve` tag adds support for [Bleve](https://blevesearch.com/) document store as an embeddings database. Note that the `vectors` tags is also necessary.
 
-#### no_duckdb
+#### duckdb
 
-The `no_duckdb` tag disables the availability of DuckDB as a database source. This is mostly so that the `embeddingsdb-inspector` tool can be compiled to run as an AWS Lambda function.
+The `duckdb` tag add supports for [DuckDB](https://www.duckdb.org) as a database source.
+
+This package uses the [duckdb/duckdb-go](https://github.com/duckdb/duckdb-go) package for interacting with DuckDB in Go. Although this package bundles all its dependencies in the `vendor` folder there is one notable exception: Any of the `.a` files included in the `duckdb-go` package. That is because it add a couple hundred megabytes to the overall package size. As such you will need to run `go run tidy && go mod vendor` before compiling tools. It's not ideal but it is what it is.
+
+Note: If you need to build a binary tool with support for DuckDB for MacOS _and_ that been signed and notarized you will need to build a customized `libduckdb_bundle.a` from source. See the [macos documentation](macos) for details.
+
+#### duckdb_iter
+
+The `duckdb_iter` tag add supports for iterating through Parquet files using [DuckDB](https://www.duckdb.org).
 
 #### vectors
 
