@@ -13,11 +13,14 @@ vuln:
 godoc:
 	godoc -http=:6060
 
+build:
+	go build -tags duckdb ./...
+
 test:
-	go test -tags sqlite -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
+	go test -tags duckdb -ldflags="$(LDFLAGS) -r /usr/local/lib" -v ./...
 
 fix:
-	go fix -tags sqlite -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
+	go fix -tags duckdb -ldflags="$(LDFLAGS) -r /usr/local/lib" ./...
 
 cli:
 	@make cli-server
