@@ -1,4 +1,4 @@
-//go:build !no_duckdb
+//go:build duckdb
 
 package database
 
