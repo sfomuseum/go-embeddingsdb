@@ -77,6 +77,12 @@ lambda-inspector:
 	zip embeddingsdb-inspector.zip bootstrap
 	rm -f bootstrap
 
+debug-multi:
+	go run -mod $(GOMOD) cmd/server/main.go \
+		-server-uri 'grpc://localhost:8081?database-uri={database}' \
+		-database-uri 'sqlite://?dsn=$(CWD)/work/debug-512.db&dimensions=512#512' \
+		-database-uri 'sqlite://?dsn=$(CWD)/work/debug-1152.db&dimensions=1152#1152' \
+		-verbose
 
 server-bundle:
 	CGO_ENABLED=1 CPPFLAGS="-DDUCKDB_STATIC_BUILD" CGO_LDFLAGS="-L./work -lduckdb_bundle -lc++" go build -tags=duckdb,duckdb_use_static_lib -mod $(GOMOD) -ldflags="$(LDFLAGS) -r /usr/local/lib" -o bin/embeddingsdb-server cmd/server/main.go

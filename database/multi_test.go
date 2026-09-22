@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"net/url"
 	"testing"
 )
 
@@ -11,19 +10,14 @@ func TestMultiDatabase(t *testing.T) {
 	ctx := context.Background()
 
 	db_uris := []string{
-		"null://#512",
-		"null://#768",
-		"null://#1024",
+		"null://?dimensions=512",
+		"null://?dimensions=768",
+		"null://?dimensions=1024",
 	}
 
-	db_q := url.Values{}
-	db_q["database"] = db_uris
+	db_u := NewMultiDatabaseURIFromURIs(db_uris...)
 
-	db_u := url.URL{}
-	db_u.Scheme = "multi"
-	db_u.RawQuery = db_q.Encode()
-
-	_, err := NewMultiDatabase(ctx, db_u.String())
+	_, err := NewMultiDatabase(ctx, db_u)
 
 	if err != nil {
 		t.Fatalf("Failed to create multi database from string, %v", err)

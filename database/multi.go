@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"log/slog"
 	"net/url"
 	"slices"
 	"strconv"
@@ -32,6 +31,18 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func NewMultiDatabaseURIFromURIs(db_uris ...string) string {
+
+	db_q := url.Values{}
+	db_q["database"] = db_uris
+
+	db_u := url.URL{}
+	db_u.Scheme = "multi"
+	db_u.RawQuery = db_q.Encode()
+
+	return db_u.String()
 }
 
 func NewMultiDatabase(ctx context.Context, uri string) (Database, error) {
@@ -65,10 +76,16 @@ func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database,
 			return nil, fmt.Errorf("Failed to parse database URI '%s', %w", uri, err)
 		}
 
-		str_dims := db_u.Fragment
+		db_q := db_u.Query()
+
+		if !db_q.Has("dimensions") {
+			return nil, fmt.Errorf("Database URI '%s' missing dimensions", uri)
+		}
+
+		str_dims := db_q.Get("dimensions")
 
 		if str_dims == "" {
-			return nil, fmt.Errorf("Database URI '%s' missing #{DIMENSIONS} fragment", uri)
+			return nil, fmt.Errorf("Database URI '%s' has empty dimensions", uri)
 		}
 
 		dims, err := strconv.Atoi(str_dims)
@@ -83,9 +100,7 @@ func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database,
 			return nil, fmt.Errorf("Database already registered for dimensions '%d'", dims)
 		}
 
-		db_u.Fragment = ""
-
-		other_db, err := NewDatabase(ctx, db_u.String())
+		other_db, err := NewDatabase(ctx, uri)
 
 		if err != nil {
 			return nil, fmt.Errorf("Failed to create new database for '%s', %w", uri, err)
@@ -114,18 +129,10 @@ func (db *MultiDatabase) URI() string {
 
 	database_uris := make([]string, 0)
 
-	for dims, target_db := range db.registry {
+	for _, target_db := range db.registry {
 
 		target_uri := target_db.URI()
-		target_u, err := url.Parse(target_uri)
-
-		if err != nil {
-			slog.Error("Failed to parse target URI", "uri", target_uri, "dims", dims, "error", err)
-			continue
-		}
-
-		target_u.Fragment = strconv.Itoa(dims)
-		database_uris = append(database_uris, target_u.String())
+		database_uris = append(database_uris, target_uri)
 	}
 
 	q := url.Values{}
