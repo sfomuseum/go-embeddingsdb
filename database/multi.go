@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"log/slog"
+	"net/url"
 	"slices"
+	"strconv"
+	"sync"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -16,7 +20,8 @@ const MultiDatabaseScheme string = "multi"
 
 type MultiDatabase struct {
 	Database
-	registry map[int]Database
+	registry    map[int]Database
+	model_cache *sync.Map
 }
 
 func init() {
@@ -30,17 +35,121 @@ func init() {
 }
 
 func NewMultiDatabase(ctx context.Context, uri string) (Database, error) {
-	db := &MultiDatabase{}
+
+	u, err := url.Parse(uri)
+
+	if err != nil {
+		return nil, err
+	}
+
+	q := u.Query()
+
+	db_uris, ok := q["database"]
+
+	if !ok {
+		return nil, fmt.Errorf("URI missing one or more ?database= parameters")
+	}
+
+	return NewMultiDatabaseFromURIs(ctx, db_uris...)
+}
+
+func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database, error) {
+
+	registry := make(map[int]Database)
+
+	for _, uri := range db_uris {
+
+		db_u, err := url.Parse(uri)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse database URI '%s', %w", uri, err)
+		}
+
+		str_dims := db_u.Fragment
+
+		if str_dims == "" {
+			return nil, fmt.Errorf("Database URI '%s' missing #{DIMENSIONS} fragment", uri)
+		}
+
+		dims, err := strconv.Atoi(str_dims)
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse dimensions for database URI '%s', %w", uri, err)
+		}
+
+		_, exists := registry[dims]
+
+		if exists {
+			return nil, fmt.Errorf("Database already registered for dimensions '%d'", dims)
+		}
+
+		db_u.Fragment = ""
+
+		other_db, err := NewDatabase(ctx, db_u.String())
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create new database for '%s', %w", uri, err)
+		}
+
+		registry[dims] = other_db
+	}
+
+	return NewMultiDatabaseFromRegistry(ctx, registry)
+}
+
+func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database) (Database, error) {
+
+	model_cache := new(sync.Map)
+
+	db := &MultiDatabase{
+		registry:    registry,
+		model_cache: model_cache,
+	}
+
 	return db, nil
 }
 
 // Return the URI string used to instantiate the Database instance.
 func (db *MultiDatabase) URI() string {
-	return fmt.Sprintf("%s://", MultiDatabaseScheme)
+
+	database_uris := make([]string, 0)
+
+	for dims, target_db := range db.registry {
+
+		target_uri := target_db.URI()
+		target_u, err := url.Parse(target_uri)
+
+		if err != nil {
+			slog.Error("Failed to parse target URI", "uri", target_uri, "dims", dims, "error", err)
+			continue
+		}
+
+		target_u.Fragment = strconv.Itoa(dims)
+		database_uris = append(database_uris, target_u.String())
+	}
+
+	q := url.Values{}
+	q["database"] = database_uris
+
+	u := url.URL{}
+	u.Scheme = "multi"
+	u.RawQuery = q.Encode()
+
+	return u.String()
 }
 
 // Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 func (db *MultiDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
+
+	for _, target_db := range db.registry {
+
+		err := target_db.Export(ctx, uri, opts...)
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -60,28 +169,73 @@ func (db *MultiDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 
 // The number of batched records currently waiting to be added.
 func (db *MultiDatabase) BatchedRecordsCount(ctx context.Context, opts ...options.Option) (int, error) {
-	return 0, nil
+
+	total := 0
+
+	for _, target_db := range db.registry {
+
+		count, err := target_db.BatchedRecordsCount(ctx, opts...)
+
+		if err != nil {
+			return total, err
+		}
+
+		total += count
+	}
+
+	return total, nil
 }
 
 // Add the pending batched records.
 func (db *MultiDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
+
+	for _, target_db := range db.registry {
+
+		err := target_db.AddBatchedRecords(ctx, opts...)
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // Return the EmbeddingsDB instance record matching 'provider', 'depiction_id' and 'model'.
 func (db *MultiDatabase) GetRecord(ctx context.Context, req *embeddingsdb.GetRecordRequest, opts ...options.Option) (*embeddingsdb.Record, error) {
-	return nil, fmt.Errorf("Not found")
+
+	target_db, err := db.databaseForModel(ctx, req.Model, opts...)
+
+	if err != nil {
+		return nil, err
+
+	}
+
+	return target_db.GetRecord(ctx, req, opts...)
 }
 
 // Remove a record from an EmbeddingsDB instance.
 func (db *MultiDatabase) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveRecordRequest, opts ...options.Option) error {
-	return nil
+
+	target_db, err := db.databaseForModel(ctx, req.Model, opts...)
+
+	if err != nil {
+		return err
+	}
+
+	return target_db.RemoveRecord(ctx, req, opts...)
 }
 
 // Find similar records for a given model and record instance.
-func (db *MultiDatabase) SimilarRecords(ctx context.Context, rec *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
-	results := make([]*embeddingsdb.SimilarRecord, 0)
-	return results, nil
+func (db *MultiDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.SimilarRecordsRequest, opts ...options.Option) ([]*embeddingsdb.SimilarRecord, error) {
+
+	target_db, err := db.databaseForModel(ctx, req.Model, opts...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return target_db.SimilarRecords(ctx, req, opts...)
 }
 
 // ListRecords returns a paginated list of records stored in the database.
@@ -224,4 +378,43 @@ func (db *MultiDatabase) Close(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (db *MultiDatabase) databaseForModel(ctx context.Context, model string, opts ...options.Option) (Database, error) {
+
+	v, ok := db.model_cache.Load(model)
+
+	if ok {
+
+		switch v.(type) {
+		case Database:
+			return v.(Database), nil
+		default:
+			return nil, fmt.Errorf("Model not found")
+		}
+	}
+
+	var target_db Database
+
+	for _, test_db := range db.registry {
+
+		test_models, err := test_db.Models(ctx, opts...)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if slices.Contains(test_models, model) {
+			target_db = test_db
+			break
+		}
+	}
+
+	db.model_cache.Store(model, target_db)
+
+	if target_db == nil {
+		return nil, fmt.Errorf("No matching database for model")
+	}
+
+	return target_db, nil
 }
