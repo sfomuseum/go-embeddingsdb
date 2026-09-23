@@ -9,7 +9,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-embeddingsdb"	
+	"github.com/sfomuseum/go-parquet"
 	"github.com/sfomuseum/go-flags/flagset"
 )
 
@@ -46,7 +47,7 @@ func main() {
 
 	enc := json.NewEncoder(wr)
 
-	for rec, err := range parquet.Iterate(ctx, uris...) {
+	for rec, err := range parquet.Iterate[embeddingsdb.Record](ctx, uris...) {
 
 		if err != nil {
 			log.Fatalf("Iterator yield an error, %v", err)

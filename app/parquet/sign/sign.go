@@ -15,7 +15,7 @@ import (
 	"github.com/aaronland/gocloud/blob/writer"
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-parquet"
 	"github.com/sfomuseum/go-embeddingsdb/signatures"
 	"github.com/sfomuseum/go-flags/flagset"
 )
@@ -121,7 +121,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 		batch_size := 10000
 
-		for rec, err := range parquet.Iterate(ctx, uri) {
+		for rec, err := range parquet.Iterate[embeddingsdb.Record](ctx, uri) {
 
 			if err != nil {
 				return fmt.Errorf("Iterator yield an error, %w", err)

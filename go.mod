@@ -1,6 +1,6 @@
 module github.com/sfomuseum/go-embeddingsdb
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/ProtonMail/gopenpgp/v3 v3.4.1
@@ -23,6 +23,7 @@ require (
 	github.com/sfomuseum/go-database v0.0.22
 	github.com/sfomuseum/go-embeddings v0.5.2
 	github.com/sfomuseum/go-flags v0.12.1
+	github.com/sfomuseum/go-parquet v0.5.0
 	github.com/sfomuseum/go-template v1.11.0
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/grpc v1.83.2

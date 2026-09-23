@@ -14,7 +14,8 @@ import (
 
 	_ "github.com/duckdb/duckdb-go/v2"
 
-	"github.com/sfomuseum/go-embeddingsdb/parquet"
+	"github.com/sfomuseum/go-parquet"
+	"github.com/sfomuseum/go-embeddingsdb"	
 	"github.com/sfomuseum/go-embeddingsdb/signatures"
 	"github.com/sfomuseum/go-flags/flagset"
 )
@@ -92,7 +93,7 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 
 	uris := fs.Args()
 
-	for rec, err := range parquet.Iterate(ctx, uris...) {
+	for rec, err := range parquet.Iterate[embeddingsdb.Record](ctx, uris...) {
 
 		if err != nil {
 			return fmt.Errorf("Iterator yield an error, %w", err)
