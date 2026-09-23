@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"sync"
 
+	"log/slog"
+
 	"github.com/aaronland/go-pagination"
-	"github.com/aaronland/go-pagination/countable"
+	_ "github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
@@ -19,8 +21,9 @@ const MultiDatabaseScheme string = "multi"
 
 type MultiDatabase struct {
 	Database
-	registry    map[int]Database
-	model_cache *sync.Map
+	registry        map[int]Database
+	model_cache     *sync.Map
+	pagination_type PaginationType
 }
 
 func init() {
@@ -114,11 +117,31 @@ func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database,
 
 func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database) (Database, error) {
 
+	pg_type := UndefinedPaginationType
+
+	for _, target_db := range registry {
+
+		target_pg, err := target_db.PaginationType(ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if pg_type != UndefinedPaginationType && target_pg != pg_type {
+			return nil, fmt.Errorf("Databases must pagination type (for now)")
+		}
+
+		pg_type = target_pg
+	}
+
+	slog.Info("WTF", "pg", pg_type)
+
 	model_cache := new(sync.Map)
 
 	db := &MultiDatabase{
-		registry:    registry,
-		model_cache: model_cache,
+		registry:        registry,
+		model_cache:     model_cache,
+		pagination_type: pg_type,
 	}
 
 	return db, nil
@@ -248,15 +271,31 @@ func (db *MultiDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 // ListRecords returns a paginated list of records stored in the database.
 func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	records := make([]*embeddingsdb.Record, 0)
+	for _, target_db := range db.registry {
 
-	pg, err := countable.NewResultsFromCountWithOptions(pg_opts, 0)
+		records, pg, err := target_db.ListRecords(ctx, pg_opts, opts...)
 
-	if err != nil {
-		return nil, nil, err
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return records, pg, err
 	}
 
-	return records, pg, nil
+	return nil, nil, fmt.Errorf("No results")
+
+	/*
+		records := make([]*embeddingsdb.Record, 0)
+
+		pg, err := countable.NewResultsFromCountWithOptions(pg_opts, 0)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return records, pg, nil
+	*/
+
 }
 
 // IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
@@ -369,7 +408,7 @@ func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) 
 
 // Return the pagination type used by the database.
 func (db *MultiDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
-	return NullPaginationType, nil
+	return db.pagination_type, nil
 }
 
 // Close performs and terminating functions required by the database.

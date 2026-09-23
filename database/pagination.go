@@ -12,10 +12,13 @@ const CountablePaginationTypeLabel string = "countable"
 
 const CursorPaginationTypeLabel string = "cursor"
 
+const UndefinedPaginationTypeLabel string = ""
+
 const (
 	NullPaginationType PaginationType = iota
 	CountablePaginationType
 	CursorPaginationType
+	UndefinedPaginationType
 )
 
 func (p PaginationType) String() string {
