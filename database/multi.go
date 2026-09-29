@@ -145,7 +145,7 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 		databases:       databases,
 		lookup:          lookup,
 		model_cache:     model_cache,
-		pagination_type: pg_type,
+		pagination_type: MultiPaginationType,
 	}
 
 	return db, nil
@@ -329,7 +329,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 		pg_opts.PerPage(remaining)
 		pg_opts.Spill(state.InternalPage)
-		pg_opts.Pointer(nil) // Isolate underlying DB from cluster state
+		pg_opts.Pointer(int64(0)) // nil) // Isolate underlying DB from cluster state
 
 		records, pg, err := target_db.ListRecords(ctx, pg_opts, opts...)
 
@@ -372,6 +372,9 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 				method:          pg.Method(),
 			}
 
+			// next_u, _ := pg_rsp.NextURL()
+			// slog.Info("OK", "next", next_u)
+			
 			return combined, pg_rsp, nil
 		}
 

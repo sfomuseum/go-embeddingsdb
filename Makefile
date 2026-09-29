@@ -81,6 +81,7 @@ debug-multi:
 	go run -mod $(GOMOD) cmd/server/main.go \
 		-server-uri 'grpc://localhost:8081?database-uri={database}' \
 		-database-uri 'sqlite://?dsn=$(CWD)/work/debug-512.db&dimensions=512' \
+		-database-uri 'sqlite://?dsn=$(CWD)/work/debug-1152.db&dimensions=1152' \
 		-verbose
 
 server-bundle:

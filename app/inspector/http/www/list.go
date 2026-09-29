@@ -58,7 +58,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 	}
 
 	switch pg_type {
-	case database.CountablePaginationType, database.CursorPaginationType:
+	case database.CountablePaginationType, database.CursorPaginationType, database.MultiPaginationType:
 		// ok
 	default:
 		return nil, fmt.Errorf("Unsupported pagination type, %T", pg_type)
@@ -221,6 +221,19 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 				pg_next = paginationURL(list_root, "cursor", next, provider, model)
 			}
 
+		case database.MultiPaginationType:
+
+			prev := pg_rsp.Previous().(string)
+			next := pg_rsp.Next().(string)
+
+			if prev != "" {
+				pg_prev = paginationURL(list_root, "cursor", prev, provider, model)
+			}
+
+			if next != "" {
+				pg_next = paginationURL(list_root, "cursor", next, provider, model)
+			}
+			
 		}
 
 		vars := ListHandlerVars{

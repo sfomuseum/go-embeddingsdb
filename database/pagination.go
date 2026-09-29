@@ -14,11 +14,14 @@ const CursorPaginationTypeLabel string = "cursor"
 
 const UndefinedPaginationTypeLabel string = ""
 
+const MultiPaginationTypeLabel string = "multi"
+
 const (
 	NullPaginationType PaginationType = iota
 	CountablePaginationType
 	CursorPaginationType
 	UndefinedPaginationType
+	MultiPaginationType	
 )
 
 func (p PaginationType) String() string {
@@ -30,6 +33,8 @@ func (p PaginationType) String() string {
 		return CountablePaginationTypeLabel
 	case CursorPaginationType:
 		return CursorPaginationTypeLabel
+	case MultiPaginationType:
+		return MultiPaginationTypeLabel
 	default:
 		return ""
 	}
@@ -44,6 +49,8 @@ func NewPaginationType(label string) (PaginationType, error) {
 		return CountablePaginationType, nil
 	case CursorPaginationTypeLabel:
 		return CursorPaginationType, nil
+	case MultiPaginationTypeLabel:
+		return MultiPaginationType, nil		
 	default:
 		return NullPaginationType, fmt.Errorf("Invalid pagination label")
 	}
