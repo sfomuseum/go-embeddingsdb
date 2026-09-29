@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-
+	
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/aaronland/go-pagination"
@@ -185,6 +185,8 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		logger.Info("WTF", "opts", pg_opts, "rsp", pg_rsp)
+		
 		var pg_next string
 		var pg_prev string
 

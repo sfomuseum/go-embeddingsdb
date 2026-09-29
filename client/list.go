@@ -54,7 +54,7 @@ func ListRecords(ctx context.Context, cl Client, list_opts *ListRecordsOptions, 
 		logger := slog.Default()
 
 		switch pg_type {
-		case database.CursorPaginationType:
+		case database.CursorPaginationType, database.MultiPaginationType:
 
 			pg_opts, err := cursor.NewCursorOptions()
 
@@ -109,7 +109,7 @@ func ListRecords(ctx context.Context, cl Client, list_opts *ListRecordsOptions, 
 				logger.Debug("Assign next cursor", "pointer", pg_next)
 			}
 
-		case database.CountablePaginationType, database.MultiPaginationType:
+		case database.CountablePaginationType:
 
 			current_page := list_opts.StartPage
 			pages := int64(0)

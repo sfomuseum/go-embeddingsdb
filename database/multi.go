@@ -318,7 +318,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	initial_state := state
 
-	var last_results pagination.Results
+	// var last_results pagination.Results
 	var total_all int64 = 0
 
 	// 2. Query individual databases sequentially
@@ -337,7 +337,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			return nil, nil, fmt.Errorf("db cluster error at index %d: %w", i, err)
 		}
 
-		last_results = pg
+		// last_results = pg
 		total_all += pg.Total()
 
 		combined = append(combined, records...)
@@ -369,7 +369,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 				total:           total_all,
 				nextPointer:     next,
 				previousPointer: prev,
-				method:          pg.Method(),
+				method:          pagination.Cursor,
 			}
 
 			// next_u, _ := pg_rsp.NextURL()
@@ -400,7 +400,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		total:           total_all,
 		nextPointer:     nil,
 		previousPointer: prev,
-		method:          last_results.Method(),
+		method:          pagination.Cursor,
 	}
 
 	return combined, pg_rsp, nil

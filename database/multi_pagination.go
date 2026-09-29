@@ -72,9 +72,11 @@ func (m *MultiDatabasePaginationResults) Page() int64 {
 }
 
 func (m *MultiDatabasePaginationResults) Pages() int64 {
+	
 	if m.perPage == 0 {
 		return 0
 	}
+	
 	return (m.total + m.perPage - 1) / m.perPage
 }
 func (m *MultiDatabasePaginationResults) Next() any {
@@ -84,6 +86,7 @@ func (m *MultiDatabasePaginationResults) Next() any {
 func (m *MultiDatabasePaginationResults) Previous() any {
 	return m.previousPointer
 }
+
 func (m *MultiDatabasePaginationResults) Method() pagination.Method {
 	return m.method
 }
