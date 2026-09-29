@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"sync"
 
-	"log/slog"
+	// "log/slog"
 
 	"github.com/aaronland/go-pagination"
 	_ "github.com/aaronland/go-pagination/countable"
@@ -21,7 +21,8 @@ const MultiDatabaseScheme string = "multi"
 
 type MultiDatabase struct {
 	Database
-	registry        map[int]Database
+	databases []Database
+	lookup        map[int]int	// map dimensions to Database offset in `databases`
 	model_cache     *sync.Map
 	pagination_type PaginationType
 }
@@ -117,9 +118,12 @@ func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database,
 
 func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database) (Database, error) {
 
+	databases := make([]Database, 0)
+	lookup := make(map[int]int)
+	
 	pg_type := UndefinedPaginationType
 
-	for _, target_db := range registry {
+	for dims, target_db := range registry {
 
 		target_pg, err := target_db.PaginationType(ctx)
 
@@ -132,14 +136,16 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 		}
 
 		pg_type = target_pg
-	}
 
-	slog.Info("WTF", "pg", pg_type)
+		databases = append(databases, target_db)
+		lookup[dims] = len(databases) - 1
+	}
 
 	model_cache := new(sync.Map)
 
 	db := &MultiDatabase{
-		registry:        registry,
+		databases: databases,
+		lookup: lookup,
 		model_cache:     model_cache,
 		pagination_type: pg_type,
 	}
@@ -152,7 +158,7 @@ func (db *MultiDatabase) URI() string {
 
 	database_uris := make([]string, 0)
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		target_uri := target_db.URI()
 		database_uris = append(database_uris, target_uri)
@@ -171,7 +177,7 @@ func (db *MultiDatabase) URI() string {
 // Export the contents of the database. Where and how a database is exported are left as details for specific implementations.
 func (db *MultiDatabase) Export(ctx context.Context, uri string, opts ...options.Option) error {
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		err := target_db.Export(ctx, uri, opts...)
 
@@ -188,12 +194,14 @@ func (db *MultiDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 
 	dims := len(rec.Embeddings)
 
-	target_db, ok := db.registry[dims]
+	target_idx, ok := db.lookup[dims]
 
 	if !ok {
 		return false, fmt.Errorf("Unregistered database for %d dimensions", dims)
 	}
 
+	target_db := db.databases[target_idx]
+	
 	return target_db.AddRecord(ctx, rec, opts...)
 }
 
@@ -202,7 +210,7 @@ func (db *MultiDatabase) BatchedRecordsCount(ctx context.Context, opts ...option
 
 	total := 0
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		count, err := target_db.BatchedRecordsCount(ctx, opts...)
 
@@ -219,7 +227,7 @@ func (db *MultiDatabase) BatchedRecordsCount(ctx context.Context, opts ...option
 // Add the pending batched records.
 func (db *MultiDatabase) AddBatchedRecord(ctx context.Context, opts ...options.Option) error {
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		err := target_db.AddBatchedRecords(ctx, opts...)
 
@@ -271,7 +279,7 @@ func (db *MultiDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 // ListRecords returns a paginated list of records stored in the database.
 func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		records, pg, err := target_db.ListRecords(ctx, pg_opts, opts...)
 
@@ -305,7 +313,7 @@ func (db *MultiDatabase) IterateRecords(ctx context.Context, opts ...options.Opt
 
 		keep_iterating := true
 
-		for _, target_db := range db.registry {
+		for _, target_db := range db.databases {
 
 			for rec, err := range target_db.IterateRecords(ctx, opts...) {
 
@@ -327,7 +335,7 @@ func (db *MultiDatabase) LastUpdate(ctx context.Context, opts ...options.Option)
 
 	lastupdate := int64(0)
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		u, err := target_db.LastUpdate(ctx, opts...)
 
@@ -351,7 +359,7 @@ func (db *MultiDatabase) Dimensions(ctx context.Context, opts ...options.Option)
 
 	dims := make([]int, 0)
 
-	for d, _ := range db.registry {
+	for d, _ := range db.lookup {
 		dims = append(dims, d)
 	}
 
@@ -363,7 +371,7 @@ func (db *MultiDatabase) Models(ctx context.Context, opts ...options.Option) ([]
 
 	models := make([]string, 0)
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		target_models, err := target_db.Models(ctx, opts...)
 
@@ -387,7 +395,7 @@ func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) 
 
 	providers := make([]string, 0)
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		target_providers, err := target_db.Providers(ctx, opts...)
 
@@ -414,7 +422,7 @@ func (db *MultiDatabase) PaginationType(ctx context.Context, opts ...options.Opt
 // Close performs and terminating functions required by the database.
 func (db *MultiDatabase) Close(ctx context.Context) error {
 
-	for _, target_db := range db.registry {
+	for _, target_db := range db.databases {
 
 		err := target_db.Close(ctx)
 
@@ -442,7 +450,7 @@ func (db *MultiDatabase) databaseForModel(ctx context.Context, model string, opt
 
 	var target_db Database
 
-	for _, test_db := range db.registry {
+	for _, test_db := range db.databases {
 
 		test_models, err := test_db.Models(ctx, opts...)
 
