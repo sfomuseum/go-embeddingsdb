@@ -3,7 +3,7 @@ package database
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	_ "fmt"
 	"log/slog"
 
 	"github.com/aaronland/go-pagination"
@@ -54,8 +54,8 @@ type MultiDatabasePaginationResults struct {
 	pagination.Results
 	perPage         int64
 	total           int64
-	nextPointer     any
-	previousPointer any
+	nextPointer     *MultiDatabaseCursorState
+	previousPointer *MultiDatabaseCursorState
 	method          pagination.Method
 }
 
@@ -94,21 +94,8 @@ func (m *MultiDatabasePaginationResults) NextURL(t *uritemplates.UriTemplate) (s
 		return "", nil
 	}
 
-	state, ok := m.nextPointer.(MultiDatabaseCursorState)
-
-	if !ok {
-
-		ptr, ok := m.nextPointer.(*MultiDatabaseCursorState)
-
-		if ok {
-			state = *ptr
-		} else {
-			return "", fmt.Errorf("invalid next pointer type")
-		}
-	}
-
 	return t.Expand(map[string]interface{}{
-		"pointer":  state.String(),
+		"pointer":  m.nextPointer.String(),
 		"per_page": m.perPage,
 	})
 }
@@ -119,21 +106,8 @@ func (m *MultiDatabasePaginationResults) PreviousURL(t *uritemplates.UriTemplate
 		return "", nil
 	}
 
-	state, ok := m.previousPointer.(MultiDatabaseCursorState)
-
-	if !ok {
-
-		ptr, ok := m.previousPointer.(*MultiDatabaseCursorState)
-
-		if ok {
-			state = *ptr
-		} else {
-			return "", fmt.Errorf("invalid previous pointer type")
-		}
-	}
-
 	return t.Expand(map[string]interface{}{
-		"pointer":  state.String(),
+		"pointer":  m.previousPointer.String(),
 		"per_page": m.perPage,
 	})
 }

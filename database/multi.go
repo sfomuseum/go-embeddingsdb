@@ -346,18 +346,18 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		// Quota reached for this page response
 		if remaining <= 0 {
 
-			next := MultiDatabaseCursorState{
+			next := &MultiDatabaseCursorState{
 				DatabaseIndex: i,
 				InternalPage:  pg.Page() + 1,
 				Direction:     DirectionNext,
 			}
 
 			// Calculate previous pointer based on where this request started
-			var prev any
+			var prev *MultiDatabaseCursorState
 
 			if initial_state.DatabaseIndex > 0 || initial_state.InternalPage > 1 {
 
-				prev = MultiDatabaseCursorState{
+				prev = &MultiDatabaseCursorState{
 					DatabaseIndex: initial_state.DatabaseIndex,
 					InternalPage:  initial_state.InternalPage,
 					Direction:     DirectionPrevious,
@@ -374,7 +374,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 			// next_u, _ := pg_rsp.NextURL()
 			// slog.Info("OK", "next", next_u)
-			
+
 			return combined, pg_rsp, nil
 		}
 
@@ -384,11 +384,11 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	// 3. Fully exhausted all databases
 
-	var prev any
+	var prev *MultiDatabaseCursorState
 
 	if initial_state.DatabaseIndex > 0 || initial_state.InternalPage > 1 {
 
-		prev = MultiDatabaseCursorState{
+		prev = &MultiDatabaseCursorState{
 			DatabaseIndex: initial_state.DatabaseIndex,
 			InternalPage:  initial_state.InternalPage,
 			Direction:     DirectionPrevious,

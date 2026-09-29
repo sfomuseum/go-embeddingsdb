@@ -145,7 +145,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 			pg_opts = countable_opts
 
-		case database.CursorPaginationType:
+		case database.CursorPaginationType, database.MultiPaginationType:
 
 			cursor_opts, err := cursor.NewCursorOptions()
 
@@ -223,17 +223,17 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		case database.MultiPaginationType:
 
-			prev := pg_rsp.Previous().(string)
-			next := pg_rsp.Next().(string)
+			prev := pg_rsp.Previous().(*database.MultiDatabaseCursorState)
+			next := pg_rsp.Next().(*database.MultiDatabaseCursorState)
 
-			if prev != "" {
-				pg_prev = paginationURL(list_root, "cursor", prev, provider, model)
+			if prev != nil {
+				pg_prev = paginationURL(list_root, "cursor", prev.String(), provider, model)
 			}
 
-			if next != "" {
-				pg_next = paginationURL(list_root, "cursor", next, provider, model)
+			if next != nil {
+				pg_next = paginationURL(list_root, "cursor", next.String(), provider, model)
 			}
-			
+
 		}
 
 		vars := ListHandlerVars{

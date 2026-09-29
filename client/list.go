@@ -109,7 +109,7 @@ func ListRecords(ctx context.Context, cl Client, list_opts *ListRecordsOptions, 
 				logger.Debug("Assign next cursor", "pointer", pg_next)
 			}
 
-		case database.CountablePaginationType:
+		case database.CountablePaginationType, database.MultiPaginationType:
 
 			current_page := list_opts.StartPage
 			pages := int64(0)

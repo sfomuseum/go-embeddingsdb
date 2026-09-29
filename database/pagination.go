@@ -21,7 +21,7 @@ const (
 	CountablePaginationType
 	CursorPaginationType
 	UndefinedPaginationType
-	MultiPaginationType	
+	MultiPaginationType
 )
 
 func (p PaginationType) String() string {
@@ -50,7 +50,7 @@ func NewPaginationType(label string) (PaginationType, error) {
 	case CursorPaginationTypeLabel:
 		return CursorPaginationType, nil
 	case MultiPaginationTypeLabel:
-		return MultiPaginationType, nil		
+		return MultiPaginationType, nil
 	default:
 		return NullPaginationType, fmt.Errorf("Invalid pagination label")
 	}
