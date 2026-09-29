@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"log/slog"
 	"net/url"
 	"slices"
 	"strconv"
 	"sync"
 
-	// "log/slog"
-
 	"github.com/aaronland/go-pagination"
-	_ "github.com/aaronland/go-pagination/countable"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
@@ -21,8 +19,8 @@ const MultiDatabaseScheme string = "multi"
 
 type MultiDatabase struct {
 	Database
-	databases []Database
-	lookup        map[int]int	// map dimensions to Database offset in `databases`
+	databases       []Database
+	lookup          map[int]int // map dimensions to Database offset in `databases`
 	model_cache     *sync.Map
 	pagination_type PaginationType
 }
@@ -120,7 +118,7 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 
 	databases := make([]Database, 0)
 	lookup := make(map[int]int)
-	
+
 	pg_type := UndefinedPaginationType
 
 	for dims, target_db := range registry {
@@ -144,8 +142,8 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 	model_cache := new(sync.Map)
 
 	db := &MultiDatabase{
-		databases: databases,
-		lookup: lookup,
+		databases:       databases,
+		lookup:          lookup,
 		model_cache:     model_cache,
 		pagination_type: pg_type,
 	}
@@ -201,7 +199,7 @@ func (db *MultiDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 	}
 
 	target_db := db.databases[target_idx]
-	
+
 	return target_db.AddRecord(ctx, rec, opts...)
 }
 
@@ -279,31 +277,130 @@ func (db *MultiDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 // ListRecords returns a paginated list of records stored in the database.
 func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
-	for _, target_db := range db.databases {
+	var combined []*embeddingsdb.Record
+
+	per_page := pg_opts.PerPage()
+	remaining := per_page
+
+	// 1. Determine current state from incoming pointer
+
+	state := MultiDatabaseCursorState{
+		DatabaseIndex: 0,
+		InternalPage:  1,
+		Direction:     DirectionNext,
+	}
+
+	current_ptr := pg_opts.Pointer()
+
+	if current_ptr != nil {
+
+		switch current_ptr.(type) {
+		case string:
+
+			dec, err := ParseCursorState(current_ptr.(string))
+
+			if err != nil {
+				slog.Error("Failed to parse cursor string", "error", err)
+			} else {
+				state = dec
+			}
+
+		case MultiDatabaseCursorState:
+			state = current_ptr.(MultiDatabaseCursorState)
+		default:
+			slog.Error("Unexpected type for pointer", "type", fmt.Sprintf("%T", current_ptr))
+		}
+
+	}
+
+	// Capture the anchor point before we start mutating variables
+	// This helps us build the "Previous" link accurately
+
+	initial_state := state
+
+	var last_results pagination.Results
+	var total_all int64 = 0
+
+	// 2. Query individual databases sequentially
+
+	for i := state.DatabaseIndex; i < len(db.databases); i++ {
+
+		target_db := db.databases[i]
+
+		pg_opts.PerPage(remaining)
+		pg_opts.Spill(state.InternalPage)
+		pg_opts.Pointer(nil) // Isolate underlying DB from cluster state
 
 		records, pg, err := target_db.ListRecords(ctx, pg_opts, opts...)
 
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("db cluster error at index %d: %w", i, err)
 		}
 
-		return records, pg, err
+		last_results = pg
+		total_all += pg.Total()
+
+		combined = append(combined, records...)
+		remaining -= int64(len(records))
+
+		// Quota reached for this page response
+		if remaining <= 0 {
+
+			next := MultiDatabaseCursorState{
+				DatabaseIndex: i,
+				InternalPage:  pg.Page() + 1,
+				Direction:     DirectionNext,
+			}
+
+			// Calculate previous pointer based on where this request started
+			var prev any
+
+			if initial_state.DatabaseIndex > 0 || initial_state.InternalPage > 1 {
+
+				prev = MultiDatabaseCursorState{
+					DatabaseIndex: initial_state.DatabaseIndex,
+					InternalPage:  initial_state.InternalPage,
+					Direction:     DirectionPrevious,
+				}
+			}
+
+			pg_rsp := &MultiDatabasePaginationResults{
+				perPage:         per_page,
+				total:           total_all,
+				nextPointer:     next,
+				previousPointer: prev,
+				method:          pg.Method(),
+			}
+
+			return combined, pg_rsp, nil
+		}
+
+		// Current database is empty/exhausted. Move forward, resetting the internal page tracking.
+		state.InternalPage = 1
 	}
 
-	return nil, nil, fmt.Errorf("No results")
+	// 3. Fully exhausted all databases
 
-	/*
-		records := make([]*embeddingsdb.Record, 0)
+	var prev any
 
-		pg, err := countable.NewResultsFromCountWithOptions(pg_opts, 0)
+	if initial_state.DatabaseIndex > 0 || initial_state.InternalPage > 1 {
 
-		if err != nil {
-			return nil, nil, err
+		prev = MultiDatabaseCursorState{
+			DatabaseIndex: initial_state.DatabaseIndex,
+			InternalPage:  initial_state.InternalPage,
+			Direction:     DirectionPrevious,
 		}
+	}
 
-		return records, pg, nil
-	*/
+	pg_rsp := &MultiDatabasePaginationResults{
+		perPage:         per_page,
+		total:           total_all,
+		nextPointer:     nil,
+		previousPointer: prev,
+		method:          last_results.Method(),
+	}
 
+	return combined, pg_rsp, nil
 }
 
 // IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
