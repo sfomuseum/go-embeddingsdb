@@ -5,7 +5,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
@@ -135,15 +137,34 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 		logger.Debug("Time to list records", "time", time.Since(t1))
 	}()
 
-	pg_opts, err := countable.NewCountableOptions()
+	var pg_opts pagination.Options
 
-	if err != nil {
-		logger.Error("Failed to create new countable options", "error", err)
-		return nil, err
+	if req.Pagination.Cursor != "" {
+
+		opts, err := cursor.NewCursorOptions()
+
+		if err != nil {
+			logger.Error("Failed to create new cursor options", "error", err)
+			return nil, err
+		}
+
+		pg_opts = opts
+		pg_opts.Pointer(req.Pagination.Cursor)
+
+	} else {
+
+		opts, err := countable.NewCountableOptions()
+
+		if err != nil {
+			logger.Error("Failed to create new countable options", "error", err)
+			return nil, err
+		}
+
+		pg_opts = opts
+		pg_opts.Pointer(req.Pagination.Page)
 	}
 
 	pg_opts.PerPage(req.Pagination.PerPage)
-	pg_opts.Pointer(req.Pagination.Page)
 
 	opts := make([]options.Option, len(req.Filters))
 

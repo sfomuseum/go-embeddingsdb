@@ -72,13 +72,14 @@ func (m *MultiDatabasePaginationResults) Page() int64 {
 }
 
 func (m *MultiDatabasePaginationResults) Pages() int64 {
-	
+
 	if m.perPage == 0 {
 		return 0
 	}
-	
+
 	return (m.total + m.perPage - 1) / m.perPage
 }
+
 func (m *MultiDatabasePaginationResults) Next() any {
 	return m.nextPointer
 }
@@ -98,7 +99,7 @@ func (m *MultiDatabasePaginationResults) NextURL(t *uritemplates.UriTemplate) (s
 	}
 
 	return t.Expand(map[string]interface{}{
-		"pointer":  m.nextPointer.String(),
+		"cursor":   m.nextPointer.String(),
 		"per_page": m.perPage,
 	})
 }
@@ -110,7 +111,7 @@ func (m *MultiDatabasePaginationResults) PreviousURL(t *uritemplates.UriTemplate
 	}
 
 	return t.Expand(map[string]interface{}{
-		"pointer":  m.previousPointer.String(),
+		"cursor":   m.previousPointer.String(),
 		"per_page": m.perPage,
 	})
 }
