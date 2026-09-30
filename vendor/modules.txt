@@ -46,6 +46,7 @@ github.com/aaronland/go-aws/v3/auth
 github.com/aaronland/go-aws/v3/dynamodb
 # github.com/aaronland/go-http/v4 v4.1.0
 ## explicit; go 1.25.0
+github.com/aaronland/go-http/v4/response
 github.com/aaronland/go-http/v4/sanitize
 github.com/aaronland/go-http/v4/server
 github.com/aaronland/go-http/v4/slog

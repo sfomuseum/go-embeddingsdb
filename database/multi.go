@@ -11,6 +11,8 @@ import (
 	"sync"
 
 	"github.com/aaronland/go-pagination"
+	"github.com/aaronland/go-pagination/countable"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
@@ -21,6 +23,7 @@ type MultiDatabase struct {
 	Database
 	databases       []Database
 	lookup          map[int]int // map dimensions to Database offset in `databases`
+	pg_lookup       map[int]PaginationType
 	model_cache     *sync.Map
 	pagination_type PaginationType
 }
@@ -118,8 +121,7 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 
 	databases := make([]Database, 0)
 	lookup := make(map[int]int)
-
-	pg_type := UndefinedPaginationType
+	pg_lookup := make(map[int]PaginationType)
 
 	for dims, target_db := range registry {
 
@@ -129,14 +131,11 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 			return nil, err
 		}
 
-		if pg_type != UndefinedPaginationType && target_pg != pg_type {
-			return nil, fmt.Errorf("Databases must pagination type (for now)")
-		}
-
-		pg_type = target_pg
+		idx := len(databases) - 1
 
 		databases = append(databases, target_db)
-		lookup[dims] = len(databases) - 1
+		lookup[dims] = idx
+		pg_lookup[idx] = target_pg
 	}
 
 	model_cache := new(sync.Map)
@@ -144,6 +143,7 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 	db := &MultiDatabase{
 		databases:       databases,
 		lookup:          lookup,
+		pg_lookup:       pg_lookup,
 		model_cache:     model_cache,
 		pagination_type: MultiPaginationType,
 	}
@@ -292,10 +292,16 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	current_ptr := pg_opts.Pointer()
 
+	slog.Info("CURRENT", "p", current_ptr)
+
 	if current_ptr != nil {
+
+		slog.Info("OK POINTER")
 
 		switch current_ptr.(type) {
 		case string:
+
+			slog.Info("YO")
 
 			dec, err := ParseCursorState(current_ptr.(string))
 
@@ -313,6 +319,8 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	}
 
+	slog.Info("STATE", "s", fmt.Sprintf("%T", state))
+
 	// Capture the anchor point before we start mutating variables
 	// This helps us build the "Previous" link accurately
 
@@ -323,15 +331,50 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	// 2. Query individual databases sequentially
 
+	slog.Info("MULTI LIST", "db", state.DatabaseIndex)
+
 	for i := state.DatabaseIndex; i < len(db.databases); i++ {
 
 		target_db := db.databases[i]
 
-		pg_opts.PerPage(remaining)
-		pg_opts.Spill(state.InternalPage)
-		pg_opts.Pointer(int64(0)) // nil) // Isolate underlying DB from cluster state
+		var target_pg_opts pagination.Options
 
-		records, pg, err := target_db.ListRecords(ctx, pg_opts, opts...)
+		target_pg_type := db.pg_lookup[i]
+
+		switch target_pg_type {
+		case CountablePaginationType:
+
+			countable_opts, err := countable.NewCountableOptions()
+
+			if err != nil {
+				return nil, nil, err
+			}
+
+			countable_opts.PerPage(remaining)
+			countable_opts.Spill(0)
+			countable_opts.Pointer(state.InternalPage)
+			target_pg_opts = countable_opts
+
+		case CursorPaginationType:
+
+			cursor_opts, err := cursor.NewCursorOptions()
+
+			if err != nil {
+				return nil, nil, err
+			}
+
+			cursor_opts.PerPage(remaining)
+			cursor_opts.Pointer(pg_opts.Pointer())
+			target_pg_opts = cursor_opts
+
+		default:
+			slog.Warn("Unsupported pagination type for database", "index", i)
+			continue
+		}
+
+		slog.Info("QUERY DB", "pointer", target_pg_opts.Pointer())
+
+		records, pg, err := target_db.ListRecords(ctx, target_pg_opts, opts...)
 
 		if err != nil {
 			return nil, nil, fmt.Errorf("db cluster error at index %d: %w", i, err)
@@ -516,7 +559,7 @@ func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) 
 
 // Return the pagination type used by the database.
 func (db *MultiDatabase) PaginationType(ctx context.Context, opts ...options.Option) (PaginationType, error) {
-	return db.pagination_type, nil
+	return MultiPaginationType, nil
 }
 
 // Close performs and terminating functions required by the database.

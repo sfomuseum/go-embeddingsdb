@@ -19,6 +19,7 @@ require (
 	github.com/blevesearch/bleve_index_api v1.4.1
 	github.com/duckdb/duckdb-go/v2 v2.10505.0
 	github.com/google/jsonschema-go v0.4.3
+	github.com/jtacoma/uritemplates v1.0.0
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/sfomuseum/go-database v0.0.22
 	github.com/sfomuseum/go-embeddings v0.5.2
@@ -102,7 +103,6 @@ require (
 	github.com/google/wire v0.7.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.19.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/jtacoma/uritemplates v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect

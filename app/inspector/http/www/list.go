@@ -175,8 +175,6 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		case database.MultiPaginationType:
 
-			logger.Info("O HAI")
-
 			cursor_opts, err := cursor.NewCursorOptions()
 
 			if err != nil {
@@ -195,10 +193,6 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			q := req.URL.Query()
-
-			logger.Info("CURSOR", "c", cursor, "q", q)
-
 			if cursor != "" {
 				cursor_opts.Pointer(cursor)
 			}
@@ -211,7 +205,6 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		logger.Info("LIST", "opts", pg_opts)
 		records, pg_rsp, err := opts.Client.ListRecords(ctx, pg_opts, list_opts...)
 
 		if err != nil {

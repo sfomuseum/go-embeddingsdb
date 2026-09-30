@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-
 	"log/slog"
 	"net/url"
 	"os"
@@ -224,9 +223,19 @@ func (e *GrpcClient) RemoveRecord(ctx context.Context, req *embeddingsdb.RemoveR
 func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	grpc_pg := &embeddingsdb_grpc.PaginationOptions{
-		Page:    countable.PageFromOptions(pg_opts),
 		PerPage: pg_opts.PerPage(),
 	}
+
+	switch pg_opts.Method() {
+	case pagination.Countable:
+		grpc_pg.Page = countable.PageFromOptions(pg_opts)
+	case pagination.Cursor:
+		grpc_pg.Cursor = pg_opts.Pointer().(string)
+	default:
+		return nil, nil, fmt.Errorf("Invalid or unsupported pagination options method")
+	}
+
+	slog.Info("GRPC", "list", grpc_pg)
 
 	grpc_req := &embeddingsdb_grpc.ListRecordsRequest{
 		Pagination: grpc_pg,
