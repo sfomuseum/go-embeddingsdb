@@ -19,7 +19,8 @@ const (
 
 type MultiDatabaseCursorState struct {
 	DatabaseIndex int                    `json:"db_idx"`
-	InternalPage  int64                  `json:"page"`
+	Page          int64                  `json:"page"`
+	Cursor        string                 `json:"cursor"`
 	Direction     MultiDatabaseDirection `json:"dir"` // Keeps track of which way we are shifting
 }
 

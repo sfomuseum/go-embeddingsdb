@@ -215,8 +215,6 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 
 		if prev != nil {
 
-			slog.Info("Y Y Y Y Y ", "p", prev)
-
 			switch prev.(type) {
 			case string:
 				pg_grpc.Previous = prev.(string)

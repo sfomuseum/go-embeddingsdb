@@ -558,6 +558,17 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return records, pg, nil
 }
 
+func (db *SQLiteDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
+
+	q := fmt.Sprintf("SELECT COUNT(id) FROM %s", db.records_table.Name())
+
+	row := db.vec_db.QueryRowContext(ctx, q)
+	var count int64
+
+	err := row.Scan(&count)
+	return count, err
+}
+
 func (db *SQLiteDatabase) IterateRecords(ctx context.Context, opts ...options.Option) iter.Seq2[*embeddingsdb.Record, error] {
 
 	return func(yield func(*embeddingsdb.Record, error) bool) {

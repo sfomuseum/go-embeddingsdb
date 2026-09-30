@@ -116,7 +116,11 @@
 	{{ end -}}
 
 	{{ if eq .PaginationType "multi" -}}
-	MULTI...
+	{{ if gt 1 .Pagination.Total -}}
+	There is one result
+	{{ else -}}
+	There are at least <span class="hey-look">{{ .Pagination.Total }}</span> results spanning multiple databases. Not all databases return exact counts so this total is approximate.
+	{{ end -}}
 	{{ end -}}
 	
     </div>

@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
@@ -286,17 +287,14 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	state := MultiDatabaseCursorState{
 		DatabaseIndex: 0,
-		InternalPage:  1,
+		Page:          1,
+		Cursor:        "",
 		Direction:     DirectionNext,
 	}
 
 	current_ptr := pg_opts.Pointer()
 
-	slog.Info("CURRENT", "p", current_ptr)
-
 	if current_ptr != nil {
-
-		slog.Info("OK POINTER")
 
 		switch current_ptr.(type) {
 		case string:
@@ -319,19 +317,32 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 	}
 
-	slog.Info("STATE", "s", fmt.Sprintf("%T", state))
-
 	// Capture the anchor point before we start mutating variables
 	// This helps us build the "Previous" link accurately
 
 	initial_state := state
 
-	// var last_results pagination.Results
-	var total_all int64 = 0
+	// Try to derive counts across all databases
 
-	// 2. Query individual databases sequentially
+	count_all := int64(0)
+	count_ch := make(chan bool)
 
-	slog.Info("MULTI LIST", "db", state.DatabaseIndex)
+	go func() {
+
+		count_ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		count, err := db.CountRecords(count_ctx, opts...)
+
+		if err != nil {
+			slog.Error("Failed to derive record(s) count", "error", err)
+		}
+
+		count_all = count
+		count_ch <- true
+	}()
+
+	// Query individual databases sequentially
 
 	for i := state.DatabaseIndex; i < len(db.databases); i++ {
 
@@ -340,6 +351,10 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		var target_pg_opts pagination.Options
 
 		target_pg_type := db.pg_lookup[i]
+
+		logger := slog.Default()
+		logger = logger.With("db index", i)
+		logger = logger.With("pagination", target_pg_type)
 
 		switch target_pg_type {
 		case CountablePaginationType:
@@ -352,7 +367,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 			countable_opts.PerPage(remaining)
 			countable_opts.Spill(0)
-			countable_opts.Pointer(state.InternalPage)
+			countable_opts.Pointer(state.Page)
 			target_pg_opts = countable_opts
 
 		case CursorPaginationType:
@@ -368,11 +383,11 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			target_pg_opts = cursor_opts
 
 		default:
-			slog.Warn("Unsupported pagination type for database", "index", i)
+			logger.Warn("Unsupported pagination type for database", "index", i)
 			continue
 		}
 
-		slog.Info("QUERY DB", "pointer", target_pg_opts.Pointer())
+		logger.Info("query database", "pointer", target_pg_opts.Pointer())
 
 		records, pg, err := target_db.ListRecords(ctx, target_pg_opts, opts...)
 
@@ -380,42 +395,38 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			return nil, nil, fmt.Errorf("db cluster error at index %d: %w", i, err)
 		}
 
-		// last_results = pg
-		total_all += pg.Total()
-
-		slog.Info("Total", "all", total_all)
-
 		combined = append(combined, records...)
 		remaining -= int64(len(records))
 
-		slog.Info("Remaining", "count", remaining)
+		logger.Info("Count", "remaining", remaining)
 
-		// Quota reached for this page response
 		if remaining <= 0 {
 
 			next := &MultiDatabaseCursorState{
 				DatabaseIndex: i,
-				InternalPage:  pg.Page() + 1,
+				Page:          pg.Page() + 1,
 				Direction:     DirectionNext,
 			}
 
 			// Calculate previous pointer based on where this request started
 			var prev *MultiDatabaseCursorState
 
-			if initial_state.DatabaseIndex > 0 || initial_state.InternalPage > 1 {
+			if initial_state.DatabaseIndex > 0 || initial_state.Page > 1 {
 
 				prev = &MultiDatabaseCursorState{
 					DatabaseIndex: initial_state.DatabaseIndex,
-					InternalPage:  initial_state.InternalPage - 1,
+					Page:          initial_state.Page - 1,
 					Direction:     DirectionPrevious,
 				}
 			}
 
-			slog.Info("PG RESULT", "prev", prev, "next", next)
+			logger.Info("Pagination", "prev", prev, "next", next)
+
+			<-count_ch
 
 			pg_rsp := &MultiDatabasePaginationResults{
 				perPage:         per_page,
-				total:           total_all,
+				total:           count_all,
 				nextPointer:     next,
 				previousPointer: prev,
 				method:          pagination.Cursor,
@@ -425,31 +436,80 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		}
 
 		// Current database is empty/exhausted. Move forward, resetting the internal page tracking.
-		state.InternalPage = 1
+		state.Page = 1
 	}
 
 	// 3. Fully exhausted all databases
 
 	var prev *MultiDatabaseCursorState
 
-	if initial_state.DatabaseIndex > 0 || initial_state.InternalPage > 1 {
+	if initial_state.DatabaseIndex > 0 || initial_state.Page > 1 {
 
 		prev = &MultiDatabaseCursorState{
 			DatabaseIndex: initial_state.DatabaseIndex,
-			InternalPage:  initial_state.InternalPage,
+			Page:          initial_state.Page,
 			Direction:     DirectionPrevious,
 		}
 	}
 
+	<-count_ch
+
 	pg_rsp := &MultiDatabasePaginationResults{
 		perPage:         per_page,
-		total:           total_all,
+		total:           count_all,
 		nextPointer:     nil,
 		previousPointer: prev,
 		method:          pagination.Cursor,
 	}
 
 	return combined, pg_rsp, nil
+}
+
+func (db *MultiDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
+
+	count_all := int64(0)
+
+	count_ch := make(chan int64)
+	err_ch := make(chan error)
+	done_ch := make(chan bool)
+
+	db_ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	for _, target_db := range db.databases {
+
+		go func(target_db Database) {
+
+			defer func() {
+				done_ch <- true
+			}()
+
+			count, err := target_db.CountRecords(db_ctx, opts...)
+
+			if err != nil && err != NotImplemented {
+				err_ch <- err
+				return
+			}
+
+			count_ch <- count
+
+		}(target_db)
+	}
+
+	remaining := len(db.databases)
+
+	for remaining > 0 {
+		select {
+		case <-done_ch:
+			remaining -= 1
+		case err := <-err_ch:
+			return count_all, err
+		case count := <-count_ch:
+			count_all += count
+		}
+	}
+
+	return count_all, nil
 }
 
 // IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
