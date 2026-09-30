@@ -14,6 +14,7 @@ import (
 
 	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/aaronland/gocloud/runtimevar"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
@@ -273,10 +274,31 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 		records[i] = embeddingsdb.GrpcEmbeddingsRecordToEmbeddingsDBRecord(grpc_r)
 	}
 
-	pg_rsp, err := countable.NewResultsFromCountWithOptions(pg_opts, grpc_rsp.Pagination.Total)
+	var pg_rsp pagination.Results
 
-	if err != nil {
-		return nil, nil, err
+	switch pagination.Method(uint8(grpc_rsp.Pagination.Method)) {
+	case pagination.Countable:
+
+		pg, err := countable.NewResultsFromCountWithOptions(pg_opts, grpc_rsp.Pagination.Total)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pg_rsp = pg
+
+	case pagination.Cursor:
+
+		pg, err := cursor.NewPaginationFromCursors(grpc_rsp.Pagination.Previous, grpc_rsp.Pagination.Next)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pg_rsp = pg
+
+	default:
+		return nil, nil, fmt.Errorf("Invalid or unsupported pagination method, %v", grpc_rsp.Pagination.Method)
 	}
 
 	return records, pg_rsp, nil
