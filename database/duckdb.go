@@ -484,6 +484,7 @@ func (db *DuckDBDatabase) IterateRecords(ctx context.Context, opts ...options.Op
 
 }
 
+// CountRecords returns the total number of records indexed in the DuckDB "embeddings" table.
 func (db *DuckDBDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := "SELECT COUNT(depiction_id) FROM embeddings"

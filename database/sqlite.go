@@ -558,6 +558,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	return records, pg, nil
 }
 
+// CountRecords returns the total number of records indexed in the SQLite "records" table.
 func (db *SQLiteDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	q := fmt.Sprintf("SELECT COUNT(id) FROM %s", db.records_table.Name())

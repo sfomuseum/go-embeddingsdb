@@ -342,6 +342,8 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		count_ch <- true
 	}()
 
+	var last_pg pagination.Results
+
 	// Query individual databases sequentially
 
 	for i := state.DatabaseIndex; i < len(db.databases); i++ {
@@ -395,6 +397,9 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			return nil, nil, fmt.Errorf("db cluster error at index %d: %w", i, err)
 		}
 
+		// Necessary below
+		last_pg = pg
+
 		combined = append(combined, records...)
 		remaining -= int64(len(records))
 
@@ -404,8 +409,15 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 			next := &MultiDatabaseCursorState{
 				DatabaseIndex: i,
-				Page:          pg.Page() + 1,
-				Direction:     DirectionNext,
+				// Page:          pg.Page() + 1,
+				Direction: DirectionNext,
+			}
+
+			switch target_pg_type {
+			case CountablePaginationType:
+				next.Page = pg.Page() + 1
+			case CursorPaginationType:
+				next.Cursor = pg.Next().(string)
 			}
 
 			// Calculate previous pointer based on where this request started
@@ -415,9 +427,17 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 				prev = &MultiDatabaseCursorState{
 					DatabaseIndex: initial_state.DatabaseIndex,
-					Page:          initial_state.Page - 1,
-					Direction:     DirectionPrevious,
+					// Page:          initial_state.Page - 1,
+					Direction: DirectionPrevious,
 				}
+
+				switch target_pg_type {
+				case CountablePaginationType:
+					prev.Page = initial_state.Page - 1
+				case CursorPaginationType:
+					prev.Cursor = pg.Previous().(string)
+				}
+
 			}
 
 			logger.Info("Pagination", "prev", prev, "next", next)
@@ -439,7 +459,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		state.Page = 1
 	}
 
-	// 3. Fully exhausted all databases
+	// All databases crawled
 
 	var prev *MultiDatabaseCursorState
 
@@ -447,8 +467,20 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 		prev = &MultiDatabaseCursorState{
 			DatabaseIndex: initial_state.DatabaseIndex,
-			Page:          initial_state.Page,
-			Direction:     DirectionPrevious,
+			// Page:          initial_state.Page,
+			Direction: DirectionPrevious,
+		}
+
+		target_pg_type := db.pg_lookup[len(db.databases)-1]
+
+		switch target_pg_type {
+		case CountablePaginationType:
+			prev.Page = initial_state.Page - 1
+		case CursorPaginationType:
+
+			if last_pg != nil {
+				prev.Cursor = last_pg.Previous().(string)
+			}
 		}
 	}
 

@@ -800,6 +800,7 @@ func (db *S3VectorsDatabase) IterateRecords(ctx context.Context, opts ...options
 	}
 }
 
+// CountRecords returns the total number of records indexed in an S3Vectors bucket. This operation requires scanning the entire bucket and is not "fast".
 func (db *S3VectorsDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	max_segments := int32(16)
