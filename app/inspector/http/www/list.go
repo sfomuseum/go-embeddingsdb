@@ -75,6 +75,8 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		model, err := sanitize.GetString(req, "model")
 
+		per_page := int64(15)
+
 		if err != nil {
 			logger.Error("Failed to derive model parameter", "error", err)
 			http.Error(rsp, "Bad request", http.StatusBadRequest)
@@ -128,7 +130,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			countable_opts.PerPage(int64(15))
+			countable_opts.PerPage(per_page)
 			countable_opts.Pointer(int64(1))
 
 			page, err := sanitize.GetInt64(req, "page")
@@ -145,7 +147,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 			pg_opts = countable_opts
 
-		case database.CursorPaginationType, database.MultiPaginationType:
+		case database.CursorPaginationType:
 
 			cursor_opts, err := cursor.NewCursorOptions()
 
@@ -155,7 +157,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			cursor_opts.PerPage(int64(15))
+			cursor_opts.PerPage(per_page)
 
 			cursor, err := sanitize.GetString(req, "cursor")
 
@@ -171,12 +173,45 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 			pg_opts = cursor_opts
 
+		case database.MultiPaginationType:
+
+			logger.Info("O HAI")
+
+			cursor_opts, err := cursor.NewCursorOptions()
+
+			if err != nil {
+				logger.Error("Failed to create pagination options", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			cursor_opts.PerPage(per_page)
+
+			cursor, err := sanitize.GetString(req, "cursor")
+
+			if err != nil {
+				logger.Error("Failed to derive page query parameter", "error", err)
+				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			q := req.URL.Query()
+
+			logger.Info("CURSOR", "c", cursor, "q", q)
+
+			if cursor != "" {
+				cursor_opts.Pointer(cursor)
+			}
+
+			pg_opts = cursor_opts
+
 		default:
 			logger.Error("Unsupported pagination type", "type", pg_type)
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
+		logger.Info("LIST", "opts", pg_opts)
 		records, pg_rsp, err := opts.Client.ListRecords(ctx, pg_opts, list_opts...)
 
 		if err != nil {
@@ -184,8 +219,6 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-
-		logger.Info("WTF", "opts", pg_opts, "rsp", pg_rsp)
 
 		var pg_next string
 		var pg_prev string
@@ -225,15 +258,17 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 		case database.MultiPaginationType:
 
-			prev := pg_rsp.Previous().(*database.MultiDatabaseCursorState)
-			next := pg_rsp.Next().(*database.MultiDatabaseCursorState)
+			prev := pg_rsp.Previous().(string)
+			next := pg_rsp.Next().(string)
 
-			if prev != nil {
-				pg_prev = paginationURL(list_root, "cursor", prev.String(), provider, model)
+			if prev != "" {
+				prev = strings.Replace(prev, "before-", "", 1)
+				pg_prev = paginationURL(list_root, "cursor", prev, provider, model)
 			}
 
-			if next != nil {
-				pg_next = paginationURL(list_root, "cursor", next.String(), provider, model)
+			if next != "" {
+				next = strings.Replace(next, "after-", "", 1)
+				pg_next = paginationURL(list_root, "cursor", next, provider, model)
 			}
 
 		}

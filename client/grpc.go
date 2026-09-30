@@ -289,11 +289,12 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 
 	case pagination.Cursor:
 
-		pg, err := cursor.NewPaginationFromCursors(grpc_rsp.Pagination.Previous, grpc_rsp.Pagination.Next)
-
-		if err != nil {
-			return nil, nil, err
-		}
+		pg := new(cursor.CursorResults)
+		pg.CursorPrevious = grpc_rsp.Pagination.Previous
+		pg.CursorNext = grpc_rsp.Pagination.Next
+		pg.TotalCount = grpc_rsp.Pagination.Total
+		pg.PageCount = grpc_rsp.Pagination.Pages
+		pg.PerPageCount = grpc_rsp.Pagination.PerPage
 
 		pg_rsp = pg
 

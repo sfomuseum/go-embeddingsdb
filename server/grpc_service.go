@@ -201,22 +201,30 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 		next := pg_rsp.Next()
 		prev := pg_rsp.Previous()
 
-		switch next.(type) {
-		case string:
-			pg_grpc.Next = next.(string)
-		case *database.MultiDatabaseCursorState:
-			pg_grpc.Next = next.(*database.MultiDatabaseCursorState).String()
-		default:
-			pg_grpc.Next = fmt.Sprintf("%v", next)
+		if next != nil {
+
+			switch next.(type) {
+			case string:
+				pg_grpc.Next = next.(string)
+			case *database.MultiDatabaseCursorState:
+				pg_grpc.Next = next.(*database.MultiDatabaseCursorState).String()
+			default:
+				pg_grpc.Next = fmt.Sprintf("%v", next)
+			}
 		}
 
-		switch prev.(type) {
-		case string:
-			pg_grpc.Previous = prev.(string)
-		case *database.MultiDatabaseCursorState:
-			pg_grpc.Previous = prev.(*database.MultiDatabaseCursorState).String()
-		default:
-			pg_grpc.Previous = fmt.Sprintf("%v", prev)
+		if prev != nil {
+
+			slog.Info("Y Y Y Y Y ", "p", prev)
+
+			switch prev.(type) {
+			case string:
+				pg_grpc.Previous = prev.(string)
+			case *database.MultiDatabaseCursorState:
+				// pg_grpc.Previous = prev.(*database.MultiDatabaseCursorState).String()
+			default:
+				pg_grpc.Previous = fmt.Sprintf("%v", prev)
+			}
 		}
 
 	case pagination.Countable:

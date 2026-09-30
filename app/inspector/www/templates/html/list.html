@@ -88,10 +88,21 @@
 	    {{ if ne .PaginationNextURL "" }}<a href="{{ .PaginationNextURL }}">next</a>{{ else }}&#8212;{{ end }}
 	</div>
 	{{ end -}}
+
+	{{ if eq .PaginationType "multi" -}}
+	<div class="pagination-el pagination-previous">
+	    {{ if ne .PaginationPreviousURL "" }}<a href="{{ .PaginationPreviousURL }}">previous</a>{{ else }}&#8212;{{ end }}
+	</div>
+	<div class="pagination-el pagination-next">
+	    {{ if ne .PaginationNextURL "" }}<a href="{{ .PaginationNextURL }}">next</a>{{ else }}&#8212;{{ end }}
+	</div>
+	{{ end -}}
+
 	
     </div>
 
     <div class="pagination-rollup">
+	
 	{{ if eq .PaginationType "countable" -}}	
 	{{ if gt 1 .Pagination.Total -}}
 	There is one result
@@ -103,6 +114,11 @@
 	{{ if eq .PaginationType "cursor" -}}
 	This database does not support <q>countable</q> pagination. For as long as there is a <q>next</q> page there are more results.
 	{{ end -}}
+
+	{{ if eq .PaginationType "multi" -}}
+	MULTI...
+	{{ end -}}
+	
     </div>
     
 </div>
