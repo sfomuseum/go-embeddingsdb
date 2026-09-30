@@ -715,7 +715,7 @@ func (db *S3VectorsDatabase) listRecords(ctx context.Context, pg_opts pagination
 	per_page := pg_opts.PerPage()
 	pointer := pg_opts.Pointer()
 
-	var prev_cursor string
+	var prev_cursor string // S3Vectors does not have "backwards" pagination
 	var next_cursor string
 
 	if per_page > 0 {
@@ -724,8 +724,9 @@ func (db *S3VectorsDatabase) listRecords(ctx context.Context, pg_opts pagination
 
 	if pointer != nil {
 
-		if token, ok := pointer.(string); ok && token != "" {
-			prev_cursor = token
+		token, ok := pointer.(string)
+
+		if ok && token != "" {
 			list_opts.NextToken = aws.String(token)
 		}
 	}
