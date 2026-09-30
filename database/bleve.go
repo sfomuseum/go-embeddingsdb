@@ -604,7 +604,7 @@ func (db *BleveDatabase) IterateRecords(ctx context.Context, opts ...options.Opt
 }
 
 func (db *BleveDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
-	return 0, NotImplemented
+	return 0, NotAvailable
 }
 
 // Return the Unix timestamp of the last update to the Database instance.

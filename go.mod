@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.8.35
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.62.2
 	github.com/aws/aws-sdk-go-v2/service/s3vectors v1.10.8
+	github.com/aws/smithy-go v1.27.10
 	github.com/blevesearch/bleve/v2 v2.6.1
 	github.com/blevesearch/bleve_index_api v1.4.1
 	github.com/duckdb/duckdb-go/v2 v2.10505.0
@@ -64,7 +65,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.33.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.2 // indirect
-	github.com/aws/smithy-go v1.27.10 // indirect
 	github.com/bits-and-blooms/bitset v1.24.2 // indirect
 	github.com/blevesearch/geo v0.2.6 // indirect
 	github.com/blevesearch/go-faiss v1.1.5 // indirect

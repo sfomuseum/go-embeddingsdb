@@ -32,7 +32,7 @@ type Database interface {
 	ListRecords(context.Context, pagination.Options, ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error)
 	// IterateRecords returns an [iter.Seq2[*embeddingsdb.Record, error]] for each record stored in the database.
 	IterateRecords(context.Context, ...options.Option) iter.Seq2[*embeddingsdb.Record, error]
-	// CountRecords...
+	// CountRecords returns the total number of records indexed by a database. Depending on the database implementation this number may be approximate or not available.
 	CountRecords(context.Context, ...options.Option) (int64, error)
 	// Find similar records for a given model and record instance.
 	SimilarRecords(context.Context, *embeddingsdb.SimilarRecordsRequest, ...options.Option) ([]*embeddingsdb.SimilarRecord, error)

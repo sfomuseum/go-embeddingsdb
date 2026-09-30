@@ -425,11 +425,11 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			<-count_ch
 
 			pg_rsp := &MultiDatabasePaginationResults{
-				perPage:         per_page,
-				total:           count_all,
-				nextPointer:     next,
-				previousPointer: prev,
-				method:          pagination.Cursor,
+				perPage:  per_page,
+				total:    count_all,
+				next:     next,
+				previous: prev,
+				method:   pagination.Cursor,
 			}
 
 			return combined, pg_rsp, nil
@@ -455,11 +455,11 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	<-count_ch
 
 	pg_rsp := &MultiDatabasePaginationResults{
-		perPage:         per_page,
-		total:           count_all,
-		nextPointer:     nil,
-		previousPointer: prev,
-		method:          pagination.Cursor,
+		perPage:  per_page,
+		total:    count_all,
+		next:     nil,
+		previous: prev,
+		method:   pagination.Cursor,
 	}
 
 	return combined, pg_rsp, nil
@@ -486,7 +486,7 @@ func (db *MultiDatabase) CountRecords(ctx context.Context, opts ...options.Optio
 
 			count, err := target_db.CountRecords(db_ctx, opts...)
 
-			if err != nil && err != NotImplemented {
+			if err != nil && err != NotAvailable {
 				err_ch <- err
 				return
 			}

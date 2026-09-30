@@ -53,11 +53,11 @@ func ParseCursorState(s string) (MultiDatabaseCursorState, error) {
 
 type MultiDatabasePaginationResults struct {
 	pagination.Results
-	perPage         int64
-	total           int64
-	nextPointer     *MultiDatabaseCursorState
-	previousPointer *MultiDatabaseCursorState
-	method          pagination.Method
+	perPage  int64
+	total    int64
+	next     *MultiDatabaseCursorState
+	previous *MultiDatabaseCursorState
+	method   pagination.Method
 }
 
 func (m *MultiDatabasePaginationResults) Total() int64 {
@@ -82,11 +82,11 @@ func (m *MultiDatabasePaginationResults) Pages() int64 {
 }
 
 func (m *MultiDatabasePaginationResults) Next() any {
-	return m.nextPointer
+	return m.next
 }
 
 func (m *MultiDatabasePaginationResults) Previous() any {
-	return m.previousPointer
+	return m.previous
 }
 
 func (m *MultiDatabasePaginationResults) Method() pagination.Method {
@@ -95,24 +95,24 @@ func (m *MultiDatabasePaginationResults) Method() pagination.Method {
 
 func (m *MultiDatabasePaginationResults) NextURL(t *uritemplates.UriTemplate) (string, error) {
 
-	if m.nextPointer == nil || t == nil {
+	if m.next == nil || t == nil {
 		return "", nil
 	}
 
 	return t.Expand(map[string]interface{}{
-		"cursor":   m.nextPointer.String(),
+		"cursor":   m.next.String(),
 		"per_page": m.perPage,
 	})
 }
 
 func (m *MultiDatabasePaginationResults) PreviousURL(t *uritemplates.UriTemplate) (string, error) {
 
-	if m.previousPointer == nil || t == nil {
+	if m.previous == nil || t == nil {
 		return "", nil
 	}
 
 	return t.Expand(map[string]interface{}{
-		"cursor":   m.previousPointer.String(),
+		"cursor":   m.previous.String(),
 		"per_page": m.perPage,
 	})
 }
