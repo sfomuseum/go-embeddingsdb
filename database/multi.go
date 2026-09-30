@@ -383,8 +383,12 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		// last_results = pg
 		total_all += pg.Total()
 
+		slog.Info("Total", "all", total_all)
+
 		combined = append(combined, records...)
 		remaining -= int64(len(records))
+
+		slog.Info("Remaining", "count", remaining)
 
 		// Quota reached for this page response
 		if remaining <= 0 {
@@ -402,10 +406,12 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 				prev = &MultiDatabaseCursorState{
 					DatabaseIndex: initial_state.DatabaseIndex,
-					InternalPage:  initial_state.InternalPage,
+					InternalPage:  initial_state.InternalPage - 1,
 					Direction:     DirectionPrevious,
 				}
 			}
+
+			slog.Info("PG RESULT", "prev", prev, "next", next)
 
 			pg_rsp := &MultiDatabasePaginationResults{
 				perPage:         per_page,
@@ -414,9 +420,6 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 				previousPointer: prev,
 				method:          pagination.Cursor,
 			}
-
-			// next_u, _ := pg_rsp.NextURL()
-			// slog.Info("OK", "next", next_u)
 
 			return combined, pg_rsp, nil
 		}
