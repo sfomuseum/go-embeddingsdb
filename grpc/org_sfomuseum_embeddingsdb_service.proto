@@ -121,7 +121,9 @@ message PaginationResults {
 	int64 page = 2;
 	int64 pages = 3;
 	int64 per_page = 4;
-	string cursor = 5;
+	string next = 5;
+	string previous = 6;
+	uint32 method = 7;
 }
 
 message ListRecordsFilter {

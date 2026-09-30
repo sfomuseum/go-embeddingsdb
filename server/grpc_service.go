@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/aaronland/go-pagination"
@@ -185,14 +187,53 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 		grpc_records[i] = embeddingsdb.EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(r)
 	}
 
+	pg_grpc := &grpc.PaginationResults{
+		Total:   pg_rsp.Total(),
+		Page:    pg_rsp.Page(),
+		Pages:   pg_rsp.Pages(),
+		PerPage: pg_rsp.PerPage(),
+		Method:  uint32(pg_rsp.Method()),
+	}
+
+	switch pg_rsp.Method() {
+	case pagination.Cursor:
+
+		next := pg_rsp.Next()
+		prev := pg_rsp.Previous()
+
+		switch next.(type) {
+		case string:
+			pg_grpc.Next = next.(string)
+		case *database.MultiDatabaseCursorState:
+			pg_grpc.Next = next.(*database.MultiDatabaseCursorState).String()
+		default:
+			pg_grpc.Next = fmt.Sprintf("%v", next)
+		}
+
+		switch prev.(type) {
+		case string:
+			pg_grpc.Previous = prev.(string)
+		case *database.MultiDatabaseCursorState:
+			pg_grpc.Previous = prev.(*database.MultiDatabaseCursorState).String()
+		default:
+			pg_grpc.Previous = fmt.Sprintf("%v", prev)
+		}
+
+	case pagination.Countable:
+
+		next := pg_rsp.Next()
+		prev := pg_rsp.Previous()
+
+		pg_grpc.Next = strconv.FormatInt(next.(int64), 10)
+		pg_grpc.Previous = strconv.FormatInt(prev.(int64), 10)
+
+	default:
+		//
+	}
+
 	rsp := &grpc.ListRecordsResponse{
-		Pagination: &grpc.PaginationResults{
-			Total:   pg_rsp.Total(),
-			Page:    pg_rsp.Page(),
-			Pages:   pg_rsp.Pages(),
-			PerPage: pg_rsp.PerPage(),
-		},
-		Records: grpc_records,
+		Pagination: pg_grpc,
+		Records:    grpc_records,
 	}
 
 	return rsp, nil
