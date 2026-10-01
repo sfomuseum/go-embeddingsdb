@@ -285,8 +285,6 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	per_page := pg_opts.PerPage()
 	remaining := per_page
 
-	// 1. Determine current state from incoming pointer
-
 	state := MultiDatabaseCursorState{
 		DatabaseIndex: 0,
 		Page:          1,
@@ -299,14 +297,14 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	if current_ptr != nil {
 
 		switch current_ptr.(type) {
+		case int64:
+			// counter-based pagination, nothing to do
 		case string:
-
-			slog.Info("YO")
 
 			dec, err := ParseCursorState(current_ptr.(string))
 
 			if err != nil {
-				slog.Error("Failed to parse cursor string", "error", err)
+				slog.Error("Failed to parse cursor string", "error", err, "cursor", current_ptr)
 			} else {
 				state = dec
 			}
@@ -314,7 +312,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		case MultiDatabaseCursorState:
 			state = current_ptr.(MultiDatabaseCursorState)
 		default:
-			slog.Error("Unexpected type for pointer", "type", fmt.Sprintf("%T", current_ptr))
+			slog.Warn("Unexpected type for pointer", "type", fmt.Sprintf("%T", current_ptr))
 		}
 
 	}
@@ -325,6 +323,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	initial_state := state
 
 	// Try to derive counts across all databases
+	// Note the explicit timeout
 
 	count_all := int64(0)
 	count_ch := make(chan bool)
@@ -351,6 +350,10 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	for i := state.DatabaseIndex; i < len(db.databases); i++ {
 
 		target_db := db.databases[i]
+
+		// Set up database-specific pagination options. This mostly
+		// has to do with whether or not count-based pagination is
+		// supported.
 
 		var target_pg_opts pagination.Options
 
@@ -391,11 +394,12 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			continue
 		}
 
-		logger.Info("query database", "pointer", target_pg_opts.Pointer())
+		logger.Debug("query database", "pointer", target_pg_opts.Pointer())
 
 		records, pg, err := target_db.ListRecords(ctx, target_pg_opts, opts...)
 
 		if err != nil {
+			logger.Error("Failed to list records", "error", err)
 			return nil, nil, fmt.Errorf("db cluster error at index %d: %w", i, err)
 		}
 
@@ -405,14 +409,13 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		combined = append(combined, records...)
 		remaining -= int64(len(records))
 
-		logger.Info("Count", "remaining", remaining)
+		logger.Debug("Count", "remaining", remaining)
 
 		if remaining <= 0 {
 
 			next := &MultiDatabaseCursorState{
 				DatabaseIndex: i,
-				// Page:          pg.Page() + 1,
-				Direction: DirectionNext,
+				Direction:     DirectionNext,
 			}
 
 			switch target_pg_type {
@@ -429,8 +432,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 				prev = &MultiDatabaseCursorState{
 					DatabaseIndex: initial_state.DatabaseIndex,
-					// Page:          initial_state.Page - 1,
-					Direction: DirectionPrevious,
+					Direction:     DirectionPrevious,
 				}
 
 				switch target_pg_type {
@@ -442,7 +444,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 			}
 
-			logger.Info("Pagination", "prev", prev, "next", next)
+			logger.Debug("Pagination", "prev", prev, "next", next)
 
 			<-count_ch
 
@@ -469,8 +471,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 
 		prev = &MultiDatabaseCursorState{
 			DatabaseIndex: initial_state.DatabaseIndex,
-			// Page:          initial_state.Page,
-			Direction: DirectionPrevious,
+			Direction:     DirectionPrevious,
 		}
 
 		target_pg_type := db.pg_lookup[len(db.databases)-1]
@@ -499,6 +500,8 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 	return combined, pg_rsp, nil
 }
 
+// CountRecords returns the total number of records indexed by all the registered databases.
+// Depending on the database implementation this number may be approximate or not available.
 func (db *MultiDatabase) CountRecords(ctx context.Context, opts ...options.Option) (int64, error) {
 
 	count_all := int64(0)
@@ -575,20 +578,46 @@ func (db *MultiDatabase) LastUpdate(ctx context.Context, opts ...options.Option)
 
 	lastupdate := int64(0)
 
+	lastupdate_ch := make(chan int64)
+	err_ch := make(chan error)
+	done_ch := make(chan bool)
+
+	db_ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for _, target_db := range db.databases {
 
-		u, err := target_db.LastUpdate(ctx, opts...)
+		go func(target_db Database) {
 
-		if err != nil {
-			return 0, err
+			defer func() {
+				done_ch <- true
+			}()
+
+			u, err := target_db.LastUpdate(db_ctx, opts...)
+
+			if err != nil {
+				err_ch <- err
+				return
+			}
+
+			lastupdate_ch <- u
+		}(target_db)
+	}
+
+	remaining := len(db.databases)
+
+	for remaining > 0 {
+		select {
+		case <-done_ch:
+			remaining -= 1
+		case err := <-err_ch:
+			return lastupdate, err
+		case t := <-lastupdate_ch:
+
+			if t > lastupdate {
+				lastupdate = t
+			}
 		}
-
-		if u < lastupdate {
-			continue
-		}
-
-		lastupdate = u
-
 	}
 
 	return lastupdate, nil
@@ -611,18 +640,44 @@ func (db *MultiDatabase) Models(ctx context.Context, opts ...options.Option) ([]
 
 	models := make([]string, 0)
 
+	models_ch := make(chan []string)
+	err_ch := make(chan error)
+	done_ch := make(chan bool)
+
+	db_ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for _, target_db := range db.databases {
 
-		target_models, err := target_db.Models(ctx, opts...)
+		go func(target_db Database) {
 
-		if err != nil {
-			return nil, err
-		}
+			target_models, err := target_db.Models(db_ctx, opts...)
 
-		for _, m := range target_models {
+			if err != nil {
+				err_ch <- err
+				return
+			}
 
-			if !slices.Contains(models, m) {
-				models = append(models, m)
+			models_ch <- target_models
+
+		}(target_db)
+	}
+
+	remaining := len(db.databases)
+
+	for remaining > 0 {
+		select {
+		case <-done_ch:
+			remaining -= 1
+		case err := <-err_ch:
+			return models, err
+		case candidates := <-models_ch:
+
+			for _, m := range candidates {
+
+				if !slices.Contains(models, m) {
+					models = append(models, m)
+				}
 			}
 		}
 	}
@@ -635,18 +690,48 @@ func (db *MultiDatabase) Providers(ctx context.Context, opts ...options.Option) 
 
 	providers := make([]string, 0)
 
+	providers_ch := make(chan []string)
+	err_ch := make(chan error)
+	done_ch := make(chan bool)
+
+	db_ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for _, target_db := range db.databases {
 
-		target_providers, err := target_db.Providers(ctx, opts...)
+		go func(target_db Database) {
 
-		if err != nil {
-			return nil, err
-		}
+			defer func() {
+				done_ch <- true
+			}()
 
-		for _, p := range target_providers {
+			target_providers, err := target_db.Providers(db_ctx, opts...)
 
-			if !slices.Contains(providers, p) {
-				providers = append(providers, p)
+			if err != nil {
+				err_ch <- err
+				return
+			}
+
+			providers_ch <- target_providers
+
+		}(target_db)
+	}
+
+	remaining := len(db.databases)
+
+	for remaining > 0 {
+		select {
+		case <-done_ch:
+			remaining -= 1
+		case err := <-err_ch:
+			return providers, err
+		case candidates := <-providers_ch:
+
+			for _, p := range candidates {
+
+				if !slices.Contains(providers, p) {
+					providers = append(providers, p)
+				}
 			}
 		}
 	}
