@@ -360,8 +360,6 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		logger = logger.With("db index", i)
 		logger = logger.With("pagination", target_pg_type)
 
-		logger.Info("OK GO")
-
 		switch target_pg_type {
 		case CountablePaginationType:
 

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	// goslog "log/slog"
+
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
 	"github.com/aaronland/go-pagination"
@@ -143,11 +145,15 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		next_cursor = strings.TrimLeft(next_cursor, "before-")
-		next_cursor = strings.TrimLeft(next_cursor, "after-")
+		// START OF so many sighs...
 
-		previous_cursor = strings.TrimLeft(previous_cursor, "before-")
-		previous_cursor = strings.TrimLeft(previous_cursor, "after-")
+		next_cursor = strings.Replace(next_cursor, "before-", "", 1)
+		next_cursor = strings.Replace(next_cursor, "after-", "", 1)
+
+		previous_cursor = strings.Replace(previous_cursor, "before-", "", 1)
+		previous_cursor = strings.Replace(previous_cursor, "after-", "", 1)
+
+		// END OF so many sighs...
 
 		var pg_opts pagination.Options
 
@@ -237,8 +243,8 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			prev := pg_rsp.Previous().(string)
 			next := pg_rsp.Next().(string)
 
-			prev = strings.TrimLeft(prev, "before-") // sigh...
-			next = strings.TrimLeft(next, "after-")  // double-sigh...
+			prev = strings.Replace(prev, "before-", "", 1) // sigh...
+			next = strings.Replace(next, "after-", "", 1)  // double-sigh...
 
 			if prev == "" {
 				// See notes above

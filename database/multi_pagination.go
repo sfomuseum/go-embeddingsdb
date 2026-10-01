@@ -34,16 +34,17 @@ func (c MultiDatabaseCursorState) String() string {
 		return ""
 	}
 
-	return base64.URLEncoding.EncodeToString(b)
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 // ParseCursorState decodes a Base64 string back into a MultiDatabaseCursorState.
 func ParseCursorState(s string) (MultiDatabaseCursorState, error) {
 
 	var state MultiDatabaseCursorState
-	b, err := base64.URLEncoding.DecodeString(s)
+	b, err := base64.StdEncoding.DecodeString(s)
 
 	if err != nil {
+		slog.Error("Failed to decode cursor state", "encoded", s, "error", err)
 		return state, err
 	}
 
