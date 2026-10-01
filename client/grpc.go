@@ -357,9 +357,6 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.S
 		Provider:    req.Provider,
 		DepictionId: req.DepictionId,
 		Model:       req.Model,
-		//SimilarProvider: req.SimilarProvider,
-		//MaxResults:      req.MaxResults,
-		//MaxDistance:     req.MaxDistance,
 	}
 
 	similar_provider := options.GetSimilarProviderFromOptions(ctx, opts...)
@@ -390,9 +387,7 @@ func (e *GrpcClient) SimilarRecordsById(ctx context.Context, req *embeddingsdb.S
 
 func (e *GrpcClient) Models(ctx context.Context, opts ...options.Option) ([]string, error) {
 
-	req := &embeddingsdb_grpc.GetModelsRequest{
-		// 		Provider: providers,
-	}
+	req := &embeddingsdb_grpc.GetModelsRequest{}
 
 	// opts here...
 

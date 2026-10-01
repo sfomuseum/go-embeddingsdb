@@ -219,7 +219,13 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 			case string:
 				pg_grpc.Previous = prev.(string)
 			case *database.MultiDatabaseCursorState:
-				pg_grpc.Previous = prev.(*database.MultiDatabaseCursorState).String()
+
+				cursor_state := prev.(*database.MultiDatabaseCursorState)
+
+				if cursor_state != nil {
+					pg_grpc.Previous = cursor_state.String()
+				}
+
 			default:
 				pg_grpc.Previous = fmt.Sprintf("%v", prev)
 			}

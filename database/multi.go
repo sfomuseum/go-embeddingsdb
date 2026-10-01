@@ -132,11 +132,13 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 			return nil, err
 		}
 
+		databases = append(databases, target_db)
 		idx := len(databases) - 1
 
-		databases = append(databases, target_db)
 		lookup[dims] = idx
 		pg_lookup[idx] = target_pg
+
+		slog.Debug("Add database", "index", idx, "dimensions", dims, "pagination type", target_pg)
 	}
 
 	model_cache := new(sync.Map)
@@ -357,6 +359,8 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 		logger := slog.Default()
 		logger = logger.With("db index", i)
 		logger = logger.With("pagination", target_pg_type)
+
+		logger.Info("OK GO")
 
 		switch target_pg_type {
 		case CountablePaginationType:
