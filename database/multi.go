@@ -383,7 +383,7 @@ func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Opt
 			}
 
 			cursor_opts.PerPage(remaining)
-			cursor_opts.Pointer(pg_opts.Pointer())
+			cursor_opts.Pointer(state.Cursor)
 			target_pg_opts = cursor_opts
 
 		default:

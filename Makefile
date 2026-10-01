@@ -80,8 +80,8 @@ lambda-inspector:
 debug-multi:
 	go run -mod $(GOMOD) cmd/server/main.go \
 		-server-uri 'grpc://localhost:8081?database-uri={database}' \
-		-database-uri 'sqlite://?dsn=$(CWD)/work/debug-512.db&dimensions=512' \
 		-database-uri 's3vectors://sfomuseum-embeddings?region=us-west-2&credentials=session&dimensions=1152&index=embeddings-1152' \
+		-database-uri 'sqlite://?dsn=$(CWD)/work/debug-512.db&dimensions=512' \
 		-verbose
 
 server-bundle:
