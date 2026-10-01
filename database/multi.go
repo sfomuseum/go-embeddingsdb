@@ -195,13 +195,11 @@ func (db *MultiDatabase) AddRecord(ctx context.Context, rec *embeddingsdb.Record
 
 	dims := len(rec.Embeddings)
 
-	target_idx, ok := db.lookup[dims]
+	target_db, err := db.databaseForDimensions(ctx, dims)
 
-	if !ok {
-		return false, fmt.Errorf("Unregistered database for %d dimensions", dims)
+	if err != nil {
+		return false, err
 	}
-
-	target_db := db.databases[target_idx]
 
 	return target_db.AddRecord(ctx, rec, opts...)
 }
@@ -757,6 +755,17 @@ func (db *MultiDatabase) Close(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (db *MultiDatabase) databaseForDimensions(ctx context.Context, dims int) (Database, error) {
+
+	target_idx, ok := db.lookup[dims]
+
+	if !ok {
+		return nil, fmt.Errorf("Unregistered database for %d dimensions", dims)
+	}
+
+	return db.databases[target_idx], nil
 }
 
 func (db *MultiDatabase) databaseForModel(ctx context.Context, model string, opts ...options.Option) (Database, error) {
