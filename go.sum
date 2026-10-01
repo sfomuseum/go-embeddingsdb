@@ -37,8 +37,8 @@ github.com/aaronland/go-aws/v3 v3.7.1/go.mod h1:2srWGIePEy+6ozT9XMRfDl2tnJ1atHXm
 github.com/aaronland/go-http/v4 v4.1.0 h1:hvIioH3SPTt7C3xfcDuGUVsLSzZGf2hTiwUIVixwUf4=
 github.com/aaronland/go-http/v4 v4.1.0/go.mod h1:goDaryYnG3CKGw7vX0Sj38fiKRKyOhCd/p23N47y3qk=
 github.com/aaronland/go-pagination v0.2.0/go.mod h1:zrYVkUTBoe6yJ23l6OyTyfSpTyg6s/cNxZxNztXNQpQ=
-github.com/aaronland/go-pagination v0.3.0 h1:5YHm2ylZtWj40m+hyncrt4vaZxjZ5v6szi2F4OqkqO4=
-github.com/aaronland/go-pagination v0.3.0/go.mod h1:zrYVkUTBoe6yJ23l6OyTyfSpTyg6s/cNxZxNztXNQpQ=
+github.com/aaronland/go-pagination v0.4.0 h1:SPY9ThMoz07wn6kNQBxN4AvtJQgj8oxz5UTGybIpPOs=
+github.com/aaronland/go-pagination v0.4.0/go.mod h1:vYR4n0iMwVOm9nbYcSIYaHzJAVAXCN/79p32aJ/KQbc=
 github.com/aaronland/go-pagination-sql v0.2.0 h1:WVesObJVvwawIgkl6Twot9DXia09qiZQJQ/7ik64kSU=
 github.com/aaronland/go-pagination-sql v0.2.0/go.mod h1:Thovmz045/sxI0actKFyGLzIKmlCK4R9Qi4gS742PbY=
 github.com/aaronland/go-roster v1.0.0 h1:FRDGrTqsYySKjWnAhbBGXyeGlI/o5/t9FZYCbUmyQtI=

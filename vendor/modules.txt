@@ -50,8 +50,8 @@ github.com/aaronland/go-http/v4/response
 github.com/aaronland/go-http/v4/sanitize
 github.com/aaronland/go-http/v4/server
 github.com/aaronland/go-http/v4/slog
-# github.com/aaronland/go-pagination v0.3.0
-## explicit; go 1.16
+# github.com/aaronland/go-pagination v0.4.0
+## explicit; go 1.25
 github.com/aaronland/go-pagination
 github.com/aaronland/go-pagination/countable
 github.com/aaronland/go-pagination/cursor

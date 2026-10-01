@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	// goslog "log/slog"
 
@@ -145,16 +144,6 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
-		// START OF so many sighs...
-
-		next_cursor = strings.Replace(next_cursor, "before-", "", 1)
-		next_cursor = strings.Replace(next_cursor, "after-", "", 1)
-
-		previous_cursor = strings.Replace(previous_cursor, "before-", "", 1)
-		previous_cursor = strings.Replace(previous_cursor, "after-", "", 1)
-
-		// END OF so many sighs...
-
 		var pg_opts pagination.Options
 
 		switch pg_type {
@@ -243,22 +232,16 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			prev := pg_rsp.Previous().(string)
 			next := pg_rsp.Next().(string)
 
-			prev = strings.Replace(prev, "before-", "", 1) // sigh...
-			next = strings.Replace(next, "after-", "", 1)  // double-sigh...
-
 			if prev == "" {
 				// See notes above
 				prev = previous_cursor
 			}
 
 			if prev != "" {
-				prev = strings.Replace(prev, "before-", "", 1)
 				pg_prev = paginationURL(list_root, "cursor", prev, provider, model, "")
 			}
 
 			if next != "" {
-				// See notes above as to why we are passing in `next_cursor`
-				next = strings.Replace(next, "after-", "", 1)
 				pg_next = paginationURL(list_root, "cursor", next, provider, model, next_cursor)
 			}
 		}

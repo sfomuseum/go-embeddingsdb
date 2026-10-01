@@ -230,10 +230,7 @@ func (e *GrpcClient) ListRecords(ctx context.Context, pg_opts pagination.Options
 	case pagination.Countable:
 		grpc_pg.Page = countable.PageFromOptions(pg_opts)
 	case pagination.Cursor:
-		cursor := pg_opts.Pointer().(string)
-		cursor = strings.Replace(cursor, "before-", "", 1) // le sigh...
-		cursor = strings.Replace(cursor, "after-", "", 1)  // le double-sigh...
-		grpc_pg.Cursor = cursor
+		grpc_pg.Cursor = pg_opts.Pointer().(string)
 	default:
 		return nil, nil, fmt.Errorf("Invalid or unsupported pagination options method")
 	}
