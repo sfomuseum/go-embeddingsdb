@@ -18,8 +18,13 @@ import (
 	"github.com/sfomuseum/go-embeddingsdb/options"
 )
 
+// MultiDatabaseScheme is the URI scheme used for a database that aggregates multiple
+// underlying databases.
 const MultiDatabaseScheme string = "multi"
 
+// MultiDatabase represents a database that contains one or more underlying databases,
+// each of which may support a different number of embedding dimensions or a different
+// pagination strategy. It implements the Database interface.
 type MultiDatabase struct {
 	Database
 	databases       []Database
@@ -39,6 +44,9 @@ func init() {
 	}
 }
 
+// NewMultiDatabaseURIFromURIs creates a URI string for a MultiDatabase from a list of
+// underlying database URIs. The returned string uses the "multi" scheme and
+// encodes each supplied URI as a query parameter named "database".
 func NewMultiDatabaseURIFromURIs(db_uris ...string) string {
 
 	db_q := url.Values{}
@@ -51,6 +59,10 @@ func NewMultiDatabaseURIFromURIs(db_uris ...string) string {
 	return db_u.String()
 }
 
+// NewMultiDatabase constructs a MultiDatabase instance from a URI. The URI must
+// use the "multi" scheme and contain one or more "?database=" query parameters
+// that point to the underlying databases. It returns an error if parsing fails
+// or if the URI is missing the required parameters.
 func NewMultiDatabase(ctx context.Context, uri string) (Database, error) {
 
 	u, err := url.Parse(uri)
@@ -70,6 +82,10 @@ func NewMultiDatabase(ctx context.Context, uri string) (Database, error) {
 	return NewMultiDatabaseFromURIs(ctx, db_uris...)
 }
 
+// NewMultiDatabaseFromURIs constructs a MultiDatabase from a list of database
+// URIs. Each URI must contain a "dimensions" query parameter that specifies
+// the dimensionality of the embeddings it contains. The function ensures that
+// no two databases share the same dimensionality.
 func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database, error) {
 
 	registry := make(map[int]Database)
@@ -118,6 +134,9 @@ func NewMultiDatabaseFromURIs(ctx context.Context, db_uris ...string) (Database,
 	return NewMultiDatabaseFromRegistry(ctx, registry)
 }
 
+// NewMultiDatabaseFromRegistry constructs a MultiDatabase from a map of
+// dimensionality to Database instances. It determines the pagination type
+// of each underlying database and prepares internal lookup tables.
 func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database) (Database, error) {
 
 	databases := make([]Database, 0)
@@ -154,7 +173,9 @@ func NewMultiDatabaseFromRegistry(ctx context.Context, registry map[int]Database
 	return db, nil
 }
 
-// Return the URI string used to instantiate the Database instance.
+// URI returns the URI string that was used to instantiate the MultiDatabase.
+// The string contains the "multi" scheme and a list of the underlying database
+// URIs as the "database" query parameter.
 func (db *MultiDatabase) URI() string {
 
 	database_uris := make([]string, 0)
@@ -275,7 +296,11 @@ func (db *MultiDatabase) SimilarRecords(ctx context.Context, req *embeddingsdb.S
 	return target_db.SimilarRecords(ctx, req, opts...)
 }
 
-// ListRecords returns a paginated list of records stored in the database.
+// ListRecords returns a paginated list of records stored in the database.  The
+// method aggregates results from all underlying databases, honouring the
+// pagination strategy of each.  The returned pagination results are of type
+// MultiDatabasePaginationResults which encodes the next/previous state across
+// multiple databases.
 func (db *MultiDatabase) ListRecords(ctx context.Context, pg_opts pagination.Options, opts ...options.Option) ([]*embeddingsdb.Record, pagination.Results, error) {
 
 	var combined []*embeddingsdb.Record

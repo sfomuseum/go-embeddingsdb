@@ -3,20 +3,25 @@ package database
 import (
 	"encoding/base64"
 	"encoding/json"
-	_ "fmt"
 	"log/slog"
 
 	"github.com/aaronland/go-pagination"
 	"github.com/jtacoma/uritemplates"
 )
 
+// MultiDatabaseDirection enumerates the direction of pagination for a MultiDatabase cursor.
 type MultiDatabaseDirection string
 
 const (
+	// DirectionNext indicates that the pagination cursor points to the next page.
 	DirectionNext     MultiDatabaseDirection = "next"
+	// DirectionPrevious indicates that the pagination cursor points to the previous page.
 	DirectionPrevious MultiDatabaseDirection = "prev"
 )
 
+// MultiDatabaseCursorState represents the state required to paginate across multiple
+// underlying databases.  It encodes the current database index, page number,
+// cursor string (for cursor based pagination) and direction.
 type MultiDatabaseCursorState struct {
 	DatabaseIndex int                    `json:"db_idx"`
 	Page          int64                  `json:"page"`
@@ -52,6 +57,9 @@ func ParseCursorState(s string) (MultiDatabaseCursorState, error) {
 	return state, err
 }
 
+// MultiDatabasePaginationResults implements pagination.Results for a MultiDatabase.
+// It contains the total record count, per-page setting and next/previous cursor
+// states for multi‑database pagination.
 type MultiDatabasePaginationResults struct {
 	pagination.Results
 	perPage  int64
@@ -61,18 +69,24 @@ type MultiDatabasePaginationResults struct {
 	method   pagination.Method
 }
 
+// Total returns the overall number of records across all databases.
 func (m *MultiDatabasePaginationResults) Total() int64 {
 	return m.total
 }
 
+// PerPage returns the number of records requested per page.
 func (m *MultiDatabasePaginationResults) PerPage() int64 {
 	return m.perPage
 }
 
+// Page returns the current page number; for multi‑database pagination this is
+// always 0 because the concept of a single page number does not apply.
 func (m *MultiDatabasePaginationResults) Page() int64 {
 	return 0
 }
 
+// Pages returns the total number of pages given the per-page value and total
+// records.  It handles a zero perPage by returning 0.
 func (m *MultiDatabasePaginationResults) Pages() int64 {
 
 	if m.perPage == 0 {
@@ -82,18 +96,25 @@ func (m *MultiDatabasePaginationResults) Pages() int64 {
 	return (m.total + m.perPage - 1) / m.perPage
 }
 
+// Next returns the cursor that points to the next page.  The returned value
+// is of type *MultiDatabaseCursorState.
 func (m *MultiDatabasePaginationResults) Next() any {
 	return m.next
 }
 
+// Previous returns the cursor that points to the previous page.
 func (m *MultiDatabasePaginationResults) Previous() any {
 	return m.previous
 }
 
+// Method reports the pagination method used (always cursor for MultiDatabase).
 func (m *MultiDatabasePaginationResults) Method() pagination.Method {
 	return m.method
 }
 
+// NextURL expands the provided UriTemplate with the next cursor and per‑page
+// parameters to generate the URL for the next page.  If no next cursor is present,
+// an empty string is returned.
 func (m *MultiDatabasePaginationResults) NextURL(t *uritemplates.UriTemplate) (string, error) {
 
 	if m.next == nil || t == nil {
@@ -106,6 +127,10 @@ func (m *MultiDatabasePaginationResults) NextURL(t *uritemplates.UriTemplate) (s
 	})
 }
 
+
+// PreviousURL expands the provided UriTemplate with the previous cursor and
+// per‑page parameters to generate the URL for the previous page.  If no
+// previous cursor is present, an empty string is returned.
 func (m *MultiDatabasePaginationResults) PreviousURL(t *uritemplates.UriTemplate) (string, error) {
 
 	if m.previous == nil || t == nil {
