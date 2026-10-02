@@ -62,9 +62,32 @@ For example:
 multi://?database=sqlite%3A%2F%2F%3Fdsn%3Dfile%3A%2Fusr%2Flocal%2Fdata%2Fembeddings.db%3Fdimension%3D512&database=duckdb%3A%2F%2F%2Fusr%2Flocal%2Fdata%2Fembeddings%3Fdimensions%3D1152
 ```
 
-These URIs can be a chore to write. All of the command line tools provided by this package have been updated to support multiple `-database-uri` flags. If the number of database flags is greater than one then a new `multi://` database URI will be constructed at runtime. 
+These URIs can be a chore to write. All of the command line tools provided by this package have been updated to support multiple `-database-uri` flags. If the number of database flags is greater than one then a new `multi://` database URI will be constructed at runtime. For example:
 
-This happens using the `database.NewMultiDatabaseURIFromURIs` method. For example:
+```
+$> bin/embeddingsdb-server \
+	-server-uri 'grpc://localhost:8081?database-uri={database}' \
+	-database-uri 's3vectors://embeddings?region=us-east-1&credentials=session&dimensions=1152&index=embeddings-1152' \
+	-database-uri 'sqlite://?dsn=/usr/local/sfomuseum/go-embeddingsdb/work/debug-512.db&dimensions=512' \
+	-verbose
+	
+2026/10/02 15:22:53 DEBUG Verbose logging enabled
+2026/10/02 15:22:53 DEBUG Set up database
+2026/10/02 15:22:53 DEBUG Check whether table exists table=s3vectors
+2026/10/02 15:22:54 DEBUG Table exists, refresh disabled table=s3vectors
+2026/10/02 15:22:54 DEBUG Check whether table exists table=s3vectors_metadata
+2026/10/02 15:22:54 DEBUG Table exists, refresh disabled table=s3vectors_metadata
+2026/10/02 15:22:54 DEBUG Reassign dimensions value=512
+2026/10/02 15:22:54 DEBUG Reassign dimensions value=512
+2026/10/02 15:22:54 DEBUG Add database index=0 dimensions=1152 "pagination type"=cursor
+2026/10/02 15:22:54 DEBUG Add database index=1 dimensions=512 "pagination type"=countable
+2026/10/02 15:22:54 DEBUG Set up listener
+2026/10/02 15:22:54 DEBUG Set up server
+2026/10/02 15:22:54 DEBUG Allow insecure connections
+2026/10/02 15:22:54 INFO Server listening address=localhost:8081
+```
+
+All of this happens using the `database.NewMultiDatabaseURIFromURIs` method. For example:
 
 ```
 import (
