@@ -1,11 +1,12 @@
 ## Databases
 
-There are currently (4) supported database implemetations:
+There are currently (5) supported database implemetations:
 
 * [DuckDB](#duckdb) - manages vector embeddings using the [DuckDB](https://duckdb.org/) database and the [VSS](https://duckdb.org/docs/stable/core_extensions/vss) extension.
 * [SQLite](#sqlite) - manages vector embeddings using the [SQLite](https://www.sqlite.org/) database and the the [sqlite-vec](https://pkg.go.dev/modernc.org/sqlite/vec) extension.
 * [Bleve](#bleve) - manages vector embeddings using the [Bleve](https://github.com/blevesearch/bleve) database and the [faiss](https://github.com/blevesearch/faiss) library.
 * [S3Vectors](#s3vectors) - manages vector embeddings using the Amazon Web Services [S3Vectors](https://aws.amazon.com/s3/features/vectors/) service.
+* [Multi(ple)](#multi] - manage vector embeddings of different dimensionalities in multiple databases.
 
 Here's the "tl;dr":
 
@@ -40,6 +41,50 @@ For example:
 ```
 duckdb:///usr/local/data/embeddings
 ```
+
+### multi://
+
+Manage embeddings of different dimensionalities in multiple databases. This implements the `Database` interface routing queries to relevant databases based on the record (embeddings) being added or the embeddings or model being queried.
+
+```
+multi://?{QUERY_PARAMETERS}
+```
+
+Valid query parameters are:
+
+| Key | Value | Required | Notes |
+| --- | --- | --- | --- |
+| database | string | yes | One or more valid database constructor URIs. These URIs MUST include a `?dimensions=` parameter indicating the size (dimensions) of the embeddings stored by this database. |
+
+For example:
+
+```
+multi://?database=sqlite%3A%2F%2F%3Fdsn%3Dfile%3A%2Fusr%2Flocal%2Fdata%2Fembeddings.db%3Fdimension%3D512&database=duckdb%3A%2F%2F%2Fusr%2Flocal%2Fdata%2Fembeddings%3Fdimensions%3D1152
+```
+
+These URIs can be a chore to write. All of the command line tools provided by this package have been updated to support multiple `-database-uri` flags. If the number of database flags is greater than one then a new `multi://` database URI will be constructed at runtime. 
+
+This happens using the `database.NewMultiDatabaseURIFromURIs` method. For example:
+
+```
+import (
+	"fmt"
+
+	"github.com/sfomuseum/go-embeddingsdb/database"
+)
+
+db_uris := []string{
+	"sqlite://?dsn=file:/usr/local/data/embeddings.db?dimension=512",
+	"duckdb:///usr/local/data/embeddings?dimensions=1152",
+}
+
+multi_uri := database.NewMultiDatabaseURIFromURIs(db_uris...)
+fmt.Println(multi_uri)
+```
+
+Which would print `multi://?database=sqlite%3A%2F%2F%3Fdsn%3Dfile%3A%2Fusr%2Flocal%2Fdata%2Fembeddings.db%3Fdimension%3D512&database=duckdb%3A%2F%2F%2Fusr%2Flocal%2Fdata%2Fembeddings%3Fdimensions%3D1152`.
+
+As of this writing it is not possible to specify more than one database per dimension.
 
 ### sqlite://
 

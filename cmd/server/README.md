@@ -3,13 +3,13 @@
 Start a network-based server for managing embeddings.
 
 ```
-$> ./bin/embeddingsdb-server -h
+> ./bin/embeddingsdb-server -h
 Start a network-based server for managing embeddings.
 Usage:
 	./bin/embeddingsdb-server [options]
 Valid options are:
-  -database-uri string
-    	An optional value which be used to replace the '{database}' placeholder, if present, in the -server-uri flag. This is expected to be a registered sfomuseum/go-embeddingsdb/database.Database URI
+  -database-uri value
+    	Zero or more optional values which be used to replace the '{database}' placeholder, if present, in the -server-uri flag. These are expected to be a registered sfomuseum/go-embeddingsdb/database.Database URI strings. If multiple then each database URI is required to include a '#{DIMENSIONS} fragment for routing requests by embeddings dimensions.
   -server-uri string
     	A registered sfomuseum/go-embeddingsdb/server.EmbeddingsDBServer URI. (default "grpc://localhost:8081?database-uri={database}&token-uri={token}")
   -token-uri string

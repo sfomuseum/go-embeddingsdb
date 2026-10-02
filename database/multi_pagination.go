@@ -14,7 +14,7 @@ type MultiDatabaseDirection string
 
 const (
 	// DirectionNext indicates that the pagination cursor points to the next page.
-	DirectionNext     MultiDatabaseDirection = "next"
+	DirectionNext MultiDatabaseDirection = "next"
 	// DirectionPrevious indicates that the pagination cursor points to the previous page.
 	DirectionPrevious MultiDatabaseDirection = "prev"
 )
@@ -126,7 +126,6 @@ func (m *MultiDatabasePaginationResults) NextURL(t *uritemplates.UriTemplate) (s
 		"per_page": m.perPage,
 	})
 }
-
 
 // PreviousURL expands the provided UriTemplate with the previous cursor and
 // per‑page parameters to generate the URL for the previous page.  If no
