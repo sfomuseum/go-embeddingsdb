@@ -2,10 +2,14 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
+	"github.com/aaronland/go-pagination"
 	"github.com/aaronland/go-pagination/countable"
+	"github.com/aaronland/go-pagination/cursor"
 	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/database"
 	"github.com/sfomuseum/go-embeddingsdb/grpc"
@@ -135,15 +139,34 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 		logger.Debug("Time to list records", "time", time.Since(t1))
 	}()
 
-	pg_opts, err := countable.NewCountableOptions()
+	var pg_opts pagination.Options
 
-	if err != nil {
-		logger.Error("Failed to create new countable options", "error", err)
-		return nil, err
+	if req.Pagination.Cursor != "" {
+
+		opts, err := cursor.NewCursorOptions()
+
+		if err != nil {
+			logger.Error("Failed to create new cursor options", "error", err)
+			return nil, err
+		}
+
+		pg_opts = opts
+		pg_opts.Pointer(req.Pagination.Cursor)
+
+	} else {
+
+		opts, err := countable.NewCountableOptions()
+
+		if err != nil {
+			logger.Error("Failed to create new countable options", "error", err)
+			return nil, err
+		}
+
+		pg_opts = opts
+		pg_opts.Pointer(req.Pagination.Page)
 	}
 
 	pg_opts.PerPage(req.Pagination.PerPage)
-	pg_opts.Pointer(req.Pagination.Page)
 
 	opts := make([]options.Option, len(req.Filters))
 
@@ -164,14 +187,65 @@ func (s *grpcService) ListRecords(ctx context.Context, req *grpc.ListRecordsRequ
 		grpc_records[i] = embeddingsdb.EmbeddingsDBRecordToGrpcEmbeddingsDBRecord(r)
 	}
 
+	pg_grpc := &grpc.PaginationResults{
+		Total:   pg_rsp.Total(),
+		Page:    pg_rsp.Page(),
+		Pages:   pg_rsp.Pages(),
+		PerPage: pg_rsp.PerPage(),
+		Method:  uint32(pg_rsp.Method()),
+	}
+
+	switch pg_rsp.Method() {
+	case pagination.Cursor:
+
+		next := pg_rsp.Next()
+		prev := pg_rsp.Previous()
+
+		if next != nil {
+
+			switch next.(type) {
+			case string:
+				pg_grpc.Next = next.(string)
+			case *database.MultiDatabaseCursorState:
+				pg_grpc.Next = next.(*database.MultiDatabaseCursorState).String()
+			default:
+				pg_grpc.Next = fmt.Sprintf("%v", next)
+			}
+		}
+
+		if prev != nil {
+
+			switch prev.(type) {
+			case string:
+				pg_grpc.Previous = prev.(string)
+			case *database.MultiDatabaseCursorState:
+
+				cursor_state := prev.(*database.MultiDatabaseCursorState)
+
+				if cursor_state != nil {
+					pg_grpc.Previous = cursor_state.String()
+				}
+
+			default:
+				pg_grpc.Previous = fmt.Sprintf("%v", prev)
+			}
+		}
+
+	case pagination.Countable:
+
+		next := pg_rsp.Next()
+		prev := pg_rsp.Previous()
+
+		pg_grpc.Next = strconv.FormatInt(next.(int64), 10)
+		pg_grpc.Previous = strconv.FormatInt(prev.(int64), 10)
+
+	default:
+		//
+	}
+
 	rsp := &grpc.ListRecordsResponse{
-		Pagination: &grpc.PaginationResults{
-			Total:   pg_rsp.Total(),
-			Page:    pg_rsp.Page(),
-			Pages:   pg_rsp.Pages(),
-			PerPage: pg_rsp.PerPage(),
-		},
-		Records: grpc_records,
+		Pagination: pg_grpc,
+		Records:    grpc_records,
 	}
 
 	return rsp, nil

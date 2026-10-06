@@ -14,10 +14,10 @@ import (
 
 	_ "github.com/duckdb/duckdb-go/v2"
 
-	"github.com/sfomuseum/go-parquet"
-	"github.com/sfomuseum/go-embeddingsdb"	
+	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-embeddingsdb/signatures"
 	"github.com/sfomuseum/go-flags/flagset"
+	"github.com/sfomuseum/go-parquet"
 )
 
 func Run(ctx context.Context) error {

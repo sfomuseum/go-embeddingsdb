@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
+
+	// goslog "log/slog"
 
 	"github.com/aaronland/go-http/v4/sanitize"
 	"github.com/aaronland/go-http/v4/slog"
@@ -58,7 +59,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 	}
 
 	switch pg_type {
-	case database.CountablePaginationType, database.CursorPaginationType:
+	case database.CountablePaginationType, database.CursorPaginationType, database.MultiPaginationType:
 		// ok
 	default:
 		return nil, fmt.Errorf("Unsupported pagination type, %T", pg_type)
@@ -74,6 +75,8 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 		providers_opts := make([]options.Option, 0)
 
 		model, err := sanitize.GetString(req, "model")
+
+		per_page := int64(15)
 
 		if err != nil {
 			logger.Error("Failed to derive model parameter", "error", err)
@@ -115,6 +118,32 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 			return
 		}
 
+		// Next cursor is the standard pagination cursor signal; as in "use this
+		// cursor to get the next set of results".
+
+		next_cursor, err := sanitize.GetString(req, "cursor")
+
+		if err != nil {
+			logger.Error("Failed to derive cursor query parameter", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		// Previous cursor is a hack to account for the lack of "backwards" pagination
+		// tokens in token-based symptoms. Specifically if the pagination response instance
+		// does not return a "previous" value then we assign the value of next_cursor
+		// to a ?previous-cursor parameter assigned to the _next_ pagination URL (below)
+		// as a way to enable backwards pagination. This will probably not work for all
+		// database implementations but it does work for s3vector buckets.
+
+		previous_cursor, err := sanitize.GetString(req, "previous-cursor")
+
+		if err != nil {
+			logger.Error("Failed to derive previous cursor query parameter", "error", err)
+			http.Error(rsp, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		var pg_opts pagination.Options
 
 		switch pg_type {
@@ -128,7 +157,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			countable_opts.PerPage(int64(15))
+			countable_opts.PerPage(per_page)
 			countable_opts.Pointer(int64(1))
 
 			page, err := sanitize.GetInt64(req, "page")
@@ -145,7 +174,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 			pg_opts = countable_opts
 
-		case database.CursorPaginationType:
+		case database.CursorPaginationType, database.MultiPaginationType:
 
 			cursor_opts, err := cursor.NewCursorOptions()
 
@@ -155,18 +184,10 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 				return
 			}
 
-			cursor_opts.PerPage(int64(15))
+			cursor_opts.PerPage(per_page)
 
-			cursor, err := sanitize.GetString(req, "cursor")
-
-			if err != nil {
-				logger.Error("Failed to derive page query parameter", "error", err)
-				http.Error(rsp, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-
-			if cursor != "" {
-				cursor_opts.Pointer(cursor)
+			if next_cursor != "" {
+				cursor_opts.Pointer(next_cursor)
 			}
 
 			pg_opts = cursor_opts
@@ -198,29 +219,31 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 
 			if prev != 0 {
 				str_prev := strconv.FormatInt(prev, 10)
-				pg_prev = paginationURL(list_root, "page", str_prev, provider, model)
+				pg_prev = paginationURL(list_root, "page", str_prev, provider, model, "")
 			}
 
 			if next != 0 {
 				str_next := strconv.FormatInt(next, 10)
-				pg_next = paginationURL(list_root, "page", str_next, provider, model)
+				pg_next = paginationURL(list_root, "page", str_next, provider, model, "")
 			}
 
-		case database.CursorPaginationType:
+		case database.CursorPaginationType, database.MultiPaginationType:
 
 			prev := pg_rsp.Previous().(string)
 			next := pg_rsp.Next().(string)
 
+			if prev == "" {
+				// See notes above
+				prev = previous_cursor
+			}
+
 			if prev != "" {
-				prev = strings.Replace(prev, "before-", "", 1)
-				pg_prev = paginationURL(list_root, "cursor", prev, provider, model)
+				pg_prev = paginationURL(list_root, "cursor", prev, provider, model, "")
 			}
 
 			if next != "" {
-				next = strings.Replace(next, "after-", "", 1)
-				pg_next = paginationURL(list_root, "cursor", next, provider, model)
+				pg_next = paginationURL(list_root, "cursor", next, provider, model, next_cursor)
 			}
-
 		}
 
 		vars := ListHandlerVars{
@@ -251,7 +274,7 @@ func ListHandler(opts *ListHandlerOptions) (http.Handler, error) {
 	return http.HandlerFunc(fn), nil
 }
 
-func paginationURL(root string, param string, pointer string, provider string, model string) string {
+func paginationURL(root string, param string, pointer string, provider string, model string, previous_cursor string) string {
 
 	q := url.Values{}
 	q.Set(param, pointer)
@@ -262,6 +285,13 @@ func paginationURL(root string, param string, pointer string, provider string, m
 
 	if model != "" {
 		q.Set("model", model)
+	}
+
+	// See notes above where next_cursor and previous_cursor
+	// query parameters are derived.
+
+	if previous_cursor != "" {
+		q.Set("previous-cursor", previous_cursor)
 	}
 
 	u, _ := url.Parse(root)

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/aaronland/go-http/v4/response"
 	"github.com/aaronland/go-http/v4/server"
 	"github.com/sfomuseum/go-embeddings"
 	inspector_http "github.com/sfomuseum/go-embeddingsdb/app/inspector/http"
@@ -79,6 +80,10 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	mux := http.NewServeMux()
 
 	// It is probably time to start using aaronland/go-http/route
+
+	null_handler := response.NullHandler()
+	mux.Handle("/favicon.ico", null_handler)
+	mux.Handle("/sw.js", null_handler)
 
 	static_handler := http.FileServerFS(static.FS)
 

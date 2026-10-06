@@ -9,9 +9,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/sfomuseum/go-embeddingsdb"	
-	"github.com/sfomuseum/go-parquet"
+	"github.com/sfomuseum/go-embeddingsdb"
 	"github.com/sfomuseum/go-flags/flagset"
+	"github.com/sfomuseum/go-parquet"
 )
 
 func main() {

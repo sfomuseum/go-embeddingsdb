@@ -15,9 +15,9 @@ import (
 	"github.com/aaronland/gocloud/blob/writer"
 	parquet_go "github.com/parquet-go/parquet-go"
 	"github.com/sfomuseum/go-embeddingsdb"
-	"github.com/sfomuseum/go-parquet"
 	"github.com/sfomuseum/go-embeddingsdb/signatures"
 	"github.com/sfomuseum/go-flags/flagset"
+	"github.com/sfomuseum/go-parquet"
 )
 
 func Run(ctx context.Context) error {
