@@ -514,7 +514,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 			args[i] = f.Value()
 		}
 
-		q = fmt.Sprintf("%s WHERE %s", q, strings.Join(where, " AND "))
+		q = fmt.Sprintf("%s AND %s", q, strings.Join(where, " AND "))
 	}
 
 	q = fmt.Sprintf("%s ORDER BY r.subject_id, r.depiction_id, r.model ASC", q)
@@ -522,6 +522,7 @@ func (db *SQLiteDatabase) ListRecords(ctx context.Context, pg_opts pagination.Op
 	rsp, err := pagination_sql.QueryPaginated(db.vec_db, pg_opts, q, args...)
 
 	if err != nil {
+		slog.Error("Failed to list SQLite records", "error", err, "query", q, "args", args)
 		return nil, nil, err
 	}
 
