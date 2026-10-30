@@ -1,0 +1,678 @@
+package download
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	getter "github.com/hashicorp/go-getter"
+)
+
+// Target identifies the machine a llama.cpp build is for.
+type Target struct {
+	Arch      Arch
+	OS        OS
+	Processor Processor
+
+	// Version is the llama.cpp release tag, e.g. "b7974" or "v0.3.0". "" means
+	// [DefaultVersion], or the newest release if that is empty. "latest" always
+	// resolves to the newest release.
+	Version string
+
+	// UpstreamVersion is the nightly build tag that has the llama.cpp binaries for
+	// Version. A tagged release has no binaries of its own, so [Install] fills this
+	// in with [LlamaNightlyTag]. Empty means use Version.
+	UpstreamVersion string
+
+	// ManifestSHA256 is the expected digest of the raw digest manifest of Version,
+	// in hexadecimal. Empty means the digest is not pinned, which is the usual case.
+	//
+	// A pin makes verification mandatory. The manifest bytes must match, the
+	// manifest must list every resolved asset, and each asset must match its
+	// digest. [Install] also accepts the pin as a suffix on Version, in the
+	// form "b10785@sha256:<digest>", and moves it here.
+	ManifestSHA256 string
+
+	// CUDAVersion is the CUDA version of the machine, e.g. "13.0". It selects the
+	// Linux CUDA build when [Target.Processor] is [CUDA]. Empty means unknown, so the
+	// platform default applies. [CUDA12] and [CUDA13] ignore it.
+	CUDAVersion string
+}
+
+// Resolver reports the release assets to install for a Target, as URLs downloaded in
+// the order returned. Implement it to reach builds the built-in table does not name.
+// Implementations must not download.
+type Resolver interface {
+	Resolve(target Target) (urls []string, err error)
+}
+
+// ResolverFunc adapts an ordinary function to [Resolver].
+type ResolverFunc func(target Target) ([]string, error)
+
+// Resolve calls f.
+func (f ResolverFunc) Resolve(target Target) ([]string, error) { return f(target) }
+
+// DefaultResolver resolves the assets published on the llama.cpp and llama-cpp-builder
+// release pages. [Install] uses it when no resolver is given. It also implements
+// [AssetResolver], so it reports the expected digest of each asset.
+var DefaultResolver Resolver = defaultResolver{}
+
+// defaultResolver is the built-in resolver. It reads the digest manifest that
+// llama-cpp-builder publishes for each release tag.
+type defaultResolver struct{}
+
+// Resolve reports the assets to install as URLs.
+func (defaultResolver) Resolve(target Target) ([]string, error) {
+	return defaultResolve(target)
+}
+
+// ResolveAssets reports the assets to install with their expected digests. If the
+// manifest cannot be read, the assets have no digest, which [VerifyIfAvailable] allows
+// and [VerifyRequired] rejects.
+//
+// Setting [Target.ManifestSHA256] makes the manifest mandatory. The bytes must have
+// that digest, and a manifest that cannot be read is an error rather than an
+// unchecked install.
+func (r defaultResolver) ResolveAssets(target Target) ([]Asset, error) {
+	assets, _, err := r.resolveAssets(context.Background(), target)
+	return assets, err
+}
+
+// resolveAssets does the work of [defaultResolver.ResolveAssets] under a context.
+// [AssetResolver] takes no context, so [Install] calls this to pass its own. It also
+// returns the raw manifest bytes, which the install saves for a later check.
+func (r defaultResolver) resolveAssets(ctx context.Context, target Target) ([]Asset, []byte, error) {
+	urls, err := defaultResolve(target)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	assets := make([]Asset, len(urls))
+	for i, url := range urls {
+		assets[i] = Asset{URL: url}
+	}
+
+	m, body, err := fetchManifestBody(ctx, target.Version, target.ManifestSHA256)
+	if err != nil {
+		if target.ManifestSHA256 != "" {
+			return nil, nil, err
+		}
+		return assets, nil, nil
+	}
+
+	for i := range assets {
+		assets[i].SHA256 = m.digestFor(assets[i].URL)
+	}
+
+	return assets, body, nil
+}
+
+// llama.cpp changed the CUDA version of its Windows builds at this build.
+const cuda134Build = 10977
+
+// windowsCUDAVersion reports the CUDA version in the Windows asset names for tag. A
+// tag that is not a nightly build gets the newest version.
+func windowsCUDAVersion(tag string) string {
+	const current = "13.4"
+	if !nightlyPattern.MatchString(tag) {
+		return current
+	}
+	build, err := strconv.Atoi(tag[1:])
+	if err != nil {
+		return current
+	}
+	if build < cuda134Build {
+		return "13.3"
+	}
+	return current
+}
+
+// llama.cpp renamed its ROCm assets at these two builds.
+const (
+	rocmRenameBuild = 10356
+	rocm10Build     = 10767
+)
+
+// rocmVersionNames holds the ROCm asset names for one build range.
+type rocmVersionNames struct {
+	linux   string
+	windows string
+}
+
+// rocmNames reports the ROCm asset names that tag published. A tag that is not a
+// nightly build gets the newest names.
+func rocmNames(tag string) rocmVersionNames {
+	current := rocmVersionNames{
+		linux:   "llama-%s-bin-ubuntu-rocm-10.0-x64.tar.gz",
+		windows: "llama-%s-bin-win-rocm-10.0-x64.zip",
+	}
+	if !nightlyPattern.MatchString(tag) {
+		return current
+	}
+	build, err := strconv.Atoi(tag[1:])
+	if err != nil {
+		return current
+	}
+
+	switch {
+	case build < rocmRenameBuild:
+		return rocmVersionNames{
+			linux:   "llama-%s-bin-ubuntu-rocm-7.2-x64.tar.gz",
+			windows: "llama-%s-bin-win-hip-radeon-x64.zip",
+		}
+	case build < rocm10Build:
+		return rocmVersionNames{
+			linux:   "llama-%s-bin-ubuntu-rocm-7.14-x64.tar.gz",
+			windows: "llama-%s-bin-win-rocm-7.14-x64.zip",
+		}
+	default:
+		return current
+	}
+}
+
+// llama.cpp changed the OpenVINO version in its asset names at these builds.
+const (
+	openvino20264Build  = 11024
+	openvino202641Build = 11374
+)
+
+// openvinoVersion reports the OpenVINO version in the asset names for tag. A tag that
+// is not a nightly build gets the newest version.
+func openvinoVersion(tag string) string {
+	const current = "2026.4.1"
+	if !nightlyPattern.MatchString(tag) {
+		return current
+	}
+	build, err := strconv.Atoi(tag[1:])
+	if err != nil {
+		return current
+	}
+	switch {
+	case build < openvino20264Build:
+		return "2026.3.1"
+	case build < openvino202641Build:
+		return "2026.4"
+	default:
+		return current
+	}
+}
+
+// The CUDA release that a Linux build uses when the machine reports no CUDA
+// version. ARM64 assumes a Jetson Orin, which runs CUDA 12.
+const (
+	defaultCUDAMajorARM64 = 12
+	defaultCUDAMajorAMD64 = 13
+)
+
+// cudaMajor reports the major CUDA version in version, for example 13 for "13.0". It
+// returns 0 when version is not usable.
+func cudaMajor(version string) int {
+	major, _, _ := strings.Cut(version, ".")
+	n, err := strconv.Atoi(major)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// linuxCUDAName reports the Linux asset name pattern for a CUDA build. The processor
+// selects the CUDA release, or for [CUDA] the machine's version does, with the arch
+// default when that is unknown.
+func linuxCUDAName(arch Arch, prcssr Processor, cudaVersion string) string {
+	major := cudaMajor(cudaVersion)
+	switch {
+	case prcssr == CUDA12:
+		major = 12
+	case prcssr == CUDA13:
+		major = 13
+	case major == 0 && arch == ARM64:
+		major = defaultCUDAMajorARM64
+	case major == 0:
+		major = defaultCUDAMajorAMD64
+	}
+
+	suffix := "x64"
+	if arch == ARM64 {
+		suffix = "arm64"
+	}
+
+	// llama.cpp keeps the unnumbered name for its CUDA 12 builds.
+	if major <= 12 {
+		return "llama-%s-bin-ubuntu-cuda-" + suffix + ".tar.gz"
+	}
+	return "llama-%s-bin-ubuntu-cuda-13-" + suffix + ".tar.gz"
+}
+
+// defaultResolve is the built-in platform table.
+func defaultResolve(target Target) ([]string, error) {
+	arch, os, prcssr, version := target.Arch, target.OS, target.Processor, target.Version
+
+	// The llama.cpp releases hold the binaries under the nightly build tag, while the
+	// llama-cpp-builder releases use the requested tag.
+	upstream := target.UpstreamVersion
+	if upstream == "" {
+		upstream = version
+	}
+	builderLocation := fmt.Sprintf("https://github.com/hybridgroup/llama-cpp-builder/releases/download/%s", version)
+
+	var extra []string
+	var filename string
+	location := fmt.Sprintf("https://github.com/ggml-org/llama.cpp/releases/download/%s", upstream)
+	tag := upstream
+
+	switch os {
+	case Linux:
+		switch prcssr {
+		case CPU:
+			if arch == ARM64 {
+				location, tag = builderLocation, version
+				filename = fmt.Sprintf("llama-%s-bin-ubuntu-cpu-arm64.tar.gz", tag)
+				break
+			}
+			filename = fmt.Sprintf("llama-%s-bin-ubuntu-x64.tar.gz", tag)
+		case CUDA, CUDA12, CUDA13:
+			location, tag = builderLocation, version
+			filename = fmt.Sprintf(linuxCUDAName(arch, prcssr, target.CUDAVersion), tag)
+		case Vulkan:
+			if arch == ARM64 {
+				location, tag = builderLocation, version
+				filename = fmt.Sprintf("llama-%s-bin-ubuntu-vulkan-arm64.tar.gz", tag)
+				break
+			}
+			filename = fmt.Sprintf("llama-%s-bin-ubuntu-vulkan-x64.tar.gz", tag)
+		case ROCm:
+			if arch != AMD64 {
+				return nil, errors.New("precompiled binaries for Linux ARM64 ROCm are not available")
+			}
+			filename = fmt.Sprintf(rocmNames(tag).linux, tag)
+		case OpenVINO:
+			if arch != AMD64 {
+				return nil, errors.New("precompiled binaries for Linux ARM64 OpenVINO are not available")
+			}
+			filename = fmt.Sprintf("llama-%s-bin-ubuntu-openvino-%s-x64.tar.gz", tag, openvinoVersion(tag))
+		default:
+			return nil, ErrUnknownProcessor
+		}
+
+	case Bookworm:
+		switch prcssr {
+		case CPU:
+			if arch == ARM64 {
+				location, tag = builderLocation, version
+				filename = fmt.Sprintf("llama-%s-bin-ubuntu-cpu-arm64.tar.gz", tag)
+				break
+			}
+
+			// no AMD64 for bookworm
+			return nil, ErrUnknownProcessor
+		case CUDA, CUDA12, CUDA13:
+			location, tag = builderLocation, version
+			if arch == ARM64 {
+				// Jetson Orin.
+				filename = fmt.Sprintf(linuxCUDAName(arch, prcssr, target.CUDAVersion), tag)
+				break
+			}
+
+			// no AMD64 for bookworm
+			return nil, ErrUnknownProcessor
+		case Vulkan:
+			if arch == ARM64 {
+				location, tag = builderLocation, version
+				filename = fmt.Sprintf("llama-%s-bin-ubuntu-vulkan-arm64.tar.gz", tag)
+				break
+			}
+
+			// no AMD64 for bookworm
+			return nil, ErrUnknownProcessor
+		default:
+			return nil, ErrUnknownProcessor
+		}
+
+	case Trixie:
+		switch prcssr {
+		case CPU:
+			if arch == ARM64 {
+				location, tag = builderLocation, version
+				filename = fmt.Sprintf("llama-%s-bin-ubuntu-trixie-cpu-arm64.tar.gz", tag)
+				break
+			}
+			filename = fmt.Sprintf("llama-%s-bin-ubuntu-x64.tar.gz", tag)
+		case CUDA, CUDA12, CUDA13:
+			location, tag = builderLocation, version
+			if arch == ARM64 {
+				// not yet
+				return nil, ErrUnknownProcessor
+			}
+			filename = fmt.Sprintf(linuxCUDAName(arch, prcssr, target.CUDAVersion), tag)
+		case Vulkan:
+			if arch == ARM64 {
+				location, tag = builderLocation, version
+				filename = fmt.Sprintf("llama-%s-bin-ubuntu-trixie-vulkan-arm64.tar.gz", tag)
+				break
+			}
+			filename = fmt.Sprintf("llama-%s-bin-ubuntu-vulkan-x64.tar.gz", tag)
+		default:
+			return nil, ErrUnknownProcessor
+		}
+
+	case Darwin:
+		switch prcssr {
+		case Metal:
+			if arch != ARM64 {
+				return nil, errors.New("precompiled binaries for macOS non-ARM64 CPU/Metal are not available")
+			}
+			filename = fmt.Sprintf("llama-%s-bin-macos-arm64.tar.gz", tag)
+		case CPU:
+			if arch == ARM64 {
+				filename = fmt.Sprintf("llama-%s-bin-macos-arm64.tar.gz", tag)
+			} else {
+				filename = fmt.Sprintf("llama-%s-bin-macos-x64.tar.gz", tag)
+			}
+		default:
+			return nil, ErrUnknownProcessor
+		}
+
+	case Windows:
+		switch prcssr {
+		case CPU:
+			if arch == ARM64 {
+				filename = fmt.Sprintf("llama-%s-bin-win-cpu-arm64.zip", tag)
+			} else {
+				filename = fmt.Sprintf("llama-%s-bin-win-cpu-x64.zip", tag)
+			}
+		case CUDA, CUDA12, CUDA13:
+			if arch == ARM64 {
+				return nil, errors.New("precompiled binaries for Windows ARM64 CUDA are not available")
+			}
+			// also requires the CUDA RT files
+			cuda := windowsCUDAVersion(tag)
+			extra = append(extra, fmt.Sprintf("%s/cudart-llama-bin-win-cuda-%s-x64.zip", location, cuda))
+			filename = fmt.Sprintf("llama-%s-bin-win-cuda-%s-x64.zip", tag, cuda)
+		case Vulkan:
+			if arch == ARM64 {
+				return nil, errors.New("precompiled binaries for Windows ARM64 Vulkan are not available")
+			}
+			filename = fmt.Sprintf("llama-%s-bin-win-vulkan-x64.zip", tag)
+		case ROCm:
+			if arch != AMD64 {
+				return nil, errors.New("precompiled binaries for Windows ARM64 ROCm are not available")
+			}
+			filename = fmt.Sprintf(rocmNames(tag).windows, tag)
+		case OpenVINO:
+			if arch != AMD64 {
+				return nil, errors.New("precompiled binaries for Windows ARM64 OpenVINO are not available")
+			}
+			filename = fmt.Sprintf("llama-%s-bin-win-openvino-%s-x64.zip", tag, openvinoVersion(tag))
+		default:
+			return nil, ErrUnknownProcessor
+		}
+
+	case Wasm:
+		// Download every build for the target, whatever processor the caller
+		// asks for, because the JavaScript glue chooses at run time and needs them
+		// all: WebGPU where the browser has it, multiple threads where the
+		// page is isolated, and a single thread everywhere else.
+		//
+		// CUDA, Metal, ROCm and Vulkan have no meaning in a browser.
+		if prcssr != CPU && prcssr != WebGPU {
+			return nil, ErrUnknownProcessor
+		}
+		location, tag = builderLocation, version
+		extra = append(extra,
+			fmt.Sprintf("%s/llama-%s-bin-wasm-simd-mt.tar.gz", location, tag),
+			fmt.Sprintf("%s/llama-%s-bin-wasm-webgpu.tar.gz", location, tag),
+		)
+		filename = fmt.Sprintf("llama-%s-bin-wasm-simd.tar.gz", tag)
+
+	default:
+		return nil, ErrUnknownOS
+	}
+
+	return append(extra, fmt.Sprintf("%s/%s", location, filename)), nil
+}
+
+// InstallOption changes what [Install] does.
+type InstallOption func(*installOptions)
+
+// installOptions holds the settings that an [InstallOption] changes.
+type installOptions struct {
+	verify      VerifyPolicy
+	cudaVersion string
+}
+
+// WithVerify sets how [Install] checks the digest of an asset. The default is
+// [VerifyIfAvailable].
+func WithVerify(policy VerifyPolicy) InstallOption {
+	return func(o *installOptions) { o.verify = policy }
+}
+
+// WithCUDAVersion sets the machine's CUDA version, for example "13.0", which
+// selects the CUDA build. It sets [Target.CUDAVersion], so callers that pass
+// strings rather than a [Target] can set that field.
+func WithCUDAVersion(version string) InstallOption {
+	return func(o *installOptions) { o.cudaVersion = version }
+}
+
+// Install downloads the llama.cpp binaries for target into dest. A nil resolver means
+// [DefaultResolver]. An empty [Target.Version] means [DefaultVersion].
+//
+// Install checks the digest of each asset that has one, and stops before writing
+// anything if one does not match. Use [WithVerify] to change that.
+//
+// [Target.Version] may carry the expected digest of the release's digest manifest,
+// in the form "b10785@sha256:<digest>". Install moves it to
+// [Target.ManifestSHA256] and uses only the tag for URLs, for the resolver, for the
+// install record, and for the version it reports. A pin makes verification mandatory,
+// so it cannot be given with [VerifyOff].
+func Install(ctx context.Context, target Target, dest string, progress getter.ProgressTracker, resolver Resolver, opts ...InstallOption) error {
+	if resolver == nil {
+		resolver = DefaultResolver
+	}
+
+	var options installOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	if options.cudaVersion != "" {
+		target.CUDAVersion = options.cudaVersion
+	}
+
+	// An empty version means the release pinned by this yzma release. That value can
+	// carry its own digest, so it is set before the version is parsed. "latest"
+	// always asks for the newest build, so it skips the pin.
+	if target.Version == "" && DefaultVersion != "" {
+		target.Version = DefaultVersion
+	}
+
+	// Strip the digest before anything validates the version or builds a URL from it.
+	tag, digest, err := ParsePinnedVersion(target.Version)
+	if err != nil {
+		return err
+	}
+	target.Version = tag
+	switch {
+	case digest == "":
+		// No message needed. The version has no digest.
+	case target.ManifestSHA256 == "":
+		target.ManifestSHA256 = digest
+	case !strings.EqualFold(target.ManifestSHA256, digest):
+		return fmt.Errorf("%w: the version pins %s and ManifestSHA256 is %s", ErrInvalidDigest, digest, target.ManifestSHA256)
+	}
+
+	// A pin asks for a check, so it conflicts with a policy that checks nothing,
+	// and it makes an asset with no digest an error.
+	if target.ManifestSHA256 != "" {
+		if options.verify == VerifyOff {
+			return ErrVerifyDisabled
+		}
+		options.verify = VerifyRequired
+	}
+
+	autoVersion := target.Version == "" || target.Version == "latest"
+	if autoVersion {
+		latest, err := LlamaLatestVersion()
+		if err != nil {
+			return err
+		}
+		target.Version = latest
+	}
+	if err := VersionIsValid(target.Version); err != nil {
+		return ErrInvalidVersion
+	}
+
+	// Only a tagged release needs a lookup on the llama.cpp release page. A nightly
+	// tag names its own assets, so it stays on the llama-cpp-builder site, which is
+	// not rate limited like the GitHub API.
+	if target.UpstreamVersion == "" && IsTaggedRelease(target.Version) {
+		upstream, err := LlamaNightlyTag(target.Version)
+		if err != nil {
+			return err
+		}
+		target.UpstreamVersion = upstream
+	}
+
+	assets, manifestBody, err := installAssets(ctx, target, dest, progress, resolver, options)
+	if err == nil {
+		return recordInstall(dest, target, assets, manifestBody)
+	}
+
+	// The newest release may still be building for this platform.
+	if autoVersion && errors.Is(err, ErrFileNotFound) {
+		previous, prevErr := LlamaPreviousVersion()
+		if prevErr != nil {
+			return err
+		}
+		target.Version = previous
+		target.UpstreamVersion = ""
+		if IsTaggedRelease(previous) {
+			target.UpstreamVersion, prevErr = LlamaNightlyTag(previous)
+			if prevErr != nil {
+				return err
+			}
+		}
+		assets, manifestBody, err := installAssets(ctx, target, dest, progress, resolver, options)
+		if err != nil {
+			return err
+		}
+		return recordInstall(dest, target, assets, manifestBody)
+	}
+
+	return err
+}
+
+// recordInstall records what was installed, so [VerifyInstall] can check the files
+// later. The manifest is saved next to the record, so the check needs no network.
+func recordInstall(dest string, target Target, assets []Asset, manifestBody []byte) error {
+	var manifestDigest string
+	if len(manifestBody) > 0 {
+		if err := WriteInstallManifest(dest, manifestBody); err != nil {
+			return err
+		}
+		sum := sha256.Sum256(manifestBody)
+		manifestDigest = hex.EncodeToString(sum[:])
+	}
+
+	return WriteInstallRecord(dest, InstallRecord{
+		Tag:            target.Version,
+		UpstreamTag:    target.UpstreamVersion,
+		Arch:           target.Arch.String(),
+		OS:             target.OS.String(),
+		Processor:      target.Processor.String(),
+		ManifestSHA256: manifestDigest,
+		Installed:      time.Now().UTC(),
+		Assets:         assets,
+	})
+}
+
+func installAssets(ctx context.Context, target Target, dest string, progress getter.ProgressTracker, resolver Resolver, options installOptions) ([]Asset, []byte, error) {
+	assets, manifestBody, err := resolveAssets(ctx, target, resolver, options.verify)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, asset := range assets {
+		switch {
+		case options.verify == VerifyOff, asset.SHA256 != "":
+			// No message needed. Any digest present is checked during download.
+		case options.verify == VerifyRequired:
+			return nil, nil, fmt.Errorf("%w: %s", ErrDigestMissing, asset.URL)
+		case VerifyWarning != nil:
+			VerifyWarning(asset.URL)
+		}
+
+		if err := getFunc(ctx, asset, dest, progress); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return assets, manifestBody, nil
+}
+
+// resolveAssets asks a resolver for the assets to install. It prefers a resolver that
+// reports digests, and a plain [Resolver] still works. [VerifyOff] uses the plain
+// [Resolver], because fetching a manifest for digests nobody checks is wasted work.
+//
+// It also returns the raw bytes of the manifest the digests came from, or nil when no
+// manifest was read.
+func resolveAssets(ctx context.Context, target Target, resolver Resolver, verify VerifyPolicy) ([]Asset, []byte, error) {
+	// A pinned manifest is the authority for every asset, whatever resolver named
+	// them, so it is read here instead of in the resolver.
+	if target.ManifestSHA256 != "" {
+		return pinnedAssets(ctx, target, resolver)
+	}
+
+	if verify != VerifyOff {
+		// The built-in resolver has a variant that takes the install context.
+		if d, ok := resolver.(defaultResolver); ok {
+			return d.resolveAssets(ctx, target)
+		}
+		if assetResolver, ok := resolver.(AssetResolver); ok {
+			assets, err := assetResolver.ResolveAssets(target)
+			return assets, nil, err
+		}
+	}
+
+	urls, err := resolver.Resolve(target)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	assets := make([]Asset, len(urls))
+	for i, url := range urls {
+		assets[i] = Asset{URL: url}
+	}
+
+	return assets, nil, nil
+}
+
+// pinnedAssets returns the assets to install when [Target.ManifestSHA256] pins the
+// digest manifest. The resolver names the assets and the pinned manifest provides
+// each digest. An asset missing from the manifest is an error.
+func pinnedAssets(ctx context.Context, target Target, resolver Resolver) ([]Asset, []byte, error) {
+	urls, err := resolver.Resolve(target)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	m, body, err := fetchManifestBody(ctx, target.Version, target.ManifestSHA256)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	assets := make([]Asset, len(urls))
+	for i, url := range urls {
+		digest := m.digestFor(url)
+		if digest == "" {
+			return nil, nil, fmt.Errorf("%w: %s is not in the pinned digests of %s", ErrDigestMissing, url, target.Version)
+		}
+		assets[i] = Asset{URL: url, SHA256: digest}
+	}
+
+	return assets, body, nil
+}

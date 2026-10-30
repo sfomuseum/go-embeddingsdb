@@ -14,6 +14,7 @@ import (
 type Embedder[T Float] interface {
 	TextEmbeddings(context.Context, *EmbeddingsRequest) (EmbeddingsResponse[T], error)
 	ImageEmbeddings(context.Context, *EmbeddingsRequest) (EmbeddingsResponse[T], error)
+	Close() error
 }
 
 // EmbedderInitializationFunc is a function defined by individual embedder package and used to create
@@ -21,6 +22,15 @@ type Embedder[T Float] interface {
 type EmbedderInitializationFunc[T Float] func(ctx context.Context, uri string) (Embedder[T], error)
 
 var embedder_roster roster.Roster
+
+func MustRegisterEmbedder[T Float](ctx context.Context, scheme string, init_func EmbedderInitializationFunc[T]) {
+
+	err := RegisterEmbedder(ctx, scheme, init_func)
+
+	if err != nil {
+		panic(err)
+	}
+}
 
 // RegisterEmbedder registers 'scheme' as a key pointing to 'init_func' in an internal lookup table
 // used to create new `Embedder` instances by the `NewEmbedder` method.
