@@ -23,7 +23,7 @@ require (
 	github.com/jtacoma/uritemplates v1.0.0
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/sfomuseum/go-database v0.0.22
-	github.com/sfomuseum/go-embeddings v0.8.0
+	github.com/sfomuseum/go-embeddings v0.8.1
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-parquet v0.5.0
 	github.com/sfomuseum/go-template v1.11.0
@@ -126,7 +126,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
-	github.com/hybridgroup/yzma v1.31.0 // indirect
+	github.com/hybridgroup/yzma v1.32.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jupiterrider/ffi v0.8.0 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
@@ -166,7 +166,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	gocloud.dev v0.46.0 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/image v0.47.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
