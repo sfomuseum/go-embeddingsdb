@@ -4,9 +4,10 @@ package acm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Retrieves the key ID and MAC key credentials for an external account binding.
@@ -37,6 +38,17 @@ type GetAcmeExternalAccountBindingCredentialsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetAcmeExternalAccountBindingCredentialsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetAcmeExternalAccountBindingCredentialsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetAcmeExternalAccountBindingCredentialsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcmeExternalAccountBindingArn != nil {
+		s.WriteString(schemas.GetAcmeExternalAccountBindingCredentialsRequest_AcmeExternalAccountBindingArn, *v.AcmeExternalAccountBindingArn)
+	}
+}
 func (in *GetAcmeExternalAccountBindingCredentialsInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM-ACME")
@@ -56,22 +68,41 @@ type GetAcmeExternalAccountBindingCredentialsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetAcmeExternalAccountBindingCredentialsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetAcmeExternalAccountBindingCredentialsResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetAcmeExternalAccountBindingCredentialsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.KeyId != nil {
+		s.WriteString(schemas.GetAcmeExternalAccountBindingCredentialsResponse_KeyId, *v.KeyId)
+	}
+	if v.MacKey != nil {
+		s.WriteString(schemas.GetAcmeExternalAccountBindingCredentialsResponse_MacKey, *v.MacKey)
+	}
+}
+func (v *GetAcmeExternalAccountBindingCredentialsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.GetAcmeExternalAccountBindingCredentialsResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.GetAcmeExternalAccountBindingCredentialsResponse_KeyId:
+			v.KeyId = new(string)
+			return d.ReadString(schemas.GetAcmeExternalAccountBindingCredentialsResponse_KeyId, v.KeyId)
+		case schemas.GetAcmeExternalAccountBindingCredentialsResponse_MacKey:
+			v.MacKey = new(string)
+			return d.ReadString(schemas.GetAcmeExternalAccountBindingCredentialsResponse_MacKey, v.MacKey)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationGetAcmeExternalAccountBindingCredentialsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpGetAcmeExternalAccountBindingCredentials{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetAcmeExternalAccountBindingCredentials, schemas.GetAcmeExternalAccountBindingCredentialsRequest, schemas.GetAcmeExternalAccountBindingCredentialsResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpGetAcmeExternalAccountBindingCredentials{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetAcmeExternalAccountBindingCredentials, schemas.GetAcmeExternalAccountBindingCredentialsRequest, schemas.GetAcmeExternalAccountBindingCredentialsResponse), output: &GetAcmeExternalAccountBindingCredentialsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -81,19 +112,10 @@ func (c *Client) addOperationGetAcmeExternalAccountBindingCredentialsMiddlewares
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetAcmeExternalAccountBindingCredentialsValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "GetAcmeExternalAccountBindingCredentials"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

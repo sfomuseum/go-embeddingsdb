@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Get detailed information about a particular Automation execution.
@@ -37,6 +38,18 @@ type GetAutomationExecutionInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetAutomationExecutionInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetAutomationExecutionRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetAutomationExecutionInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AutomationExecutionId != nil {
+		s.WriteString(schemas.GetAutomationExecutionRequest_AutomationExecutionId, *v.AutomationExecutionId)
+	}
+}
+
 type GetAutomationExecutionOutput struct {
 
 	// Detailed information about the current state of an automation execution.
@@ -48,22 +61,37 @@ type GetAutomationExecutionOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetAutomationExecutionOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetAutomationExecutionResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetAutomationExecutionOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AutomationExecution != nil {
+		s.WriteStruct(schemas.GetAutomationExecutionResult_AutomationExecution)
+		v.AutomationExecution.SerializeMembers(s)
+		s.CloseStruct()
+	}
+}
+func (v *GetAutomationExecutionOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.GetAutomationExecutionResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.GetAutomationExecutionResult_AutomationExecution:
+			v.AutomationExecution = &types.AutomationExecution{}
+			return v.AutomationExecution.Deserialize(d)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationGetAutomationExecutionMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpGetAutomationExecution{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetAutomationExecution, schemas.GetAutomationExecutionRequest, schemas.GetAutomationExecutionResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpGetAutomationExecution{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetAutomationExecution, schemas.GetAutomationExecutionRequest, schemas.GetAutomationExecutionResult), output: &GetAutomationExecutionOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -73,19 +101,10 @@ func (c *Client) addOperationGetAutomationExecutionMiddlewares(stack *middleware
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetAutomationExecutionValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "GetAutomationExecution"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

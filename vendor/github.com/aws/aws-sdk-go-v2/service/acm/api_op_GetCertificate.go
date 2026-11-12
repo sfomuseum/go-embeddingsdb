@@ -4,9 +4,10 @@ package acm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Retrieves a certificate and its certificate chain. The certificate may be
@@ -48,6 +49,17 @@ type GetCertificateInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetCertificateInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetCertificateRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetCertificateInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CertificateArn != nil {
+		s.WriteString(schemas.GetCertificateRequest_CertificateArn, *v.CertificateArn)
+	}
+}
 func (in *GetCertificateInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM")
@@ -69,22 +81,41 @@ type GetCertificateOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetCertificateOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetCertificateResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetCertificateOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Certificate != nil {
+		s.WriteString(schemas.GetCertificateResponse_Certificate, *v.Certificate)
+	}
+	if v.CertificateChain != nil {
+		s.WriteString(schemas.GetCertificateResponse_CertificateChain, *v.CertificateChain)
+	}
+}
+func (v *GetCertificateOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.GetCertificateResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.GetCertificateResponse_Certificate:
+			v.Certificate = new(string)
+			return d.ReadString(schemas.GetCertificateResponse_Certificate, v.Certificate)
+		case schemas.GetCertificateResponse_CertificateChain:
+			v.CertificateChain = new(string)
+			return d.ReadString(schemas.GetCertificateResponse_CertificateChain, v.CertificateChain)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationGetCertificateMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpGetCertificate{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetCertificate, schemas.GetCertificateRequest, schemas.GetCertificateResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpGetCertificate{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetCertificate, schemas.GetCertificateRequest, schemas.GetCertificateResponse), output: &GetCertificateOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -94,19 +125,10 @@ func (c *Client) addOperationGetCertificateMiddlewares(stack *middleware.Stack, 
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetCertificateValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "GetCertificate"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

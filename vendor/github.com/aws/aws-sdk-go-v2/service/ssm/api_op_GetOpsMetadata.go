@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // View operational metadata related to an application in Application Manager.
@@ -42,6 +43,24 @@ type GetOpsMetadataInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetOpsMetadataInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetOpsMetadataRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetOpsMetadataInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.GetOpsMetadataRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.GetOpsMetadataRequest_NextToken, *v.NextToken)
+	}
+	if v.OpsMetadataArn != nil {
+		s.WriteString(schemas.GetOpsMetadataRequest_OpsMetadataArn, *v.OpsMetadataArn)
+	}
+}
+
 type GetOpsMetadataOutput struct {
 
 	// OpsMetadata for an Application Manager application.
@@ -60,22 +79,46 @@ type GetOpsMetadataOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetOpsMetadataOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetOpsMetadataResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetOpsMetadataOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Metadata != nil {
+		serializeMetadataMap(s, schemas.GetOpsMetadataResult_Metadata, v.Metadata)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.GetOpsMetadataResult_NextToken, *v.NextToken)
+	}
+	if v.ResourceId != nil {
+		s.WriteString(schemas.GetOpsMetadataResult_ResourceId, *v.ResourceId)
+	}
+}
+func (v *GetOpsMetadataOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.GetOpsMetadataResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.GetOpsMetadataResult_Metadata:
+			return deserializeMetadataMap(d, schemas.GetOpsMetadataResult_Metadata, &v.Metadata)
+		case schemas.GetOpsMetadataResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.GetOpsMetadataResult_NextToken, v.NextToken)
+		case schemas.GetOpsMetadataResult_ResourceId:
+			v.ResourceId = new(string)
+			return d.ReadString(schemas.GetOpsMetadataResult_ResourceId, v.ResourceId)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationGetOpsMetadataMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpGetOpsMetadata{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetOpsMetadata, schemas.GetOpsMetadataRequest, schemas.GetOpsMetadataResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpGetOpsMetadata{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetOpsMetadata, schemas.GetOpsMetadataRequest, schemas.GetOpsMetadataResult), output: &GetOpsMetadataOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -85,19 +128,10 @@ func (c *Client) addOperationGetOpsMetadataMiddlewares(stack *middleware.Stack, 
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetOpsMetadataValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "GetOpsMetadata"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

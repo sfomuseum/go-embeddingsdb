@@ -4,18 +4,19 @@ package acm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Updates a certificate. You can use this function to specify whether to export
-// your certificate. Certificate transparency logging opt-out is no longer
-// available. For more information, see [Certificate Transparency Logging]and [Certificate Manager Exportable Managed Certificates].
+// Updates certificate options. You can use this operation to change the domain
+// validation method or specify whether to export your certificate. For more
+// information, see [Migrate from email to DNS validation]and [Certificate Manager Exportable Managed Certificates].
 //
 // [Certificate Manager Exportable Managed Certificates]: https://docs.aws.amazon.com/acm/latest/userguide/acm-exportable-certificates.html
-// [Certificate Transparency Logging]: https://docs.aws.amazon.com/acm/latest/userguide/acm-concepts.html#concept-transparency
+// [Migrate from email to DNS validation]: https://docs.aws.amazon.com/acm/latest/userguide/email-to-dns-migration.html
 func (c *Client) UpdateCertificateOptions(ctx context.Context, params *UpdateCertificateOptionsInput, optFns ...func(*Options)) (*UpdateCertificateOptionsOutput, error) {
 	if params == nil {
 		params = &UpdateCertificateOptionsInput{}
@@ -40,12 +41,11 @@ type UpdateCertificateOptionsInput struct {
 	// This member is required.
 	CertificateArn *string
 
-	// Use to update the options for your certificate. Currently, you can specify
-	// whether to export your certificate. Certificate transparency logging opt-out is
-	// no longer available. All public certificates are recorded in a certificate
-	// transparency log. For more information, see [Certificate Transparency Logging].
+	// Use to update the options for your certificate. Currently, you can change the
+	// domain validation method or specify whether to export your certificate. For more
+	// information about migrating from email to DNS validation, see [Migrate from email to DNS validation].
 	//
-	// [Certificate Transparency Logging]: https://docs.aws.amazon.com/acm/latest/userguide/acm-concepts.html#concept-transparency
+	// [Migrate from email to DNS validation]: https://docs.aws.amazon.com/acm/latest/userguide/email-to-dns-migration.html
 	//
 	// This member is required.
 	Options *types.CertificateOptions
@@ -53,6 +53,22 @@ type UpdateCertificateOptionsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *UpdateCertificateOptionsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.UpdateCertificateOptionsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *UpdateCertificateOptionsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CertificateArn != nil {
+		s.WriteString(schemas.UpdateCertificateOptionsRequest_CertificateArn, *v.CertificateArn)
+	}
+	if v.Options != nil {
+		s.WriteStruct(schemas.UpdateCertificateOptionsRequest_Options)
+		v.Options.SerializeMembers(s)
+		s.CloseStruct()
+	}
+}
 func (in *UpdateCertificateOptionsInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM")
@@ -65,22 +81,29 @@ type UpdateCertificateOptionsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *UpdateCertificateOptionsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(nil)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *UpdateCertificateOptionsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+}
+func (v *UpdateCertificateOptionsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, nil, func(s *smithy.Schema) error {
+		switch s {
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationUpdateCertificateOptionsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpUpdateCertificateOptions{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.UpdateCertificateOptions, schemas.UpdateCertificateOptionsRequest, nil)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpUpdateCertificateOptions{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.UpdateCertificateOptions, schemas.UpdateCertificateOptionsRequest, nil), output: &UpdateCertificateOptionsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -90,19 +113,10 @@ func (c *Client) addOperationUpdateCertificateOptionsMiddlewares(stack *middlewa
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpUpdateCertificateOptionsValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "UpdateCertificateOptions"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

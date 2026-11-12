@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Starts the workflow for just-in-time node access sessions.
@@ -43,6 +44,24 @@ type StartAccessRequestInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *StartAccessRequestInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.StartAccessRequestRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *StartAccessRequestInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Reason != nil {
+		s.WriteString(schemas.StartAccessRequestRequest_Reason, *v.Reason)
+	}
+	if v.Tags != nil {
+		serializeTagList(s, schemas.StartAccessRequestRequest_Tags, v.Tags)
+	}
+	if v.Targets != nil {
+		serializeTargets(s, schemas.StartAccessRequestRequest_Targets, v.Targets)
+	}
+}
+
 type StartAccessRequestOutput struct {
 
 	// The ID of the access request.
@@ -54,22 +73,35 @@ type StartAccessRequestOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *StartAccessRequestOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.StartAccessRequestResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *StartAccessRequestOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AccessRequestId != nil {
+		s.WriteString(schemas.StartAccessRequestResponse_AccessRequestId, *v.AccessRequestId)
+	}
+}
+func (v *StartAccessRequestOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.StartAccessRequestResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.StartAccessRequestResponse_AccessRequestId:
+			v.AccessRequestId = new(string)
+			return d.ReadString(schemas.StartAccessRequestResponse_AccessRequestId, v.AccessRequestId)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationStartAccessRequestMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpStartAccessRequest{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.StartAccessRequest, schemas.StartAccessRequestRequest, schemas.StartAccessRequestResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpStartAccessRequest{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.StartAccessRequest, schemas.StartAccessRequestRequest, schemas.StartAccessRequestResponse), output: &StartAccessRequestOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -79,19 +111,10 @@ func (c *Client) addOperationStartAccessRequestMiddlewares(stack *middleware.Sta
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpStartAccessRequestValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "StartAccessRequest"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

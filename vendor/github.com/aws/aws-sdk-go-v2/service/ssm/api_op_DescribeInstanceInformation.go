@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Provides information about one or more of your managed nodes, including the
@@ -66,6 +67,27 @@ type DescribeInstanceInformationInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeInstanceInformationInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeInstanceInformationRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeInstanceInformationInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Filters != nil {
+		serializeInstanceInformationStringFilterList(s, schemas.DescribeInstanceInformationRequest_Filters, v.Filters)
+	}
+	if v.InstanceInformationFilterList != nil {
+		serializeInstanceInformationFilterList(s, schemas.DescribeInstanceInformationRequest_InstanceInformationFilterList, v.InstanceInformationFilterList)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.DescribeInstanceInformationRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeInstanceInformationRequest_NextToken, *v.NextToken)
+	}
+}
+
 type DescribeInstanceInformationOutput struct {
 
 	// The managed node information list.
@@ -81,22 +103,40 @@ type DescribeInstanceInformationOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeInstanceInformationOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeInstanceInformationResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeInstanceInformationOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.InstanceInformationList != nil {
+		serializeInstanceInformationList(s, schemas.DescribeInstanceInformationResult_InstanceInformationList, v.InstanceInformationList)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeInstanceInformationResult_NextToken, *v.NextToken)
+	}
+}
+func (v *DescribeInstanceInformationOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DescribeInstanceInformationResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.DescribeInstanceInformationResult_InstanceInformationList:
+			return deserializeInstanceInformationList(d, schemas.DescribeInstanceInformationResult_InstanceInformationList, &v.InstanceInformationList)
+		case schemas.DescribeInstanceInformationResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.DescribeInstanceInformationResult_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDescribeInstanceInformationMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDescribeInstanceInformation{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeInstanceInformation, schemas.DescribeInstanceInformationRequest, schemas.DescribeInstanceInformationResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDescribeInstanceInformation{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeInstanceInformation, schemas.DescribeInstanceInformationRequest, schemas.DescribeInstanceInformationResult), output: &DescribeInstanceInformationOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -106,19 +146,10 @@ func (c *Client) addOperationDescribeInstanceInformationMiddlewares(stack *middl
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDescribeInstanceInformationValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DescribeInstanceInformation"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

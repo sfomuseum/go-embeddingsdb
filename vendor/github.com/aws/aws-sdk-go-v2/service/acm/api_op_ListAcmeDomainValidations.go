@@ -5,10 +5,11 @@ package acm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Retrieves a list of domain validations for the specified ACME endpoint.
@@ -43,6 +44,23 @@ type ListAcmeDomainValidationsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListAcmeDomainValidationsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListAcmeDomainValidationsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListAcmeDomainValidationsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcmeEndpointArn != nil {
+		s.WriteString(schemas.ListAcmeDomainValidationsRequest_AcmeEndpointArn, *v.AcmeEndpointArn)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.ListAcmeDomainValidationsRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListAcmeDomainValidationsRequest_NextToken, *v.NextToken)
+	}
+}
 func (in *ListAcmeDomainValidationsInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM-ACME")
@@ -62,22 +80,40 @@ type ListAcmeDomainValidationsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListAcmeDomainValidationsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListAcmeDomainValidationsResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListAcmeDomainValidationsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcmeDomainValidations != nil {
+		serializeAcmeDomainValidationList(s, schemas.ListAcmeDomainValidationsResponse_AcmeDomainValidations, v.AcmeDomainValidations)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListAcmeDomainValidationsResponse_NextToken, *v.NextToken)
+	}
+}
+func (v *ListAcmeDomainValidationsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ListAcmeDomainValidationsResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ListAcmeDomainValidationsResponse_AcmeDomainValidations:
+			return deserializeAcmeDomainValidationList(d, schemas.ListAcmeDomainValidationsResponse_AcmeDomainValidations, &v.AcmeDomainValidations)
+		case schemas.ListAcmeDomainValidationsResponse_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.ListAcmeDomainValidationsResponse_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationListAcmeDomainValidationsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpListAcmeDomainValidations{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListAcmeDomainValidations, schemas.ListAcmeDomainValidationsRequest, schemas.ListAcmeDomainValidationsResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpListAcmeDomainValidations{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListAcmeDomainValidations, schemas.ListAcmeDomainValidationsRequest, schemas.ListAcmeDomainValidationsResponse), output: &ListAcmeDomainValidationsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -87,19 +123,10 @@ func (c *Client) addOperationListAcmeDomainValidationsMiddlewares(stack *middlew
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpListAcmeDomainValidationsValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "ListAcmeDomainValidations"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

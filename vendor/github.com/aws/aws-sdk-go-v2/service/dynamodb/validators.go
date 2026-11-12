@@ -70,6 +70,26 @@ func (m *validateOpBatchWriteItem) HandleInitialize(ctx context.Context, in midd
 	return next.HandleInitialize(ctx, in)
 }
 
+type validateOpCancelBulkOperation struct {
+}
+
+func (*validateOpCancelBulkOperation) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpCancelBulkOperation) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*CancelBulkOperationInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpCancelBulkOperationInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
 type validateOpCreateBackup struct {
 }
 
@@ -225,6 +245,26 @@ func (m *validateOpDescribeBackup) HandleInitialize(ctx context.Context, in midd
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpDescribeBackupInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
+type validateOpDescribeBulkOperation struct {
+}
+
+func (*validateOpDescribeBulkOperation) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpDescribeBulkOperation) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*DescribeBulkOperationInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpDescribeBulkOperationInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -730,6 +770,46 @@ func (m *validateOpScan) HandleInitialize(ctx context.Context, in middleware.Ini
 	return next.HandleInitialize(ctx, in)
 }
 
+type validateOpSearchVectors struct {
+}
+
+func (*validateOpSearchVectors) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpSearchVectors) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*SearchVectorsInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpSearchVectorsInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
+type validateOpStartBulkPutItems struct {
+}
+
+func (*validateOpStartBulkPutItems) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpStartBulkPutItems) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*StartBulkPutItemsInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpStartBulkPutItemsInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
 type validateOpTagResource struct {
 }
 
@@ -1002,6 +1082,10 @@ func addOpBatchWriteItemValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpBatchWriteItem{}, middleware.After)
 }
 
+func addOpCancelBulkOperationValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpCancelBulkOperation{}, middleware.After)
+}
+
 func addOpCreateBackupValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpCreateBackup{}, middleware.After)
 }
@@ -1032,6 +1116,10 @@ func addOpDeleteTableValidationMiddleware(stack *middleware.Stack) error {
 
 func addOpDescribeBackupValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpDescribeBackup{}, middleware.After)
+}
+
+func addOpDescribeBulkOperationValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpDescribeBulkOperation{}, middleware.After)
 }
 
 func addOpDescribeContinuousBackupsValidationMiddleware(stack *middleware.Stack) error {
@@ -1132,6 +1220,14 @@ func addOpRestoreTableToPointInTimeValidationMiddleware(stack *middleware.Stack)
 
 func addOpScanValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpScan{}, middleware.After)
+}
+
+func addOpSearchVectorsValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpSearchVectors{}, middleware.After)
+}
+
+func addOpStartBulkPutItemsValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpStartBulkPutItems{}, middleware.After)
 }
 
 func addOpTagResourceValidationMiddleware(stack *middleware.Stack) error {
@@ -1438,6 +1534,42 @@ func validateCreateReplicationGroupMemberAction(v *types.CreateReplicationGroupM
 	}
 }
 
+func validateCreateVectorIndexAction(v *types.CreateVectorIndexAction) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "CreateVectorIndexAction"}
+	if v.IndexName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("IndexName"))
+	}
+	if v.VectorAttribute == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("VectorAttribute"))
+	} else if v.VectorAttribute != nil {
+		if err := validateVectorAttributeDefinition(v.VectorAttribute); err != nil {
+			invalidParams.AddNested("VectorAttribute", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.SearchSchema != nil {
+		if err := validateSearchSchema(v.SearchSchema); err != nil {
+			invalidParams.AddNested("SearchSchema", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.Projection == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Projection"))
+	}
+	if v.Dimensions == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Dimensions"))
+	}
+	if len(v.DistanceFunction) == 0 {
+		invalidParams.Add(smithy.NewErrParamRequired("DistanceFunction"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateDelete(v *types.Delete) error {
 	if v == nil {
 		return nil
@@ -1523,6 +1655,39 @@ func validateDeleteRequest(v *types.DeleteRequest) error {
 	invalidParams := smithy.InvalidParamsError{Context: "DeleteRequest"}
 	if v.Key == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("Key"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateDeleteVectorIndexAction(v *types.DeleteVectorIndexAction) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "DeleteVectorIndexAction"}
+	if v.IndexName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("IndexName"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateDisassociateReplicationGroupMemberAction(v *types.DisassociateReplicationGroupMemberAction) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "DisassociateReplicationGroupMemberAction"}
+	if v.RegionName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("RegionName"))
+	}
+	if len(v.DisassociationMode) == 0 {
+		invalidParams.Add(smithy.NewErrParamRequired("DisassociationMode"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -1768,6 +1933,24 @@ func validateGlobalTableWitnessGroupUpdateList(v []types.GlobalTableWitnessGroup
 	}
 }
 
+func validateInputS3Configuration(v *types.InputS3Configuration) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "InputS3Configuration"}
+	if v.S3Bucket == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("S3Bucket"))
+	}
+	if len(v.InputFormat) == 0 {
+		invalidParams.Add(smithy.NewErrParamRequired("InputFormat"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateKeyConditions(v map[string]types.Condition) error {
 	if v == nil {
 		return nil
@@ -1870,6 +2053,21 @@ func validateLocalSecondaryIndexList(v []types.LocalSecondaryIndex) error {
 		if err := validateLocalSecondaryIndex(&v[i]); err != nil {
 			invalidParams.AddNested(fmt.Sprintf("[%d]", i), err.(smithy.InvalidParamsError))
 		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOutputS3Configuration(v *types.OutputS3Configuration) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "OutputS3Configuration"}
+	if v.OutputType == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("OutputType"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -2200,6 +2398,11 @@ func validateReplicationGroupUpdate(v *types.ReplicationGroupUpdate) error {
 			invalidParams.AddNested("Delete", err.(smithy.InvalidParamsError))
 		}
 	}
+	if v.Disassociate != nil {
+		if err := validateDisassociateReplicationGroupMemberAction(v.Disassociate); err != nil {
+			invalidParams.AddNested("Disassociate", err.(smithy.InvalidParamsError))
+		}
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -2278,6 +2481,41 @@ func validateS3BucketSource(v *types.S3BucketSource) error {
 	}
 }
 
+func validateSearchSchema(v []types.SearchSchemaElement) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "SearchSchema"}
+	for i := range v {
+		if err := validateSearchSchemaElement(&v[i]); err != nil {
+			invalidParams.AddNested(fmt.Sprintf("[%d]", i), err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateSearchSchemaElement(v *types.SearchSchemaElement) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "SearchSchemaElement"}
+	if v.AttributeName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("AttributeName"))
+	}
+	if len(v.SearchSchemaElementType) == 0 {
+		invalidParams.Add(smithy.NewErrParamRequired("SearchSchemaElementType"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateStreamSpecification(v *types.StreamSpecification) error {
 	if v == nil {
 		return nil
@@ -2323,6 +2561,11 @@ func validateTableCreationParameters(v *types.TableCreationParameters) error {
 	if v.GlobalSecondaryIndexes != nil {
 		if err := validateGlobalSecondaryIndexList(v.GlobalSecondaryIndexes); err != nil {
 			invalidParams.AddNested("GlobalSecondaryIndexes", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.VectorIndexes != nil {
+		if err := validateVectorIndexList(v.VectorIndexes); err != nil {
+			invalidParams.AddNested("VectorIndexes", err.(smithy.InvalidParamsError))
 		}
 	}
 	if invalidParams.Len() > 0 {
@@ -2531,6 +2774,113 @@ func validateUpdateReplicationGroupMemberAction(v *types.UpdateReplicationGroupM
 	}
 }
 
+func validateVectorAttributeDefinition(v *types.VectorAttributeDefinition) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "VectorAttributeDefinition"}
+	if v.AttributeName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("AttributeName"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateVectorIndex(v *types.VectorIndex) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "VectorIndex"}
+	if v.IndexName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("IndexName"))
+	}
+	if v.VectorAttribute == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("VectorAttribute"))
+	} else if v.VectorAttribute != nil {
+		if err := validateVectorAttributeDefinition(v.VectorAttribute); err != nil {
+			invalidParams.AddNested("VectorAttribute", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.SearchSchema != nil {
+		if err := validateSearchSchema(v.SearchSchema); err != nil {
+			invalidParams.AddNested("SearchSchema", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.Projection == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Projection"))
+	}
+	if v.Dimensions == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Dimensions"))
+	}
+	if len(v.DistanceFunction) == 0 {
+		invalidParams.Add(smithy.NewErrParamRequired("DistanceFunction"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateVectorIndexList(v []types.VectorIndex) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "VectorIndexList"}
+	for i := range v {
+		if err := validateVectorIndex(&v[i]); err != nil {
+			invalidParams.AddNested(fmt.Sprintf("[%d]", i), err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateVectorIndexUpdate(v *types.VectorIndexUpdate) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "VectorIndexUpdate"}
+	if v.Create != nil {
+		if err := validateCreateVectorIndexAction(v.Create); err != nil {
+			invalidParams.AddNested("Create", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.Delete != nil {
+		if err := validateDeleteVectorIndexAction(v.Delete); err != nil {
+			invalidParams.AddNested("Delete", err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateVectorIndexUpdateList(v []types.VectorIndexUpdate) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "VectorIndexUpdateList"}
+	for i := range v {
+		if err := validateVectorIndexUpdate(&v[i]); err != nil {
+			invalidParams.AddNested(fmt.Sprintf("[%d]", i), err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateWriteRequest(v *types.WriteRequest) error {
 	if v == nil {
 		return nil
@@ -2627,6 +2977,21 @@ func validateOpBatchWriteItemInput(v *BatchWriteItemInput) error {
 	}
 }
 
+func validateOpCancelBulkOperationInput(v *CancelBulkOperationInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "CancelBulkOperationInput"}
+	if v.BulkOperationArn == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("BulkOperationArn"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateOpCreateBackupInput(v *CreateBackupInput) error {
 	if v == nil {
 		return nil
@@ -2706,6 +3071,11 @@ func validateOpCreateTableInput(v *CreateTableInput) error {
 			invalidParams.AddNested("Tags", err.(smithy.InvalidParamsError))
 		}
 	}
+	if v.VectorIndexes != nil {
+		if err := validateVectorIndexList(v.VectorIndexes); err != nil {
+			invalidParams.AddNested("VectorIndexes", err.(smithy.InvalidParamsError))
+		}
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -2783,6 +3153,21 @@ func validateOpDescribeBackupInput(v *DescribeBackupInput) error {
 	invalidParams := smithy.InvalidParamsError{Context: "DescribeBackupInput"}
 	if v.BackupArn == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("BackupArn"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOpDescribeBulkOperationInput(v *DescribeBulkOperationInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "DescribeBulkOperationInput"}
+	if v.BulkOperationArn == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("BulkOperationArn"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -3193,6 +3578,11 @@ func validateOpRestoreTableFromBackupInput(v *RestoreTableFromBackupInput) error
 			invalidParams.AddNested("ProvisionedThroughputOverride", err.(smithy.InvalidParamsError))
 		}
 	}
+	if v.VectorIndexOverride != nil {
+		if err := validateVectorIndexList(v.VectorIndexOverride); err != nil {
+			invalidParams.AddNested("VectorIndexOverride", err.(smithy.InvalidParamsError))
+		}
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -3223,6 +3613,11 @@ func validateOpRestoreTableToPointInTimeInput(v *RestoreTableToPointInTimeInput)
 			invalidParams.AddNested("ProvisionedThroughputOverride", err.(smithy.InvalidParamsError))
 		}
 	}
+	if v.VectorIndexOverride != nil {
+		if err := validateVectorIndexList(v.VectorIndexOverride); err != nil {
+			invalidParams.AddNested("VectorIndexOverride", err.(smithy.InvalidParamsError))
+		}
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -3242,6 +3637,59 @@ func validateOpScanInput(v *ScanInput) error {
 		if err := validateFilterConditionMap(v.ScanFilter); err != nil {
 			invalidParams.AddNested("ScanFilter", err.(smithy.InvalidParamsError))
 		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOpSearchVectorsInput(v *SearchVectorsInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "SearchVectorsInput"}
+	if v.TableName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TableName"))
+	}
+	if v.IndexName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("IndexName"))
+	}
+	if v.SearchVector == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("SearchVector"))
+	}
+	if v.TopK == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TopK"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOpStartBulkPutItemsInput(v *StartBulkPutItemsInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "StartBulkPutItemsInput"}
+	if v.InputS3Configuration == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("InputS3Configuration"))
+	} else if v.InputS3Configuration != nil {
+		if err := validateInputS3Configuration(v.InputS3Configuration); err != nil {
+			invalidParams.AddNested("InputS3Configuration", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.OutputS3Configuration == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("OutputS3Configuration"))
+	} else if v.OutputS3Configuration != nil {
+		if err := validateOutputS3Configuration(v.OutputS3Configuration); err != nil {
+			invalidParams.AddNested("OutputS3Configuration", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.TableName == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TableName"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -3492,6 +3940,11 @@ func validateOpUpdateTableInput(v *UpdateTableInput) error {
 	if v.GlobalTableWitnessUpdates != nil {
 		if err := validateGlobalTableWitnessGroupUpdateList(v.GlobalTableWitnessUpdates); err != nil {
 			invalidParams.AddNested("GlobalTableWitnessUpdates", err.(smithy.InvalidParamsError))
+		}
+	}
+	if v.VectorIndexUpdates != nil {
+		if err := validateVectorIndexUpdateList(v.VectorIndexUpdates); err != nil {
+			invalidParams.AddNested("VectorIndexUpdates", err.(smithy.InvalidParamsError))
 		}
 	}
 	if invalidParams.Len() > 0 {

@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Updates an existing cloud connector with new configuration details.
@@ -45,6 +46,27 @@ type UpdateCloudConnectorInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *UpdateCloudConnectorInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.UpdateCloudConnectorRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *UpdateCloudConnectorInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CloudConnectorId != nil {
+		s.WriteString(schemas.UpdateCloudConnectorRequest_CloudConnectorId, *v.CloudConnectorId)
+	}
+	if v.Configuration != nil {
+		serializeCloudConnectorConfiguration(s, schemas.UpdateCloudConnectorRequest_Configuration, v.Configuration)
+	}
+	if v.Description != nil {
+		s.WriteString(schemas.UpdateCloudConnectorRequest_Description, *v.Description)
+	}
+	if v.DisplayName != nil {
+		s.WriteString(schemas.UpdateCloudConnectorRequest_DisplayName, *v.DisplayName)
+	}
+}
+
 type UpdateCloudConnectorOutput struct {
 
 	// The ID of the cloud connector that was updated.
@@ -56,22 +78,35 @@ type UpdateCloudConnectorOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *UpdateCloudConnectorOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.UpdateCloudConnectorResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *UpdateCloudConnectorOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CloudConnectorId != nil {
+		s.WriteString(schemas.UpdateCloudConnectorResult_CloudConnectorId, *v.CloudConnectorId)
+	}
+}
+func (v *UpdateCloudConnectorOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.UpdateCloudConnectorResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.UpdateCloudConnectorResult_CloudConnectorId:
+			v.CloudConnectorId = new(string)
+			return d.ReadString(schemas.UpdateCloudConnectorResult_CloudConnectorId, v.CloudConnectorId)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationUpdateCloudConnectorMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpUpdateCloudConnector{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.UpdateCloudConnector, schemas.UpdateCloudConnectorRequest, schemas.UpdateCloudConnectorResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpUpdateCloudConnector{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.UpdateCloudConnector, schemas.UpdateCloudConnectorRequest, schemas.UpdateCloudConnectorResult), output: &UpdateCloudConnectorOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -81,19 +116,10 @@ func (c *Client) addOperationUpdateCloudConnectorMiddlewares(stack *middleware.S
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpUpdateCloudConnectorValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "UpdateCloudConnector"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

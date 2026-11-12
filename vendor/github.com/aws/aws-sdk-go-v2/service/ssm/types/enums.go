@@ -639,6 +639,25 @@ func (ConnectionStatus) Values() []ConnectionStatus {
 	}
 }
 
+type DeletionMode string
+
+// Enum values for DeletionMode
+const (
+	DeletionModeRemoveSharing     DeletionMode = "RemoveSharing"
+	DeletionModeRollbackMigration DeletionMode = "RollbackMigration"
+)
+
+// Values returns all known values for DeletionMode. Note that this can be
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (DeletionMode) Values() []DeletionMode {
+	return []DeletionMode{
+		"RemoveSharing",
+		"RollbackMigration",
+	}
+}
+
 type DescribeActivationsFilterKeys string
 
 // Enum values for DescribeActivationsFilterKeys
@@ -658,6 +677,25 @@ func (DescribeActivationsFilterKeys) Values() []DescribeActivationsFilterKeys {
 		"ActivationIds",
 		"DefaultInstanceName",
 		"IamRole",
+	}
+}
+
+type DHMCPermissionModel string
+
+// Enum values for DHMCPermissionModel
+const (
+	DHMCPermissionModelServiceManaged DHMCPermissionModel = "SERVICE_MANAGED"
+	DHMCPermissionModelSelfManaged    DHMCPermissionModel = "SELF_MANAGED"
+)
+
+// Values returns all known values for DHMCPermissionModel. Note that this can be
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (DHMCPermissionModel) Values() []DHMCPermissionModel {
+	return []DHMCPermissionModel{
+		"SERVICE_MANAGED",
+		"SELF_MANAGED",
 	}
 }
 

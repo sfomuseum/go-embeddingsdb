@@ -4,9 +4,10 @@ package acm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Exports a private certificate issued by a private certificate authority (CA) or
@@ -64,6 +65,20 @@ type ExportCertificateInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ExportCertificateInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ExportCertificateRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ExportCertificateInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CertificateArn != nil {
+		s.WriteString(schemas.ExportCertificateRequest_CertificateArn, *v.CertificateArn)
+	}
+	if v.Passphrase != nil {
+		s.WriteBlob(schemas.ExportCertificateRequest_Passphrase, v.Passphrase)
+	}
+}
 func (in *ExportCertificateInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM")
@@ -88,22 +103,47 @@ type ExportCertificateOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ExportCertificateOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ExportCertificateResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ExportCertificateOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Certificate != nil {
+		s.WriteString(schemas.ExportCertificateResponse_Certificate, *v.Certificate)
+	}
+	if v.CertificateChain != nil {
+		s.WriteString(schemas.ExportCertificateResponse_CertificateChain, *v.CertificateChain)
+	}
+	if v.PrivateKey != nil {
+		s.WriteString(schemas.ExportCertificateResponse_PrivateKey, *v.PrivateKey)
+	}
+}
+func (v *ExportCertificateOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ExportCertificateResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ExportCertificateResponse_Certificate:
+			v.Certificate = new(string)
+			return d.ReadString(schemas.ExportCertificateResponse_Certificate, v.Certificate)
+		case schemas.ExportCertificateResponse_CertificateChain:
+			v.CertificateChain = new(string)
+			return d.ReadString(schemas.ExportCertificateResponse_CertificateChain, v.CertificateChain)
+		case schemas.ExportCertificateResponse_PrivateKey:
+			v.PrivateKey = new(string)
+			return d.ReadString(schemas.ExportCertificateResponse_PrivateKey, v.PrivateKey)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationExportCertificateMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpExportCertificate{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ExportCertificate, schemas.ExportCertificateRequest, schemas.ExportCertificateResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpExportCertificate{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ExportCertificate, schemas.ExportCertificateRequest, schemas.ExportCertificateResponse), output: &ExportCertificateOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -113,19 +153,10 @@ func (c *Client) addOperationExportCertificateMiddlewares(stack *middleware.Stac
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpExportCertificateValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "ExportCertificate"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

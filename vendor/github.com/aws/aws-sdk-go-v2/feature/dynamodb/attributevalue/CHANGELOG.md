@@ -1,3 +1,227 @@
+# v1.21.21 (2026-11-10)
+
+* **Bug Fix**: Fix a panic in `Marshal` and `MarshalMap` when a typed nil pointer with a pointer-receiver `Marshaler` is held in an interface or is the inner pointer of a double pointer. These values are encoded as `AttributeValueMemberNULL` again.
+* **Dependency Update**: Update to smithy-go v1.28.9.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.20 (2026-11-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.19 (2026-11-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.18 (2026-11-04)
+
+* **Dependency Update**: Update to smithy-go v1.28.8.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.17 (2026-10-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.16 (2026-10-27)
+
+* **Dependency Update**: Update to smithy-go v1.28.7.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.15 (2026-10-22)
+
+* **Bug Fix**: Update smithy-go to v1.28.6
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.14 (2026-10-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.13 (2026-10-19)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.12 (2026-10-14)
+
+* **Bug Fix**: attributevalue marshal to AttributeValueMemberNULL with double pointer when outer pointer is not nil
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.11 (2026-10-09.2)
+
+* **Dependency Update**: Update to smithy-go v1.28.5.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.10 (2026-10-08)
+
+* **Dependency Update**: Update to smithy-go v1.28.4.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.9 (2026-10-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.8 (2026-09-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.7 (2026-09-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.6 (2026-09-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.5 (2026-09-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.4 (2026-09-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.3 (2026-09-04)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.2 (2026-08-31.2)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.1 (2026-08-28)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.21.0 (2026-08-27)
+
+* **Feature**: Support connection read timeouts in the SDK. This is currently available on an opt-in basis by setting env `AWS_ENABLE_DEFAULT_SOCKET_TIMEOUT_2026=true`.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.64 (2026-08-26)
+
+* **Dependency Update**: Update to smithy-go v1.28.0.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.63 (2026-08-25)
+
+* **Dependency Update**: Update to smithy-go v1.27.10.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.62 (2026-08-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.61 (2026-08-14)
+
+* **Dependency Update**: Update to smithy-go v1.27.8.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.60 (2026-08-10)
+
+* **Dependency Update**: Update to smithy-go v1.27.7.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.59 (2026-08-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.58 (2026-08-04)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.57 (2026-07-31.2)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+* **Dependency Update**: Upgrade to smithy-go v1.27.6 to fix various serde issues in HTTP binding services.
+
+# v1.20.56 (2026-07-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.55 (2026-07-28)
+
+* **Dependency Update**: Update to smithy-go v1.27.5.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.54 (2026-07-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.53 (2026-07-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.52 (2026-07-13)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.51 (2026-07-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.50 (2026-07-01)
+
+* **Bug Fix**: Bump smithy-go to 1.27.3, fix JSON encorder for document.Number, endpoint host label format validation and CBOR union serialization on new serde
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.49 (2026-06-29)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.48 (2026-06-09)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.47 (2026-06-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.46 (2026-06-05)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.45 (2026-06-04)
+
+* **Dependency Update**: Update to smithy-go v1.27.1 to fix several union-related deserialization bugs in schema-serde-enabled services.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.44 (2026-06-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.43 (2026-06-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.42 (2026-05-29)
+
+* **Dependency Update**: Update to smithy-go v1.26.0.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.41 (2026-05-28)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.40 (2026-05-22)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.39 (2026-04-29)
+
+* **Dependency Update**: Update to smithy-go v1.25.1.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.38 (2026-04-17)
+
+* **Dependency Update**: Bump smithy-go to 1.25.0 to support endpointBdd trait
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.37 (2026-03-26)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.20.36 (2026-03-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.20.35 (2026-03-13)
 
 * **Bug Fix**: Fix documentation typo.

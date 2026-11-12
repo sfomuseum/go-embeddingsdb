@@ -5,10 +5,11 @@ package acm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Creates an external account binding (EAB) for an ACME endpoint. An EAB provides
@@ -55,6 +56,31 @@ type CreateAcmeExternalAccountBindingInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *CreateAcmeExternalAccountBindingInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.CreateAcmeExternalAccountBindingRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *CreateAcmeExternalAccountBindingInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcmeEndpointArn != nil {
+		s.WriteString(schemas.CreateAcmeExternalAccountBindingRequest_AcmeEndpointArn, *v.AcmeEndpointArn)
+	}
+	if v.Expiration != nil {
+		s.WriteStruct(schemas.CreateAcmeExternalAccountBindingRequest_Expiration)
+		v.Expiration.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.IdempotencyToken != nil {
+		s.WriteString(schemas.CreateAcmeExternalAccountBindingRequest_IdempotencyToken, *v.IdempotencyToken)
+	}
+	if v.RoleArn != nil {
+		s.WriteString(schemas.CreateAcmeExternalAccountBindingRequest_RoleArn, *v.RoleArn)
+	}
+	if v.Tags != nil {
+		serializeTagList(s, schemas.CreateAcmeExternalAccountBindingRequest_Tags, v.Tags)
+	}
+}
 func (in *CreateAcmeExternalAccountBindingInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM-ACME")
@@ -71,22 +97,37 @@ type CreateAcmeExternalAccountBindingOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *CreateAcmeExternalAccountBindingOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.CreateAcmeExternalAccountBindingResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *CreateAcmeExternalAccountBindingOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.ExternalAccountBinding != nil {
+		s.WriteStruct(schemas.CreateAcmeExternalAccountBindingResponse_ExternalAccountBinding)
+		v.ExternalAccountBinding.SerializeMembers(s)
+		s.CloseStruct()
+	}
+}
+func (v *CreateAcmeExternalAccountBindingOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.CreateAcmeExternalAccountBindingResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.CreateAcmeExternalAccountBindingResponse_ExternalAccountBinding:
+			v.ExternalAccountBinding = &types.AcmeExternalAccountBinding{}
+			return v.ExternalAccountBinding.Deserialize(d)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationCreateAcmeExternalAccountBindingMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpCreateAcmeExternalAccountBinding{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.CreateAcmeExternalAccountBinding, schemas.CreateAcmeExternalAccountBindingRequest, schemas.CreateAcmeExternalAccountBindingResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpCreateAcmeExternalAccountBinding{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.CreateAcmeExternalAccountBinding, schemas.CreateAcmeExternalAccountBindingRequest, schemas.CreateAcmeExternalAccountBindingResponse), output: &CreateAcmeExternalAccountBindingOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -96,12 +137,6 @@ func (c *Client) addOperationCreateAcmeExternalAccountBindingMiddlewares(stack *
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
@@ -109,9 +144,6 @@ func (c *Client) addOperationCreateAcmeExternalAccountBindingMiddlewares(stack *
 		return err
 	}
 	if err = addOpCreateAcmeExternalAccountBindingValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "CreateAcmeExternalAccountBinding"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

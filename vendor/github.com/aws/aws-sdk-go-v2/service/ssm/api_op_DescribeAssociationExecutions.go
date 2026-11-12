@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Views all executions for a specific association ID.
@@ -52,6 +53,27 @@ type DescribeAssociationExecutionsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeAssociationExecutionsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeAssociationExecutionsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeAssociationExecutionsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AssociationId != nil {
+		s.WriteString(schemas.DescribeAssociationExecutionsRequest_AssociationId, *v.AssociationId)
+	}
+	if v.Filters != nil {
+		serializeAssociationExecutionFilterList(s, schemas.DescribeAssociationExecutionsRequest_Filters, v.Filters)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.DescribeAssociationExecutionsRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeAssociationExecutionsRequest_NextToken, *v.NextToken)
+	}
+}
+
 type DescribeAssociationExecutionsOutput struct {
 
 	// A list of the executions for the specified association ID.
@@ -67,22 +89,40 @@ type DescribeAssociationExecutionsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeAssociationExecutionsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeAssociationExecutionsResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeAssociationExecutionsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AssociationExecutions != nil {
+		serializeAssociationExecutionsList(s, schemas.DescribeAssociationExecutionsResult_AssociationExecutions, v.AssociationExecutions)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeAssociationExecutionsResult_NextToken, *v.NextToken)
+	}
+}
+func (v *DescribeAssociationExecutionsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DescribeAssociationExecutionsResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.DescribeAssociationExecutionsResult_AssociationExecutions:
+			return deserializeAssociationExecutionsList(d, schemas.DescribeAssociationExecutionsResult_AssociationExecutions, &v.AssociationExecutions)
+		case schemas.DescribeAssociationExecutionsResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.DescribeAssociationExecutionsResult_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDescribeAssociationExecutionsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDescribeAssociationExecutions{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeAssociationExecutions, schemas.DescribeAssociationExecutionsRequest, schemas.DescribeAssociationExecutionsResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDescribeAssociationExecutions{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeAssociationExecutions, schemas.DescribeAssociationExecutionsRequest, schemas.DescribeAssociationExecutionsResult), output: &DescribeAssociationExecutionsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -92,19 +132,10 @@ func (c *Client) addOperationDescribeAssociationExecutionsMiddlewares(stack *mid
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDescribeAssociationExecutionsValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DescribeAssociationExecutions"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

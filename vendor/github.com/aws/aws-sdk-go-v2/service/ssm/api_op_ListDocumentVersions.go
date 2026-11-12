@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // List all versions for a document.
@@ -44,6 +45,24 @@ type ListDocumentVersionsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListDocumentVersionsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListDocumentVersionsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListDocumentVersionsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.ListDocumentVersionsRequest_MaxResults, *v.MaxResults)
+	}
+	if v.Name != nil {
+		s.WriteString(schemas.ListDocumentVersionsRequest_Name, *v.Name)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListDocumentVersionsRequest_NextToken, *v.NextToken)
+	}
+}
+
 type ListDocumentVersionsOutput struct {
 
 	// The document versions.
@@ -59,22 +78,40 @@ type ListDocumentVersionsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListDocumentVersionsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListDocumentVersionsResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListDocumentVersionsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.DocumentVersions != nil {
+		serializeDocumentVersionList(s, schemas.ListDocumentVersionsResult_DocumentVersions, v.DocumentVersions)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListDocumentVersionsResult_NextToken, *v.NextToken)
+	}
+}
+func (v *ListDocumentVersionsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ListDocumentVersionsResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ListDocumentVersionsResult_DocumentVersions:
+			return deserializeDocumentVersionList(d, schemas.ListDocumentVersionsResult_DocumentVersions, &v.DocumentVersions)
+		case schemas.ListDocumentVersionsResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.ListDocumentVersionsResult_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationListDocumentVersionsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpListDocumentVersions{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListDocumentVersions, schemas.ListDocumentVersionsRequest, schemas.ListDocumentVersionsResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpListDocumentVersions{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListDocumentVersions, schemas.ListDocumentVersionsRequest, schemas.ListDocumentVersionsResult), output: &ListDocumentVersionsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -84,19 +121,10 @@ func (c *Client) addOperationListDocumentVersionsMiddlewares(stack *middleware.S
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpListDocumentVersionsValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "ListDocumentVersions"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Retrieves the Session Manager connection status for a managed node to determine
@@ -36,6 +37,18 @@ type GetConnectionStatusInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetConnectionStatusInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetConnectionStatusRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetConnectionStatusInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Target != nil {
+		s.WriteString(schemas.GetConnectionStatusRequest_Target, *v.Target)
+	}
+}
+
 type GetConnectionStatusOutput struct {
 
 	// The status of the connection to the managed node.
@@ -50,22 +63,45 @@ type GetConnectionStatusOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetConnectionStatusOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetConnectionStatusResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetConnectionStatusOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Status != "" {
+		s.WriteString(schemas.GetConnectionStatusResponse_Status, string(v.Status))
+	}
+	if v.Target != nil {
+		s.WriteString(schemas.GetConnectionStatusResponse_Target, *v.Target)
+	}
+}
+func (v *GetConnectionStatusOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.GetConnectionStatusResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.GetConnectionStatusResponse_Status:
+			var ev string
+			if err := d.ReadString(schemas.GetConnectionStatusResponse_Status, &ev); err != nil {
+				return err
+			}
+			v.Status = types.ConnectionStatus(ev)
+			return nil
+		case schemas.GetConnectionStatusResponse_Target:
+			v.Target = new(string)
+			return d.ReadString(schemas.GetConnectionStatusResponse_Target, v.Target)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationGetConnectionStatusMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpGetConnectionStatus{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetConnectionStatus, schemas.GetConnectionStatusRequest, schemas.GetConnectionStatusResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpGetConnectionStatus{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetConnectionStatus, schemas.GetConnectionStatusRequest, schemas.GetConnectionStatusResponse), output: &GetConnectionStatusOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -75,19 +111,10 @@ func (c *Client) addOperationGetConnectionStatusMiddlewares(stack *middleware.St
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetConnectionStatusValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "GetConnectionStatus"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

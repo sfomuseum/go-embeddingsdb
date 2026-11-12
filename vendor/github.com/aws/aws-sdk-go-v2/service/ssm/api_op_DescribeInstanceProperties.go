@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // An API operation used by the Systems Manager console to display information
@@ -46,6 +47,27 @@ type DescribeInstancePropertiesInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeInstancePropertiesInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeInstancePropertiesRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeInstancePropertiesInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.FiltersWithOperator != nil {
+		serializeInstancePropertyStringFilterList(s, schemas.DescribeInstancePropertiesRequest_FiltersWithOperator, v.FiltersWithOperator)
+	}
+	if v.InstancePropertyFilterList != nil {
+		serializeInstancePropertyFilterList(s, schemas.DescribeInstancePropertiesRequest_InstancePropertyFilterList, v.InstancePropertyFilterList)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.DescribeInstancePropertiesRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeInstancePropertiesRequest_NextToken, *v.NextToken)
+	}
+}
+
 type DescribeInstancePropertiesOutput struct {
 
 	// Properties for the managed instances.
@@ -61,22 +83,40 @@ type DescribeInstancePropertiesOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeInstancePropertiesOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeInstancePropertiesResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeInstancePropertiesOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.InstanceProperties != nil {
+		serializeInstanceProperties(s, schemas.DescribeInstancePropertiesResult_InstanceProperties, v.InstanceProperties)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeInstancePropertiesResult_NextToken, *v.NextToken)
+	}
+}
+func (v *DescribeInstancePropertiesOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DescribeInstancePropertiesResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.DescribeInstancePropertiesResult_InstanceProperties:
+			return deserializeInstanceProperties(d, schemas.DescribeInstancePropertiesResult_InstanceProperties, &v.InstanceProperties)
+		case schemas.DescribeInstancePropertiesResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.DescribeInstancePropertiesResult_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDescribeInstancePropertiesMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDescribeInstanceProperties{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeInstanceProperties, schemas.DescribeInstancePropertiesRequest, schemas.DescribeInstancePropertiesResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDescribeInstanceProperties{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeInstanceProperties, schemas.DescribeInstancePropertiesRequest, schemas.DescribeInstancePropertiesResult), output: &DescribeInstancePropertiesOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -86,19 +126,10 @@ func (c *Client) addOperationDescribeInstancePropertiesMiddlewares(stack *middle
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDescribeInstancePropertiesValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DescribeInstanceProperties"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

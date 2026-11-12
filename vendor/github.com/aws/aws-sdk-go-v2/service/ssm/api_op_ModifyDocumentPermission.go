@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Shares a Amazon Web Services Systems Manager document (SSM document)publicly or
@@ -59,6 +60,30 @@ type ModifyDocumentPermissionInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ModifyDocumentPermissionInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ModifyDocumentPermissionRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ModifyDocumentPermissionInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AccountIdsToAdd != nil {
+		serializeAccountIdList(s, schemas.ModifyDocumentPermissionRequest_AccountIdsToAdd, v.AccountIdsToAdd)
+	}
+	if v.AccountIdsToRemove != nil {
+		serializeAccountIdList(s, schemas.ModifyDocumentPermissionRequest_AccountIdsToRemove, v.AccountIdsToRemove)
+	}
+	if v.Name != nil {
+		s.WriteString(schemas.ModifyDocumentPermissionRequest_Name, *v.Name)
+	}
+	if v.PermissionType != "" {
+		s.WriteString(schemas.ModifyDocumentPermissionRequest_PermissionType, string(v.PermissionType))
+	}
+	if v.SharedDocumentVersion != nil {
+		s.WriteString(schemas.ModifyDocumentPermissionRequest_SharedDocumentVersion, *v.SharedDocumentVersion)
+	}
+}
+
 type ModifyDocumentPermissionOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -66,22 +91,29 @@ type ModifyDocumentPermissionOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ModifyDocumentPermissionOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ModifyDocumentPermissionResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ModifyDocumentPermissionOutput) SerializeMembers(s smithy.ShapeSerializer) {
+}
+func (v *ModifyDocumentPermissionOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ModifyDocumentPermissionResponse, func(s *smithy.Schema) error {
+		switch s {
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationModifyDocumentPermissionMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpModifyDocumentPermission{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ModifyDocumentPermission, schemas.ModifyDocumentPermissionRequest, schemas.ModifyDocumentPermissionResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpModifyDocumentPermission{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ModifyDocumentPermission, schemas.ModifyDocumentPermissionRequest, schemas.ModifyDocumentPermissionResponse), output: &ModifyDocumentPermissionOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -91,19 +123,10 @@ func (c *Client) addOperationModifyDocumentPermissionMiddlewares(stack *middlewa
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpModifyDocumentPermissionValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "ModifyDocumentPermission"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

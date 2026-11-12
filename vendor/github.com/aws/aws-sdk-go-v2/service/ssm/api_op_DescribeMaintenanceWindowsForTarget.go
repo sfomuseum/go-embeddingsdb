@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Retrieves information about the maintenance window targets or tasks that a
@@ -51,6 +52,27 @@ type DescribeMaintenanceWindowsForTargetInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeMaintenanceWindowsForTargetInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeMaintenanceWindowsForTargetRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeMaintenanceWindowsForTargetInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.DescribeMaintenanceWindowsForTargetRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeMaintenanceWindowsForTargetRequest_NextToken, *v.NextToken)
+	}
+	if v.ResourceType != "" {
+		s.WriteString(schemas.DescribeMaintenanceWindowsForTargetRequest_ResourceType, string(v.ResourceType))
+	}
+	if v.Targets != nil {
+		serializeTargets(s, schemas.DescribeMaintenanceWindowsForTargetRequest_Targets, v.Targets)
+	}
+}
+
 type DescribeMaintenanceWindowsForTargetOutput struct {
 
 	// The token for the next set of items to return. (You use this token in the next
@@ -67,22 +89,40 @@ type DescribeMaintenanceWindowsForTargetOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeMaintenanceWindowsForTargetOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeMaintenanceWindowsForTargetResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeMaintenanceWindowsForTargetOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeMaintenanceWindowsForTargetResult_NextToken, *v.NextToken)
+	}
+	if v.WindowIdentities != nil {
+		serializeMaintenanceWindowsForTargetList(s, schemas.DescribeMaintenanceWindowsForTargetResult_WindowIdentities, v.WindowIdentities)
+	}
+}
+func (v *DescribeMaintenanceWindowsForTargetOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DescribeMaintenanceWindowsForTargetResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.DescribeMaintenanceWindowsForTargetResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.DescribeMaintenanceWindowsForTargetResult_NextToken, v.NextToken)
+		case schemas.DescribeMaintenanceWindowsForTargetResult_WindowIdentities:
+			return deserializeMaintenanceWindowsForTargetList(d, schemas.DescribeMaintenanceWindowsForTargetResult_WindowIdentities, &v.WindowIdentities)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDescribeMaintenanceWindowsForTargetMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDescribeMaintenanceWindowsForTarget{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeMaintenanceWindowsForTarget, schemas.DescribeMaintenanceWindowsForTargetRequest, schemas.DescribeMaintenanceWindowsForTargetResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDescribeMaintenanceWindowsForTarget{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeMaintenanceWindowsForTarget, schemas.DescribeMaintenanceWindowsForTargetRequest, schemas.DescribeMaintenanceWindowsForTargetResult), output: &DescribeMaintenanceWindowsForTargetOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -92,19 +132,10 @@ func (c *Client) addOperationDescribeMaintenanceWindowsForTargetMiddlewares(stac
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDescribeMaintenanceWindowsForTargetValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DescribeMaintenanceWindowsForTarget"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

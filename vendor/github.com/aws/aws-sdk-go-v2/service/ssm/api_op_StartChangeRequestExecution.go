@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"time"
 )
 
@@ -115,6 +116,48 @@ type StartChangeRequestExecutionInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *StartChangeRequestExecutionInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.StartChangeRequestExecutionRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *StartChangeRequestExecutionInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AutoApprove != false {
+		s.WriteBool(schemas.StartChangeRequestExecutionRequest_AutoApprove, v.AutoApprove)
+	}
+	if v.ChangeDetails != nil {
+		s.WriteString(schemas.StartChangeRequestExecutionRequest_ChangeDetails, *v.ChangeDetails)
+	}
+	if v.ChangeRequestName != nil {
+		s.WriteString(schemas.StartChangeRequestExecutionRequest_ChangeRequestName, *v.ChangeRequestName)
+	}
+	if v.ClientToken != nil {
+		s.WriteString(schemas.StartChangeRequestExecutionRequest_ClientToken, *v.ClientToken)
+	}
+	if v.DocumentName != nil {
+		s.WriteString(schemas.StartChangeRequestExecutionRequest_DocumentName, *v.DocumentName)
+	}
+	if v.DocumentVersion != nil {
+		s.WriteString(schemas.StartChangeRequestExecutionRequest_DocumentVersion, *v.DocumentVersion)
+	}
+	if v.Parameters != nil {
+		serializeAutomationParameterMap(s, schemas.StartChangeRequestExecutionRequest_Parameters, v.Parameters)
+	}
+	if v.Runbooks != nil {
+		serializeRunbooks(s, schemas.StartChangeRequestExecutionRequest_Runbooks, v.Runbooks)
+	}
+	if v.ScheduledEndTime != nil {
+		s.WriteTime(schemas.StartChangeRequestExecutionRequest_ScheduledEndTime, *v.ScheduledEndTime)
+	}
+	if v.ScheduledTime != nil {
+		s.WriteTime(schemas.StartChangeRequestExecutionRequest_ScheduledTime, *v.ScheduledTime)
+	}
+	if v.Tags != nil {
+		serializeTagList(s, schemas.StartChangeRequestExecutionRequest_Tags, v.Tags)
+	}
+}
+
 type StartChangeRequestExecutionOutput struct {
 
 	// The unique ID of a runbook workflow operation. (A runbook workflow is a type of
@@ -127,22 +170,35 @@ type StartChangeRequestExecutionOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *StartChangeRequestExecutionOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.StartChangeRequestExecutionResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *StartChangeRequestExecutionOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AutomationExecutionId != nil {
+		s.WriteString(schemas.StartChangeRequestExecutionResult_AutomationExecutionId, *v.AutomationExecutionId)
+	}
+}
+func (v *StartChangeRequestExecutionOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.StartChangeRequestExecutionResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.StartChangeRequestExecutionResult_AutomationExecutionId:
+			v.AutomationExecutionId = new(string)
+			return d.ReadString(schemas.StartChangeRequestExecutionResult_AutomationExecutionId, v.AutomationExecutionId)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationStartChangeRequestExecutionMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpStartChangeRequestExecution{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.StartChangeRequestExecution, schemas.StartChangeRequestExecutionRequest, schemas.StartChangeRequestExecutionResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpStartChangeRequestExecution{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.StartChangeRequestExecution, schemas.StartChangeRequestExecutionRequest, schemas.StartChangeRequestExecutionResult), output: &StartChangeRequestExecutionOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -152,19 +208,10 @@ func (c *Client) addOperationStartChangeRequestExecutionMiddlewares(stack *middl
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpStartChangeRequestExecutionValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "StartChangeRequestExecution"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

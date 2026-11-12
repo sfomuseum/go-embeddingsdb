@@ -4,8 +4,9 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Deletes a resource data sync configuration. After the configuration is deleted,
@@ -39,6 +40,21 @@ type DeleteResourceDataSyncInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DeleteResourceDataSyncInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DeleteResourceDataSyncRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DeleteResourceDataSyncInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.SyncName != nil {
+		s.WriteString(schemas.DeleteResourceDataSyncRequest_SyncName, *v.SyncName)
+	}
+	if v.SyncType != nil {
+		s.WriteString(schemas.DeleteResourceDataSyncRequest_SyncType, *v.SyncType)
+	}
+}
+
 type DeleteResourceDataSyncOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -46,22 +62,29 @@ type DeleteResourceDataSyncOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DeleteResourceDataSyncOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DeleteResourceDataSyncResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DeleteResourceDataSyncOutput) SerializeMembers(s smithy.ShapeSerializer) {
+}
+func (v *DeleteResourceDataSyncOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DeleteResourceDataSyncResult, func(s *smithy.Schema) error {
+		switch s {
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDeleteResourceDataSyncMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDeleteResourceDataSync{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DeleteResourceDataSync, schemas.DeleteResourceDataSyncRequest, schemas.DeleteResourceDataSyncResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDeleteResourceDataSync{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DeleteResourceDataSync, schemas.DeleteResourceDataSyncRequest, schemas.DeleteResourceDataSyncResult), output: &DeleteResourceDataSyncOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -71,19 +94,10 @@ func (c *Client) addOperationDeleteResourceDataSyncMiddlewares(stack *middleware
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDeleteResourceDataSyncValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DeleteResourceDataSync"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

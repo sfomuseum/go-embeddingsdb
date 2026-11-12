@@ -5,10 +5,11 @@ package acm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Retrieves a list of certificate ARNs and domain names. You can request that
@@ -69,6 +70,37 @@ type ListCertificatesInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListCertificatesInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListCertificatesRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListCertificatesInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CertificateKeyPairOrigins != nil {
+		serializeCertificateKeyPairOrigins(s, schemas.ListCertificatesRequest_CertificateKeyPairOrigins, v.CertificateKeyPairOrigins)
+	}
+	if v.CertificateStatuses != nil {
+		serializeCertificateStatuses(s, schemas.ListCertificatesRequest_CertificateStatuses, v.CertificateStatuses)
+	}
+	if v.Includes != nil {
+		s.WriteStruct(schemas.ListCertificatesRequest_Includes)
+		v.Includes.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.MaxItems != nil {
+		s.WriteInt32(schemas.ListCertificatesRequest_MaxItems, *v.MaxItems)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListCertificatesRequest_NextToken, *v.NextToken)
+	}
+	if v.SortBy != "" {
+		s.WriteString(schemas.ListCertificatesRequest_SortBy, string(v.SortBy))
+	}
+	if v.SortOrder != "" {
+		s.WriteString(schemas.ListCertificatesRequest_SortOrder, string(v.SortOrder))
+	}
+}
 func (in *ListCertificatesInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM")
@@ -89,22 +121,40 @@ type ListCertificatesOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListCertificatesOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListCertificatesResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListCertificatesOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CertificateSummaryList != nil {
+		serializeCertificateSummaryList(s, schemas.ListCertificatesResponse_CertificateSummaryList, v.CertificateSummaryList)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListCertificatesResponse_NextToken, *v.NextToken)
+	}
+}
+func (v *ListCertificatesOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ListCertificatesResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ListCertificatesResponse_CertificateSummaryList:
+			return deserializeCertificateSummaryList(d, schemas.ListCertificatesResponse_CertificateSummaryList, &v.CertificateSummaryList)
+		case schemas.ListCertificatesResponse_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.ListCertificatesResponse_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationListCertificatesMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpListCertificates{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListCertificates, schemas.ListCertificatesRequest, schemas.ListCertificatesResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpListCertificates{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListCertificates, schemas.ListCertificatesRequest, schemas.ListCertificatesResponse), output: &ListCertificatesOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -114,16 +164,7 @@ func (c *Client) addOperationListCertificatesMiddlewares(stack *middleware.Stack
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "ListCertificates"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

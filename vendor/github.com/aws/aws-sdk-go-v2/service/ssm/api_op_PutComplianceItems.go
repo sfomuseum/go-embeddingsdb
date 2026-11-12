@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Registers a compliance type and other compliance details on a designated
@@ -127,6 +128,38 @@ type PutComplianceItemsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *PutComplianceItemsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.PutComplianceItemsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *PutComplianceItemsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.ComplianceType != nil {
+		s.WriteString(schemas.PutComplianceItemsRequest_ComplianceType, *v.ComplianceType)
+	}
+	if v.ExecutionSummary != nil {
+		s.WriteStruct(schemas.PutComplianceItemsRequest_ExecutionSummary)
+		v.ExecutionSummary.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.ItemContentHash != nil {
+		s.WriteString(schemas.PutComplianceItemsRequest_ItemContentHash, *v.ItemContentHash)
+	}
+	if v.Items != nil {
+		serializeComplianceItemEntryList(s, schemas.PutComplianceItemsRequest_Items, v.Items)
+	}
+	if v.ResourceId != nil {
+		s.WriteString(schemas.PutComplianceItemsRequest_ResourceId, *v.ResourceId)
+	}
+	if v.ResourceType != nil {
+		s.WriteString(schemas.PutComplianceItemsRequest_ResourceType, *v.ResourceType)
+	}
+	if v.UploadType != "" {
+		s.WriteString(schemas.PutComplianceItemsRequest_UploadType, string(v.UploadType))
+	}
+}
+
 type PutComplianceItemsOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -134,22 +167,29 @@ type PutComplianceItemsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *PutComplianceItemsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.PutComplianceItemsResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *PutComplianceItemsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+}
+func (v *PutComplianceItemsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.PutComplianceItemsResult, func(s *smithy.Schema) error {
+		switch s {
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationPutComplianceItemsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpPutComplianceItems{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.PutComplianceItems, schemas.PutComplianceItemsRequest, schemas.PutComplianceItemsResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpPutComplianceItems{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.PutComplianceItems, schemas.PutComplianceItemsRequest, schemas.PutComplianceItemsResult), output: &PutComplianceItemsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -159,19 +199,10 @@ func (c *Client) addOperationPutComplianceItemsMiddlewares(stack *middleware.Sta
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpPutComplianceItemsValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "PutComplianceItems"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

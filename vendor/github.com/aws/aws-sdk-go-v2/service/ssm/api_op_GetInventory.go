@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Query inventory information. This includes managed node status, such as Stopped
@@ -52,6 +53,30 @@ type GetInventoryInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetInventoryInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetInventoryRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetInventoryInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Aggregators != nil {
+		serializeInventoryAggregatorList(s, schemas.GetInventoryRequest_Aggregators, v.Aggregators)
+	}
+	if v.Filters != nil {
+		serializeInventoryFilterList(s, schemas.GetInventoryRequest_Filters, v.Filters)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.GetInventoryRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.GetInventoryRequest_NextToken, *v.NextToken)
+	}
+	if v.ResultAttributes != nil {
+		serializeResultAttributeList(s, schemas.GetInventoryRequest_ResultAttributes, v.ResultAttributes)
+	}
+}
+
 type GetInventoryOutput struct {
 
 	// Collection of inventory entities such as a collection of managed node
@@ -68,22 +93,40 @@ type GetInventoryOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *GetInventoryOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.GetInventoryResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *GetInventoryOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Entities != nil {
+		serializeInventoryResultEntityList(s, schemas.GetInventoryResult_Entities, v.Entities)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.GetInventoryResult_NextToken, *v.NextToken)
+	}
+}
+func (v *GetInventoryOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.GetInventoryResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.GetInventoryResult_Entities:
+			return deserializeInventoryResultEntityList(d, schemas.GetInventoryResult_Entities, &v.Entities)
+		case schemas.GetInventoryResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.GetInventoryResult_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationGetInventoryMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpGetInventory{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetInventory, schemas.GetInventoryRequest, schemas.GetInventoryResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpGetInventory{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.GetInventory, schemas.GetInventoryRequest, schemas.GetInventoryResult), output: &GetInventoryOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -93,19 +136,10 @@ func (c *Client) addOperationGetInventoryMiddlewares(stack *middleware.Stack, op
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpGetInventoryValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "GetInventory"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

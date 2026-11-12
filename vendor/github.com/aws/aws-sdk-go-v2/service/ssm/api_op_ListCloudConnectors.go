@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Returns a list of cloud connectors in the current Amazon Web Services account
@@ -42,6 +43,24 @@ type ListCloudConnectorsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListCloudConnectorsInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListCloudConnectorsRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListCloudConnectorsInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Filters != nil {
+		serializeCloudConnectorFilterList(s, schemas.ListCloudConnectorsRequest_Filters, v.Filters)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.ListCloudConnectorsRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListCloudConnectorsRequest_NextToken, *v.NextToken)
+	}
+}
+
 type ListCloudConnectorsOutput struct {
 
 	// A list of cloud connector summary objects.
@@ -56,22 +75,40 @@ type ListCloudConnectorsOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *ListCloudConnectorsOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ListCloudConnectorsResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ListCloudConnectorsOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CloudConnectors != nil {
+		serializeCloudConnectorSummaryList(s, schemas.ListCloudConnectorsResult_CloudConnectors, v.CloudConnectors)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.ListCloudConnectorsResult_NextToken, *v.NextToken)
+	}
+}
+func (v *ListCloudConnectorsOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ListCloudConnectorsResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ListCloudConnectorsResult_CloudConnectors:
+			return deserializeCloudConnectorSummaryList(d, schemas.ListCloudConnectorsResult_CloudConnectors, &v.CloudConnectors)
+		case schemas.ListCloudConnectorsResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.ListCloudConnectorsResult_NextToken, v.NextToken)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationListCloudConnectorsMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpListCloudConnectors{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListCloudConnectors, schemas.ListCloudConnectorsRequest, schemas.ListCloudConnectorsResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpListCloudConnectors{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.ListCloudConnectors, schemas.ListCloudConnectorsRequest, schemas.ListCloudConnectorsResult), output: &ListCloudConnectorsOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -81,16 +118,7 @@ func (c *Client) addOperationListCloudConnectorsMiddlewares(stack *middleware.St
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "ListCloudConnectors"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

@@ -5,9 +5,10 @@ package ssm
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Lists all patches eligible to be included in a patch baseline.
@@ -131,6 +132,24 @@ type DescribeAvailablePatchesInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeAvailablePatchesInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeAvailablePatchesRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeAvailablePatchesInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Filters != nil {
+		serializePatchOrchestratorFilterList(s, schemas.DescribeAvailablePatchesRequest_Filters, v.Filters)
+	}
+	if v.MaxResults != nil {
+		s.WriteInt32(schemas.DescribeAvailablePatchesRequest_MaxResults, *v.MaxResults)
+	}
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeAvailablePatchesRequest_NextToken, *v.NextToken)
+	}
+}
+
 type DescribeAvailablePatchesOutput struct {
 
 	// The token to use when requesting the next set of items. If there are no
@@ -146,22 +165,40 @@ type DescribeAvailablePatchesOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeAvailablePatchesOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeAvailablePatchesResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeAvailablePatchesOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.NextToken != nil {
+		s.WriteString(schemas.DescribeAvailablePatchesResult_NextToken, *v.NextToken)
+	}
+	if v.Patches != nil {
+		serializePatchList(s, schemas.DescribeAvailablePatchesResult_Patches, v.Patches)
+	}
+}
+func (v *DescribeAvailablePatchesOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DescribeAvailablePatchesResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.DescribeAvailablePatchesResult_NextToken:
+			v.NextToken = new(string)
+			return d.ReadString(schemas.DescribeAvailablePatchesResult_NextToken, v.NextToken)
+		case schemas.DescribeAvailablePatchesResult_Patches:
+			return deserializePatchList(d, schemas.DescribeAvailablePatchesResult_Patches, &v.Patches)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDescribeAvailablePatchesMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDescribeAvailablePatches{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeAvailablePatches, schemas.DescribeAvailablePatchesRequest, schemas.DescribeAvailablePatchesResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDescribeAvailablePatches{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeAvailablePatches, schemas.DescribeAvailablePatchesRequest, schemas.DescribeAvailablePatchesResult), output: &DescribeAvailablePatchesOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -171,16 +208,7 @@ func (c *Client) addOperationDescribeAvailablePatchesMiddlewares(stack *middlewa
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DescribeAvailablePatches"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

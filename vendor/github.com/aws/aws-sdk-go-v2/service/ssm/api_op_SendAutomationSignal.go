@@ -4,9 +4,10 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Sends a signal to an Automation execution to change the current behavior or
@@ -61,6 +62,24 @@ type SendAutomationSignalInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *SendAutomationSignalInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.SendAutomationSignalRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *SendAutomationSignalInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AutomationExecutionId != nil {
+		s.WriteString(schemas.SendAutomationSignalRequest_AutomationExecutionId, *v.AutomationExecutionId)
+	}
+	if v.Payload != nil {
+		serializeAutomationParameterMap(s, schemas.SendAutomationSignalRequest_Payload, v.Payload)
+	}
+	if v.SignalType != "" {
+		s.WriteString(schemas.SendAutomationSignalRequest_SignalType, string(v.SignalType))
+	}
+}
+
 type SendAutomationSignalOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -68,22 +87,29 @@ type SendAutomationSignalOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *SendAutomationSignalOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.SendAutomationSignalResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *SendAutomationSignalOutput) SerializeMembers(s smithy.ShapeSerializer) {
+}
+func (v *SendAutomationSignalOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.SendAutomationSignalResult, func(s *smithy.Schema) error {
+		switch s {
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationSendAutomationSignalMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpSendAutomationSignal{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.SendAutomationSignal, schemas.SendAutomationSignalRequest, schemas.SendAutomationSignalResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpSendAutomationSignal{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.SendAutomationSignal, schemas.SendAutomationSignalRequest, schemas.SendAutomationSignalResult), output: &SendAutomationSignalOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -93,19 +119,10 @@ func (c *Client) addOperationSendAutomationSignalMiddlewares(stack *middleware.S
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpSendAutomationSignalValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "SendAutomationSignal"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

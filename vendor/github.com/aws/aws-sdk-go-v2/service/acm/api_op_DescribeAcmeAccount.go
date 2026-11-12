@@ -4,10 +4,11 @@ package acm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Returns detailed metadata about the specified ACME account, including its
@@ -42,6 +43,20 @@ type DescribeAcmeAccountInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeAcmeAccountInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeAcmeAccountRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeAcmeAccountInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AccountUrl != nil {
+		s.WriteString(schemas.DescribeAcmeAccountRequest_AccountUrl, *v.AccountUrl)
+	}
+	if v.AcmeEndpointArn != nil {
+		s.WriteString(schemas.DescribeAcmeAccountRequest_AcmeEndpointArn, *v.AcmeEndpointArn)
+	}
+}
 func (in *DescribeAcmeAccountInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM-ACME")
@@ -58,22 +73,37 @@ type DescribeAcmeAccountOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *DescribeAcmeAccountOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.DescribeAcmeAccountResponse)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *DescribeAcmeAccountOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcmeAccount != nil {
+		s.WriteStruct(schemas.DescribeAcmeAccountResponse_AcmeAccount)
+		v.AcmeAccount.SerializeMembers(s)
+		s.CloseStruct()
+	}
+}
+func (v *DescribeAcmeAccountOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.DescribeAcmeAccountResponse, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.DescribeAcmeAccountResponse_AcmeAccount:
+			v.AcmeAccount = &types.AcmeAccount{}
+			return v.AcmeAccount.Deserialize(d)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationDescribeAcmeAccountMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpDescribeAcmeAccount{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeAcmeAccount, schemas.DescribeAcmeAccountRequest, schemas.DescribeAcmeAccountResponse)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpDescribeAcmeAccount{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.DescribeAcmeAccount, schemas.DescribeAcmeAccountRequest, schemas.DescribeAcmeAccountResponse), output: &DescribeAcmeAccountOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -83,19 +113,10 @@ func (c *Client) addOperationDescribeAcmeAccountMiddlewares(stack *middleware.St
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpDescribeAcmeAccountValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "DescribeAcmeAccount"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

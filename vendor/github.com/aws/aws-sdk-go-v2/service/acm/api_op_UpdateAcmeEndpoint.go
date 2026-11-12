@@ -4,10 +4,11 @@ package acm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/acm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/acm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/aws/smithy-go/ptr"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Updates the configuration of an existing ACME endpoint. You can change the
@@ -46,6 +47,26 @@ type UpdateAcmeEndpointInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *UpdateAcmeEndpointInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.UpdateAcmeEndpointRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *UpdateAcmeEndpointInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcmeEndpointArn != nil {
+		s.WriteString(schemas.UpdateAcmeEndpointRequest_AcmeEndpointArn, *v.AcmeEndpointArn)
+	}
+	if v.AuthorizationBehavior != "" {
+		s.WriteString(schemas.UpdateAcmeEndpointRequest_AuthorizationBehavior, string(v.AuthorizationBehavior))
+	}
+	if v.CertificateAuthority != nil {
+		serializeCertificateAuthority(s, schemas.UpdateAcmeEndpointRequest_CertificateAuthority, v.CertificateAuthority)
+	}
+	if v.Contact != "" {
+		s.WriteString(schemas.UpdateAcmeEndpointRequest_Contact, string(v.Contact))
+	}
+}
 func (in *UpdateAcmeEndpointInput) bindEndpointParams(p *EndpointParameters) {
 
 	p.ServiceType = ptr.String("ACM-ACME")
@@ -58,22 +79,29 @@ type UpdateAcmeEndpointOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *UpdateAcmeEndpointOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(nil)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *UpdateAcmeEndpointOutput) SerializeMembers(s smithy.ShapeSerializer) {
+}
+func (v *UpdateAcmeEndpointOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, nil, func(s *smithy.Schema) error {
+		switch s {
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationUpdateAcmeEndpointMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpUpdateAcmeEndpoint{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.UpdateAcmeEndpoint, schemas.UpdateAcmeEndpointRequest, nil)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpUpdateAcmeEndpoint{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.UpdateAcmeEndpoint, schemas.UpdateAcmeEndpointRequest, nil), output: &UpdateAcmeEndpointOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -83,19 +111,10 @@ func (c *Client) addOperationUpdateAcmeEndpointMiddlewares(stack *middleware.Sta
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpUpdateAcmeEndpointValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "UpdateAcmeEndpoint"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

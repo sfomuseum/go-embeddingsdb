@@ -4,8 +4,9 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Registers a patch baseline for a patch group.
@@ -39,6 +40,21 @@ type RegisterPatchBaselineForPatchGroupInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *RegisterPatchBaselineForPatchGroupInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.RegisterPatchBaselineForPatchGroupRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *RegisterPatchBaselineForPatchGroupInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.BaselineId != nil {
+		s.WriteString(schemas.RegisterPatchBaselineForPatchGroupRequest_BaselineId, *v.BaselineId)
+	}
+	if v.PatchGroup != nil {
+		s.WriteString(schemas.RegisterPatchBaselineForPatchGroupRequest_PatchGroup, *v.PatchGroup)
+	}
+}
+
 type RegisterPatchBaselineForPatchGroupOutput struct {
 
 	// The ID of the patch baseline the patch group was registered with.
@@ -53,22 +69,41 @@ type RegisterPatchBaselineForPatchGroupOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *RegisterPatchBaselineForPatchGroupOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.RegisterPatchBaselineForPatchGroupResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *RegisterPatchBaselineForPatchGroupOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.BaselineId != nil {
+		s.WriteString(schemas.RegisterPatchBaselineForPatchGroupResult_BaselineId, *v.BaselineId)
+	}
+	if v.PatchGroup != nil {
+		s.WriteString(schemas.RegisterPatchBaselineForPatchGroupResult_PatchGroup, *v.PatchGroup)
+	}
+}
+func (v *RegisterPatchBaselineForPatchGroupOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.RegisterPatchBaselineForPatchGroupResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.RegisterPatchBaselineForPatchGroupResult_BaselineId:
+			v.BaselineId = new(string)
+			return d.ReadString(schemas.RegisterPatchBaselineForPatchGroupResult_BaselineId, v.BaselineId)
+		case schemas.RegisterPatchBaselineForPatchGroupResult_PatchGroup:
+			v.PatchGroup = new(string)
+			return d.ReadString(schemas.RegisterPatchBaselineForPatchGroupResult_PatchGroup, v.PatchGroup)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationRegisterPatchBaselineForPatchGroupMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpRegisterPatchBaselineForPatchGroup{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.RegisterPatchBaselineForPatchGroup, schemas.RegisterPatchBaselineForPatchGroupRequest, schemas.RegisterPatchBaselineForPatchGroupResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpRegisterPatchBaselineForPatchGroup{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.RegisterPatchBaselineForPatchGroup, schemas.RegisterPatchBaselineForPatchGroupRequest, schemas.RegisterPatchBaselineForPatchGroupResult), output: &RegisterPatchBaselineForPatchGroupOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
-	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
-		return err
-	}
-	if err = addComputeContentLength(stack); err != nil {
-		return err
-	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
@@ -78,19 +113,10 @@ func (c *Client) addOperationRegisterPatchBaselineForPatchGroupMiddlewares(stack
 	if err = addRecordResponseTiming(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
-	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
-		return err
-	}
 	if err = addCredentialSource(stack, options); err != nil {
 		return err
 	}
 	if err = addOpRegisterPatchBaselineForPatchGroupValidationMiddleware(stack); err != nil {
-		return err
-	}
-	if err = stack.Initialize.Add(newServiceMetadataMiddleware(options.Region, "RegisterPatchBaselineForPatchGroup"), middleware.Before); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
