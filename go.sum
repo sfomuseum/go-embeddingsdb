@@ -247,8 +247,8 @@ github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
-github.com/hybridgroup/yzma v1.32.0 h1:rs4/D8xK494V3u5ky0vZU4mHZ1J7BbhjERVyYZAk8+U=
-github.com/hybridgroup/yzma v1.32.0/go.mod h1:ovV3WQ5v3X53vqo9Izg/28QHEXaVasW9b4Kgkhk05T0=
+github.com/hybridgroup/yzma v1.33.0 h1:mouJYpgdWx9i94Lu4ZCDJBpw9Jb1EaXQjl168r0bAjM=
+github.com/hybridgroup/yzma v1.33.0/go.mod h1:ovV3WQ5v3X53vqo9Izg/28QHEXaVasW9b4Kgkhk05T0=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/jtacoma/uritemplates v1.0.0 h1:xwx5sBF7pPAb0Uj8lDC1Q/aBPpOFyQza7OC705ZlLCo=
@@ -287,8 +287,8 @@ github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/sfomuseum/go-database v0.0.22 h1:xosrkMBardcXZHJbSR2x2lc8SjGbj2la6WjKw/C6UcI=
 github.com/sfomuseum/go-database v0.0.22/go.mod h1:bp7w0NhPVHWyWapw4RKJKhhCvxWC+boaQuJKA7mJ4kU=
-github.com/sfomuseum/go-embeddings v0.9.0 h1:Zlqk6OyOPwN6ukpE+9mdjUls4cASjAhH+QKPC/uHn5A=
-github.com/sfomuseum/go-embeddings v0.9.0/go.mod h1:Q1D+dvkj42z8BEV274zt5zB0yT1HzCv4Um6DAZUzUwo=
+github.com/sfomuseum/go-embeddings v0.9.1 h1:9a06iFkK5RCZ8JdrS/xX0p0HFHRVAB2Dpu6RH/ym36I=
+github.com/sfomuseum/go-embeddings v0.9.1/go.mod h1:Gj6phvZG+sF826uT/lt+p5JuV11F9TVUZTFjOxbUV00=
 github.com/sfomuseum/go-encoderfile v0.0.1 h1:ht0GYR0b/KuljcmPIas5/0/nGNKxl9h/TewAtNfhM2c=
 github.com/sfomuseum/go-encoderfile v0.0.1/go.mod h1:zFc9CxM/uEW2vXN6Wk9Zy1aEz3PdXlJVvx8Nzslbe8g=
 github.com/sfomuseum/go-flags v0.12.1 h1:xvg3iEz510JPr9ItPxOOF2C12JnlplodT1V/1Ty7Pg8=

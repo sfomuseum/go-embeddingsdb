@@ -23,7 +23,7 @@ require (
 	github.com/jtacoma/uritemplates v1.0.0
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/sfomuseum/go-database v0.0.22
-	github.com/sfomuseum/go-embeddings v0.9.0
+	github.com/sfomuseum/go-embeddings v0.9.1
 	github.com/sfomuseum/go-flags v0.12.1
 	github.com/sfomuseum/go-parquet v0.5.1
 	github.com/sfomuseum/go-template v1.12.0
@@ -120,7 +120,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
-	github.com/hybridgroup/yzma v1.32.0 // indirect
+	github.com/hybridgroup/yzma v1.33.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jupiterrider/ffi v0.8.0 // indirect
 	github.com/klauspost/compress v1.20.3 // indirect

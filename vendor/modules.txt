@@ -714,7 +714,7 @@ github.com/hashicorp/go-getter/helper/url
 # github.com/hashicorp/go-version v1.8.0
 ## explicit
 github.com/hashicorp/go-version
-# github.com/hybridgroup/yzma v1.32.0
+# github.com/hybridgroup/yzma v1.33.0
 ## explicit; go 1.26.0
 github.com/hybridgroup/yzma/pkg/download
 github.com/hybridgroup/yzma/pkg/llama
@@ -827,7 +827,7 @@ github.com/remyoudompheng/bigfft
 ## explicit; go 1.26.5
 github.com/sfomuseum/go-database/sql
 github.com/sfomuseum/go-database/sql/sqlite
-# github.com/sfomuseum/go-embeddings v0.9.0
+# github.com/sfomuseum/go-embeddings v0.9.1
 ## explicit; go 1.27.3
 github.com/sfomuseum/go-embeddings
 # github.com/sfomuseum/go-encoderfile v0.0.1
