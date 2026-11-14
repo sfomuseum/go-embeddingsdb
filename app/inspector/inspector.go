@@ -166,6 +166,23 @@ func RunWithFlagSet(ctx context.Context, fs *flag.FlagSet) error {
 	logger.Debug("Register API providers handler", "uri", uris.APIProviders)
 	mux.Handle(uris.APIProviders, api_providers_handler)
 
+	//
+
+	similar_embeddings_opts := &api.SimilarWithEmbeddingsHandlerOptions{
+		Client: cl,
+	}
+
+	similar_embeddings_handler, err := api.SimilarWithEmbeddingsHandler(similar_embeddings_opts)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create new API similar with embeddings handler, %w", err)
+	}
+
+	logger.Debug("Register similar with embeddings handler", "uri", "...")
+	mux.Handle("/api/similar/embeddings", similar_embeddings_handler)
+
+	//
+
 	if enable_search {
 
 		emb_cl, err := embeddings.NewEmbedder32(ctx, embeddings_client_uri)
