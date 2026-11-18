@@ -8,6 +8,8 @@ Emit embeddingsdb records in a Parquet as JSON-encoded data.
 Usage:
 	./bin/parquet-emit [options] parquet_file(N) parquet_file(N)
 Valid options are:
+  -strip value
+    	Zero or more record properties to "strip" (remove values for)
   -verbose
     	Enable vebose (debug) logging.
 ```
